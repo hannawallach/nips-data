@@ -1,0 +1,848 @@
+Learning Sparse Topographic Representations with Products of Student-t Distributions
+
+Max Welling and Geoffrey Hinton Department of Computer Science University of Toronto 10 King's College Road
+
+  Toronto, M5S 3G5 Canada welling,hinton¡ @cs.toronto.edu
+
+Simon Osindero Gatsby Unit University College London 17 Queen Square London WC1N 3AR, UK simon@gatsby.ucl.ac.uk
+
+Abstract We propose a model for natural images in which the probability of an image is proportional to the product of the probabilities of some filter outputs. We encourage the system to find sparse features by using a Studentt distribution to model each filter output. If the t-distribution is used to model the combined outputs of sets of neurally adjacent filters, the system learns a topographic map in which the orientation, spatial frequency and location of the filters change smoothly across the map. Even though maximum likelihood learning is intractable in our model, the product form allows a relatively efficient learning procedure that works well even for highly overcomplete sets of filters. Once the model has been learned it can be used as a prior to derive the "iterated Wiener filter" for the purpose of denoising images.
+
+1 Introduction Historically, two different classes of statistical model have been used for natural images. "Energy-based" models assign to each image a global energy, ¢ , that is the sum of a number of local contributions and they define the probability of an image to be proportional to nearby pixel values contribute local energies, Boltzmann Machines in which binary pixels are augmented with binary hidden variables that learn to model higher-order statistical interactions and Maximum Entropy methods which learn the appropriate magnitudes for the energy contributions of heuristically derived features [5] [9]. It is difficult to perform maximum likelihood fitting on most energy-based models because of the normalization term ization term is a sum over all possible images and its derivative w.r.t. the parameters is required for maximum likelihood fitting. The usual approach is to approximate this derivative by using Markov Chain Monte Carlo (MCMC) to sample from the model, but the large number of iterations required to reach equilibrium makes learning very slow. The other class of model uses a "causal" directed acyclic graph in which the lowest level nodes correspond to pixels and the probability distribution at a node (in the absence of any observations) depends only on its parents. When the graph is singly or very sparsely
+
+£¥¤§¦©¨ ¢ . This class of models includes Markov Random Fields where combinations of
+
+(the partition function) that is required to convert £¤§¦©¨ ¢ to a probability. The normal-
+
+
+connected there are efficient algorithms for maximum likelihood fitting but if nodes have many parents, it is hard to perform maximum likelihood fitting because this requires the intractable posterior distribution over non-leaf nodes given the pixel values. There is much debate about which class of model is the most appropriate for natural images. Is a particular image best characterized by the states of some hidden variables in a causal generative model? Or is it best characterized by its peculiarities i.e. by saying which of a very large set of normally satisfied constraints are violated? In this paper we treat violations of constraints as contributions to a global energy and we show how to learn a large set of constraints each of which is normally satisfied fairly accurately but occasionally violated by a lot. The ability to learn efficiently without ever having to generate equilibrium samples from the model and without having to confront the intractable partition function removes a major obstacle to the use of energy-based models.
+
+2 The Product of Student-t Model Products of Experts (PoE) are a restricted class of energy-based model [1]. The distribution represented by a PoE is simply the normalized product of all the distributions represented by the individual "experts":
+
+¥
+
+§
+
+  ¨¢¡ ¨
+
+¤£ ¦ © ¨¡  ©  (1)
+
+©
+
+¦ © ¨¡  © where  are un-normalizedexperts and denotes the overall normalization constant.
+
+In the product of Student-t (PoT) model, un-normalized experts have the following form,
+
+¥
+
+¨¢#%$© ¡ ©
+
+¨¢¡ £
+
+
+
+¨ ¥!  "  '&)( ©2143 (2)
+
+ " 0
+
+where # © is called a filter and is the -th column in the filter-matrix . When properly 5 #
+
+normalized, this represents a Student-t distribution over the filtered random variable
+
+# $© ¡
+
+6
+
+©
+
+£
+
+. An important feature of the Student-t distribution is its heavy tails, which makes it a
+
+suitable candidate for modelling constraints of the kind that are found in images.
+
+ 
+
+Defining ¨¢7 £ £¤§¦©¨ ¢ ¨7 ¦  '8 , the energy of the PoT model becomes
+
+§ ¥
+
+¨7 @ ¨ ¥! ¨¢# $© ¡ "   ¢ 9£ ©)ACBED
+
+F (3)
+
+© 0
+
+Viewed this way, the model takes the form of a maximum entropy distribution with weights however, we can fit both the weights and the features at the same time. ©
+
+on real-valued "features" of the image. Unlike previous maximum entropy models, 0
+
+When the number of input dimensions is equal to the number of experts, the normally intractable partition function becomes a determinant and the PoT model becomes equivalent to a noiseless ICA model with Student-t prior distributions [2]. In that case the rows of less ICA can be viewed as an energy-based model even though it is usually interpeted as a causal generative model in which the posterior over the hidden variables collapses to a point. However, when we consider more experts than input dimensions (i.e. an overcomplete representation), the energy-based view and the causal generative view lead to different generalizations of ICA. The natural causal generalization retains the independence of the hidden variables in the prior by assuming independent sources. In contrast, the PoT model simply multiplies together more experts than input dimensions and re-normalizes to get the total probability.
+
+the inverse filters GH£ #PI will represent independent directions in input space. So noise-
+
+
+3 Training the PoT Model with Contrastive Divergence When training energy-based models we need to shape the energy function so that observed images have low energy and empty regions in the space of all possible images have high energy. The maximum likelihood learning rule is given by,
+
+  ¢¡  
+
+£¥¤¤
+
+¢
+
+§¦©¨ 
+
+£¥¤¤
+
+¢
+
+§¦©"!""#$%"'&  (4)
+
+It is the second term which causes learning to be slow and noisy because it is usually necessary to use MCMC to compute the average over the equilibrium distribution. A much more efficient way to fit the model is to use the data distribution itself to initialize a Markov Chain which then starts moving towards the model's equilibrium distribution. After just a few steps, we observe how the chain is diverging from the data and adjust the parameters to counteract this divergence. This is done by lowering the energy of the data and raising the energy of the "confabulations" produced by a few steps of MCMC.
+
+  ¥¡  
+
+£ ¤¤
+
+¢
+
+(¦©¨) 
+
+£ ¤¤
+
+¢
+
+(¦10 54 6&748!9 32 2
+
+I
+
+
+
+2 (5)
+
+It can be shown that the above update rule approximately minimizes a new objective function called the contrastive divergence [1]. As it stands the learning rule will be inefficient if the Markov Chain mixes slowly because the two terms in equation 5 will almost cancel each other out. To speed up learning we need a Markov chain that mixes rapidly so that the confabulations will be some distance away from the data. Rapid mixing can be achieved by alternately Gibbs sampling a set of hidden variables given the random variables under consideration and vice versa. Fortunately, the PoT model can be equipped with a number of hidden random variables equal to the number
+
+of experts as follows,
+
+B
+
+V   ¨¢¡ A@5B ¡DC 7EGFIH8PQR VP
+
+ I 
+
+( (
+
+SUT SXWYa`b bT S bdcegf R ih 
+
+( I & ( ( (6)
+
+Integrating over the variables results in the density of the PoT model, i.e. eqns. (1) and
+
+(2). Moreover, the conditional distributions are easy to identify and sample from, namely
+
+§
+
+ 
+
+pB¨
+
+¨¡
+
+¥
+
+w 9 ¡
+
+B
+
+"
+
+ ¥ £ ¨ © rq R ts
+
+(
+
+0
+
+¨ #    £ x
+
+`y¥u 3
+
+vu  © ¨ # $© ¡  F
+
+# $  I
+
+   p
+
+£
+
+Q h ©
+
+(7) (8)
+
+where
+
+q
+
+the variables
+
+denotes a Gamma distribution and
+
+B x
+
+a normal distribution. From (8) we see that
+
+can be interpreted as precision variables in the transformed space
+
+
+
+£
+
+# $ ¡
+
+.
+
+In this respect our model resembles a "Gaussian scale mixture" (GSM) [8] which also multiplies a positive scaling variable with a normal variate. But GSM is a causal model while PoT is energy-based. The (in)dependencyrelations between the variables in a PoT model are depicted graphically in figure (1a,b). The hidden variables are independent given , which allows them to be
+
+¡
+
+Gibbs-sampled in parallel. This resembles the way in which brief Gibbs sampling is used to fit binary "Restricted Boltzmann Machines" [1]. To learn the parameters of the PoT model we thus propose to iterate the following steps:
+
+
+
+1) Sample
+
+B
+
+given the data
+
+ for every data-vector according to the Gamma-
+
+distribution (7).
+
+
+u u
+
+T 2 ¡ ¡
+
+(Jx) x
+
+u
+
+T 2¥¤¥¤
+
+(Jx) x ¢¢ ££
+
+x J
+
+§¦§¦
+
+W J
+
+1 2 3 4 5
+
+(a) (b) (c) (d)
+
+Figure 1: (a)- Undirected graph for the PoT model. (b)-Expanded graph where the deterministic
+
+¨ ©
+
+relation (dashed lines) between the random variable and the activities of the filters
+
+explicit. (c)-Graph for the PoT model including weights
+
+left to right) weights into a particular top level unit filters similar in frequency, location and orientation.
+
+
+
+!
+
+
+
+¨
+
+is made
+
+. (d)-Filters with large (decreasing from
+
+. Top level units have learned to connect to
+
+2) Sample reconstructions of the data ¡
+
+
+
+given the sampled values of
+
+B  for every
+
+data-vector according to the Normal distribution (8).
+
+3) Update the parameters according to (5) where the "k-step samples" are now given
+
+by the reconstructions
+
+  
+
+by £
+
+# #"
+
+¡ .
+
+¡
+
+A@
+
+, the energy is given by (3), and the parameters are given
+
+
+
+4 Overcomplete Representations The above learning rules are still valid for overcomplete representations. However, step-2
+
+of the learning algorithm is much more efficient when the inverse of the filter matrix
+
+exists. In that case we simply draw $ standard normal random numbers (with
+
+  I VP
+
+$
+
+#
+
+the num-
+
+ber of data-vectors) and multiply each of them with
+
+  I
+
+the data dependent matrix
+
+#¤I $
+
+VP
+
+. This is efficient because
+
+is diagonal while the costly inverse # I $ is data indepen-
+
+dent. In contrast, for the overcomplete case we ought to perform a Cholesky factorization proceeding as in the complete case and replacing the inverse of the filter matrix with its pseudo-inverse. From experiments we have also found that in the overcomplete case we should fix the This operation is done after every step of learning. Since controlling the norm removes the ability of the experts to adapt to scale it is necessary to whiten the data first. 4.1 Experiment: Overcomplete Representations for Natural Images
+
+on # # $ for each data-vector separately. We have, however, obtained good results by
+
+¥'&
+
+% "
+
+norm of the filters, # $© # © £ 5
+
+, in order to prevent some of them from decaying to zero.
+
+@
+
+¥ ¥
+
+We randomly generated ( 3 3)3)3 patches of 30) 3 pixels from images of natural scenes1.
+
+
+
+The patches were centered and sphered using PCA and the DC component (eigen-vector
+
+with largest variance) was removed. The¥2143
+
+the pseudo-inverse was used to train
+
+(
+
+a
+
+3E3 %
+
+( 3
+
+@
+
+algorithm for overcomplete representations using
+
+experts, i.e. a representation that is more than
+
+© ¥
+
+times overcomplete. We fixed the weights to have
+
+¥ "
+
+£ and the the filters to have
+
+-norm of . A small weight decay term and a momentum term were included in the
+
+0
+
+gradient updates of the filters.¥ The learning rate was set so that initially the change in the
+
+filters was approximately 3!5 3)3 . In figure (2a) we show a small subset of the inverse-filters
+
+# $7698A@7B 6C8A@7B
+
+, where
+
+¥
+
+is the
+
+3)3D)FEGE
+
+matrix used for
+
+given by the pseudo-inverse of sphering the data.
+
+1 Collected from http://www.cis.hut.fi/projects/ica/data/images
+
+
+5 Topographically Ordered Features In [6] it was shown that linear filtering of natural images is not enough to remove all higher order dependencies.¨¢#In$© particular, it was argued that there are residual dependencies among dependencies within the PoT model. By inspection of figure (1b) we note that these depen-
+
+the activities " 6 © £ ¡ "  of the filtered inputs. It is therefore desirable to model those
+
+dencies can be modelled through a non-negative" weight matrix
+
+the hidden variables
+
+
+
+© with the activities ¨¢# $ ¡
+
+¡
+
+ 
+
+©¢¡¤£ 3
+
+, which connects
+
+ . The resultant model is depicted in figure
+
+(1c). Depending on how many nonzero weights
+
+¦ © ¦
+
+), each expert now occupies
+
+©
+
+ 
+
+©¥¡
+
+emanate from a hidden unit
+
+
+
+©
+
+(say
+
+input dimensions instead¨¢#of$© just one. The  expressions for ¡ "¨§©
+
+these richer experts can be obtained from (2) by replacing,
+
+have found that learning is assisted by fixing the % 
+
+¡ ©¢¡ ¨¢# $ ¡
+
+¡
+
+©¥¡ £
+
+"
+
+ . We
+
+¥ &
+
+5 ).
+
+©
+
+-norm of the weights ( ¡  
+
+Moreover, we have found that the sparsity of the weights lowing generalization of the experts,
+
+¥
+
+© ¨¢¡ !£
+
+¥!
+
+ can be controlled by the fol-
+
+ ¨ "  © ' ¡ ( ©
+
+@  143 @
+
+  ©¥¡  # $ ¡  ¡   ©¥¡ £ 3 (9)
+
+ &E( 0
+
+The larger the value for  the sparser the distribution of  values.
+
+Joint and conditional distributions over hidden variables are obtained through similar replacements in eqn. (6) and (7) respectively. Sampling the reconstructions given the states of
+
+the hidden variables proceeds by first sampling from
+
+distributions
+
+£¥¤§¦©¨$#   ©
+
+
+
+© 
+
+
+
+© "!!©
+
+ independent generalized Laplace
+
+
+
+ with precision parameters H£ %
+
+# I $'&
+
+B
+
+"
+
+$
+
+ which are
+
+subsequently transformed into ¡
+
+
+
+£ . Learning in this model therefore proceeds with
+
+only minor modifications to the algorithm described in the previous section.
+
+When we learn the weight matrix
+
+variable
+
+
+
+©
+
+  ©¢¡ from image data we find that a particular hidden
+
+develops weights to the activities of filters similar in frequency, location and
+
+B
+
+orientation. The variables therefore integrate information from these filters and as a
+
+result develop certain invariances that resemble the behavior of complex cells. A similar approach was studied in [4] using a related causal model2 in which a number of scale variables generate correlated variances for conditionally Gaussian experts. This results in topography when the scale-generating variables are non-adaptive and connect to a local neighborhood of filters only. model. The reason is that averaging the squares of randomly chosen filter outputs (eqn.9) produces an approximately Gaussian distribution which is a poor fit to the heavy-tailed experts. However, this "smoothing effect" may be largely avoided by averaging squared filter outputs that are highly correlated (i.e. ones that are similar in location, frequency and orientation). Since the averaging is local, this results in a topographic layout of the filters. 5.1 Experiment: Topographic Representations for Natural Images
+
+We will now argue that fixed local weights  also give rise to topography in the PoT
+
+@
+
+¥ 3 ¥ 3
+
+For this experiment we collected ( 3 3)3E3 image patches of size ) pixels in the same
+
+¥ 3
+
+way as described in section (4.1). The image data were sphered and reduced to
+
+3 ¥
+
+mensions by removing ( low variance and
+
+E di-
+
+high variance (DC) direction. We learned an
+
+F 3)3 3D) F
+
+overcomplete representation with )
+
+experts which were¥ organized on a square
+
+3
+
+grid. Each expert connects with a fixed weight of  
+
+©¢¡ £ 8 E to itself and all its ( neigh-
+
+bors, where periodic boundary conditions were imposed for the experts on the boundary.
+
+2 
+
+Interestingly, the update equations for the filters presented in [4], which minimize a bound on
+
+the log-likelihood of a directed model, reduce to the same equations as our learning rules when the representation is complete and the filters orthogonal.
+
+
+(a) (b)
+
+Figure 2: (a)-Small subset of the  ¢¡¤£¦¥¨§¢© learned filters from a  ¡¡ times overcomplete representation for natural image patches. (b)-Topographically ordered filters. The weights were fixed and connect to neighbors only, using periodic boundary conditions. Neighboring filters have learned to be similar in frequency, location and orientation. One can observe a pinwheel structure to the left of the low frequency cluster.
+
+# " ¥ " ¥  F We adapted the filters (% -norm ) and used fixed values for
+
+£ and
+
+
+
+£ . The re-
+
+sulting inverse-filters are shown in figure (2b). We note that the weights have enforced a
+
+topographic ordering on the experts, where location, scale and frequency of the Gabor-like filters all change smoothly across the map.
+
+¥ 3
+
+In another experiment we used the same data to train a complete representation of
+
+experts where we learned the ¥weights
+
+but with a fixed value of  £
+
+ (% -norm ),
+
+ ¥ " #
+
+and the filters
+
+E
+
+(unconstrained),
+
+. The weights
+
+
+
+"
+
+ and were kept positive by adapting their
+
+logarithm. Since the weights can now connect to any other expert we do not expect
+
+topography. To study whether the¨ weights
+
+the energies of the filter outputs # $© ¡ "
+
+ were modelling the dependencies between
+
+ we ordered the filters for each complex cell
+
+
+
+©
+
+according to the strength of the¥ weights connecting to it. For a representative subset of the
+
+complex cells , we show the 3 filters with the strongest connections to that cell in figure
+
+(1d). Since the cells connect to similar filters we may conclude that the weights indeed learning the dependencies between the activities of the filter outputs.  are
+
+B
+
+6 Denoising Images: The Iterated Wiener Filter If the PoT model provides an accurate description of the statistics of natural image data it ought to be a good prior for cleaning up noisy images. In the following we will apply this idea to denoise images contaminated with Gaussian pixel noise. We follow the standard Bayesian approach which states that the optimal estimate of the original image is given by
+
+ 
+
+the maximum a posteriori (MAP) estimate of For the PoT model this reduces to,
+
+!
+
+ B 8 ¥
+
+¨¡ &
+
+ , where
+
+&
+
+denotes the noisy image.
+
+   F ¨  ¡ #" I ¨  ¡ &  $ &  @ ¥ ¡ © AB)D %$& ¥! @  F   ©¥¡ ¨ # $ ¡ ¡ '(0)1 " £ ` 
+
+© 0 ¡
+
+(10)
+
+
+(a) (b)
+
+(c) (d)
+
+Figure 3: (a)- Original "rock"-image. (b)-Rock-image with noise added. (c)-Denoised image using Wiener filtering. (d) Denoised image using IWF.
+
+¡ £¢ ¢ ¢ using
+
+To minimize this we follow a¥ variational procedure where we upper¥ bound the logarithm every logarithm in the summation in eqn. (10) and iteratively minimizing this bound over
+
+ACBED 7 7  ACBED . The bound is saturated when
+
+£ 8 7 . Applying this to
+
+¡
+
+and
+
+¤
+
+we find the following update equations,
+
+¥
+
+¢ ¦¥
+
+©
+
+¥
+
+¥! @ "
+
+8
+
+¨ # $ ¡ ¡ F   ©¥¡ 
+
+(11) (12) ¡
+
+ B 8 ¡ ¥
+
+¨ " I  #  # $ I  " I   &  p
+
+H£
+
+Q $  ¨ " ) ¤  h
+
+where )
+
+denotes componentwise multiplication. Since the second equation is just a Wiener
+
+filter with noise covariance
+
+" and a Gaussian prior with covariance ¨ #
+
+ # $  I we have
+
+named the above denoising equations the iterated Wiener filter (IWF).
+
+When the filters are orthonormal, the noise covariance isotropic and the weight matrix the
+
+identity, the minimization in (10) decouples into
+
+variables 6
+
+©
+
+£
+
+# $© ¡
+
+. Defining
+
+©
+
+£
+
+# $© &
+
+§
+
+ minimizations over the transformed
+
+we can easily derive that 6
+
+©
+
+following cubic equation (for which analytic solutions exist),
+
+©¨ §
+
+©  " " F
+
+6 © 6 © F ¨ ¥ ©  6 © 
+
+§
+
+© £
+
+0
+
+
+
+3
+
+is the solution of the (13)
+
+We note however that constraining the filters to be orthogonal is a rather severe restriction if the data are not pre-whitened. On the other hand, if we decide to work with whitened data, the isotropic noise assumption seems unrealistic. Having said that, Hyvarinen's shrinkage method for ICA models [3] is based on precisely these assumptions and seems to give good results. The proposed method is also related to approaches based on the GSM [7]. 6.1 Experiment: Denoising
+
+To test the iterated Wiener filter, we trained a complete set of E E experts on the data de-
+
+scribed in section (4.1). The norm of the filters was unconstrained, the
+
+but we did not include any weights 
+
+"
+
+were free to adapt,
+
+. The image shown in figure (3a) was corrupted with
+
+F F)F
+
+Gaussian noise with standard deviation
+
+
+
+3
+
+£ , which resulted in a PSNR of
+
+5 3
+
+dB (fig-
+
+ure (3b)). We applied the adaptive Wiener filter from matlab (Wiener2.m) with an optimal
+
+
+( ) ( neighborhood size and known noise-variance. The denoised image using adaptive
+
+F43
+
+Wiener filtering¥ has a PSNR of ¥
+
+possible
+
+filters
+
+# $
+
+3 ) 3
+
+5 E
+
+dB and is shown in figure (3c). IWF was run on every
+
+patch in the image, after which the results were averaged. Because the
+
+were trained on sphered data without a DC component, the same transformations
+
+have to be applied to the test patches before IWF is applied. The denoised image using IWF is shown in (3d) and has a PSNR of dB, which is a significant improvement of F ¥
+
+¥ F 5
+
+( 5
+
+dB over Wiener filtering. It is our hope that the use of overcomplete representations and
+
+weights  will further improve those results.
+
+7 Discussion It is well known that a wavelet transform de-correlates natural image data in good approximation. In [6] it was found that in the marginal distribution the wavelet coefficients are sparsely distributed but that there are significant residual dependencies among their enerters with sparsely distributed outputs. With a second hidden layer that is locally connected, it captures the dependencies between filter outputs by learning topographic representations. Our approach improves upon earlier attempts (e.g. [4],[8]) in a number of ways. In the PoT model the hidden variables are conditionally independent so perceptual inference is very easy and does not require iterative settling even when the model is overcomplete. There is a fairly simple and efficient procedure for learning all the parameters, including the weights connecting top-level units to filter outputs. Finally, the model leads to an elegant denoising algorithm which involves iterating a Wiener-filter. Acknowledgements This research was funded by NSERC, the Gatsby Charitable Foundation, and the Wellcome Trust. We thank Yee-Whye Teh for first suggesting a related model and Peter Dayan for encouraging us to apply products of experts to topography. References
+
+gies 6 ©" . In this paper we have shown that the PoT model can learn highly overcomplete fil-
+
+[1] G.E. Hinton. Training products of experts by minimizing contrastive divergence. Neural Computation, 14:1771­1800, 2002. [2] G.E. Hinton, M. Welling, Y.W. Teh, and K. Osindero. A new view of ICA. In Int. Conf. on Independent Component Analysis and Blind Source Separation, 2001. [3] A. Hyvarinen. Sparse code shrinkage: Denoising of nongaussian data by maximum likelihood estimation. Neural Computation, 11(7):1739­1768, 1999. [4] A. Hyvarinen, P.O. Hoyer, and M. Inki. Topographic independent component analysis. Neural Computation, 13(7):1525­1558, 2001. [5] S. Della Pietra, V.J. Della Pietra, and J.D. Lafferty. Inducing features of random fields. IEEE Transactions on Pattern Analysis and Machine Intelligence, 19(4):380­393, 1997. [6] E.P. Simoncelli. Modeling the joint statistics of images in the wavelet domain. In Proc SPIE, 44th Annual Meeting, volume 3813, pages 188­195, Denver, 1999. [7] V. Strela, J. Portilla, and E. Simoncelli. Image denoising using a local Gaussian scale mixture model in the wavelet domain. In Proc. SPIE, 45th Annual Meeting, San Diego, 2000. [8] M.J. Wainwright and E.P. Simoncelli. Scale mixtures of Gaussians and the statistics of natural images. In Advances Neural Information Processing Systems, volume 12, pages 855­861, 2000. [9] S.C. Zhu, Z.N. Wu, and D. Mumford. Minimax entropy principle and its application to texture modeling. Neural Computation, 9(8):1627­1660, 1997.
+
+

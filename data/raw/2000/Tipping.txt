@@ -1,0 +1,380 @@
+Sparse Kernel
+Principal Component Analysis
+Michael E. Tipping
+Microsoft Research
+St George House, 1 Guildhall St
+Cambridge CB2 3NH, U.K.
+mtipping@microsoft.com
+Abstract
+`Kernel' principal component analysis (PCA) is an elegant non-
+linear generalisation of the popular linear data analysis method,
+where a kernel function implicitly denes a nonlinear transforma-
+tion into a feature space wherein standard PCA is performed. Un-
+fortunately, the technique is not `sparse', since the components
+thus obtained are expressed in terms of kernels associated with ev-
+ery training vector. This paper shows that by approximating the
+covariance matrix in feature space by a reduced number of exam-
+ple vectors, using a maximum-likelihood approach, we may obtain
+a highly sparse form of kernel PCA without loss of eectiveness.
+1 Introduction
+Principal component analysis (PCA) is a well-established technique for dimension-
+ality reduction, and examples of its many applications include data compression,
+image processing, visualisation, exploratory data analysis, pattern recognition and
+time series prediction. Given a set of N d-dimensional data vectors xn , which we
+take to have zero mean, the principal components are the linear projections onto
+the `principal axes', dened as the leading eigenvectors of the sample covariance
+matrix S = N 1
+P N
+n=1 xnx T
+n = N 1 X T X, where X = (x 1 ; x 2 ; : : : ; xN ) T is the
+conventionally-dened `design' matrix. These projections are of interest as they
+retain maximum variance and minimise error of subsequent linear reconstruction.
+However, because PCA only denes a linear projection of the data, the scope of
+its application is necessarily somewhat limited. This has naturally motivated vari-
+ous developments of nonlinear `principal component analysis' in an eort to model
+non-trivial data structures more faithfully, and a particularly interesting recent in-
+novation has been `kernel PCA' [4].
+Kernel PCA, summarised in Section 2, makes use of the `kernel trick', so eectively
+exploited by the `support vector machine', in that a kernel function k(; ) may
+be considered to represent a dot (inner) product in some transformed space if it
+satises Mercer's condition | i.e. if it is the continuous symmetric kernel of a
+positive integral operator. This can be an elegant way to `non-linearise' linear
+
+procedures which depend only on inner products of the examples.
+Applications utilising kernel PCA are emerging [2], but in practice the approach
+suers from one important disadvantage in that it is not a sparse method. Com-
+putation of principal component projections for a given input x requires evaluation
+of the kernel function k(x; xn ) in respect of all N `training' examples xn . This is
+an unfortunate limitation as in practice, to obtain the best model, we would like to
+estimate the kernel principal components from as much data as possible.
+Here we tackle this problem by rst approximating the covariance matrix in feature
+space by a subset of outer products of feature vectors, using a maximum-likelihood
+criterion based on a `probabilistic PCA' model detailed in Section 3. Subsequently
+applying (kernel) PCA denes sparse projections. Importantly, the approximation
+we adopt is principled and controllable, and is related to the choice of the number of
+components to `discard' in the conventional approach. We demonstrate its e∆cacy
+in Section 4 and illustrate how it can oer similar performance to a full non-sparse
+kernel PCA implementation while oering much reduced computational overheads.
+2 Kernel PCA
+Although PCA is conventionally dened (as above) in terms of the covariance, or
+outer-product, matrix, it is well-established that the eigenvectors of X T X can be
+obtained from those of the inner-product matrix XX T . If U is an orthogonal ma-
+trix of column eigenvectors of XX T with corresponding eigenvalues in the diagonal
+matrix , then by denition (XX T )U = U. Pre-multiplying by X T gives:
+(X T X)(X T U) = (X T U): (1)
+From inspection, it can be seen that the eigenvectors of X T X are X T U, with eigen-
+values . Note, however, that the column vectors X T U are not normalised since
+for column i, u T
+i XX T u i =  i u T
+i u i =  i , so the correctly normalised eigenvectors of
+X T X, and thus the principal axes of the data, are given by U pca = X T U 1
+2 .
+This derivation is useful if d > N , when the dimensionality of x is greater than
+the number of examples, but it is also fundamental for implementing kernel PCA.
+In kernel PCA, the data vectors xn are implicitly mapped into a feature space by
+a set of functions fg : xn ! (xn ). Although the vectors  n = (xn ) in the
+feature space are generally not known explicitly, their inner products are dened
+by the kernel:  T
+m  n = k(xm ; xn ). Dening  as the (notional) design matrix in
+feature space, and exploiting the above inner-product PCA formulation, allows the
+eigenvectors of the covariance matrix in feature space 1 , S  = N 1
+P
+n  n  T
+n , to be
+specied as:
+U kpca =  T U 1
+2 ; (2)
+where U; are the eigenvectors/values of the kernel matrix K, with (K)mn =
+k(xm ; xn ). Although we can't compute U kpca since we don't know  explicitly, we
+can compute projections of arbitrary test vectors x  !   onto U kpca in feature
+space:
+ T
+ U kpca =  T
+  T U 1
+2 = k T
+ U 1
+2 ; (3)
+where k  is the N-vector of inner products of x  with the data in kernel space:
+(k) n = k(x  ; xn ). We can thus compute, and plot, these projections | Figure 1
+gives an example for some synthetic 3-cluster data in two dimensions.
+1 Here, and in the rest of the paper, we do not `centre' the data in feature space,
+although this may be achieved if desired (see [4]). In fact, we would argue that when using
+a Gaussian kernel, it does not necessarily make sense to do so.
+
+0.218 0.203 0.191
+0.057 0.053 0.051
+0.047 0.043 0.036
+Figure 1: Contour plots of the rst nine principal component projections evaluated over a
+region of input space for data from 3 Gaussian clusters (standard deviation 0.1; axis scales
+are shown in Figure 3) each comprising 30 vectors. A Gaussian kernel, exp(kx x 0
+k 2
+=r 2
+),
+with width r = 0:25, was used. The corresponding eigenvalues are given above each
+projection. Note how the rst three components `pick out' the individual clusters [4].
+3 Probabilistic Feature-Space PCA
+Our approach to sparsifying kernel PCA is to a priori approximate the feature space
+sample covariance matrix S with a sum of weighted outer products of a reduced
+number of feature vectors. (The basis of this technique is thus general and its
+application not necessarily limited to kernel PCA.) This is achieved probabilistically,
+by maximising the likelihood of the feature vectors under a Gaussian density model
+  N (0; C), where we specify the covariance C by:
+C =  2 I +
+N
+X
+i=1
+w i  i  T
+i =  2 I + T W; (4)
+where w 1 : : : wN are the adjustable weights, W is a matrix with those weights on
+the diagonal, and  2 is an isotropic `noise' component common to all dimensions
+of feature space. Of course, a naive maximum of the likelihood under this model
+is obtained with  2 = 0 and all w i = 1=N . However, if we x  2 , and optimise
+only the weighting factors w i , we will nd that the maximum-likelihood estimates
+of many w i are zero, thus realising a sparse representation of the covariance matrix.
+This probabilistic approach is motivated by the fact that if we relax the form of the
+model, by dening it in terms of outer products of N arbitrary vectors v i (rather
+than the xed training vectors), i.e. C =  2 I+ P N
+i=1 w i v i v T
+i , then we realise a form
+of `probabilistic PCA' [6]. That is, if fu i ;  i g are the set of eigenvectors/values of S  ,
+then the likelihood under this model is maximised by v i = u i and w i = ( i  2 ) 1=2 ,
+for those i for which  i >  2 . For  i   2 , the most likely weights w i are zero.
+
+3.1 Computations in feature space
+We wish to maximise the likelihood under a Gaussian model with covariance given
+by (4). Ignoring terms independent of the weighting parameters, its log is given by:
+L = 1
+2
+
+N log jCj + tr C 1  T 
+
+: (5)
+Computing (5) requires the quantities jCj and  T C 1 , which for innite dimen-
+sionality feature spaces might appear problematic. However, by judicious re-writing
+of the terms of interest, we are able to both compute the log-likelihood (to within
+a constant) and optimise it with respect to the weights. First, we can write:
+log j 2 I + T Wj = D log  2 + log jW 1 +  2  T j + log jWj: (6)
+The potential problem of innite dimensionality, D, of the feature space now en-
+ters only in the rst term, which is constant if  2 is xed and so does not aect
+maximisation. The term in jWj is straightforward and the remaining term can be
+expressed in terms of the inner-product (kernel) matrix:
+W 1 +  2  T = W 1 +  2 K; (7)
+where K is the kernel matrix such that (K)mn = k(xm ; xn ).
+For the data-dependent term in the likelihood, we can use the Woodbury matrix
+inversion identity to compute the quantities  T
+n C 1  n :
+ T
+n ( 2 I +W T ) 1  n =  T
+n
+
+ 2 I  4 (W 1 +  2  T ) 1  T
+
+ n ;
+=  2 k(xn ; xn )  4 k T
+n (W 1 +  2 K) 1 kn ; (8)
+with kn = [k(x n ; x 1 ); k(xn ; x 2 ); : : : ; k(xn ; xN )] T .
+3.2 Optimising the weights
+To maximise the log-likelihood with respect to the w i , dierentiating (5) gives us:
+@L
+@w i
+= 1
+2  T
+i C 1  T C 1  i N T
+i C 1  i
+
+; (9)
+= 1
+2w 2
+i
+  N
+X
+n=1
+ 2
+ni +N ii Nw i
+!
+; (10)
+where  and  n are dened respectively by
+ = (W 1 +  2 K) 1 ; (11)
+ n =  2 kn : (12)
+Setting (10) to zero gives re-estimation equations for the weights:
+w new
+i = N 1
+N
+X
+n=1
+ 2
+ni + ii : (13)
+The re-estimates (13) are equivalent to expectation-maximisation updates, which
+would be obtained by adopting a factor analytic perspective [3], and introducing a
+set of `hidden' Gaussian explanatory variables whose conditional means and com-
+mon covariance, given the feature vectors and the current values of the weights,
+are given by  n and  respectively (hence the notation). As such, (13) is guar-
+anteed to increase L unless it is already at a maximum. However, an alternative
+
+re-arrangement of (10), motivated by [5], leads to a re-estimation update which
+typically converges signicantly more quickly:
+w new
+i =
+P N
+n=1  2
+ni
+N(1  ii =w i ) : (14)
+Note that these w i updates (14) are dened in terms of the computable (i.e. not
+dependent on explicit feature space vectors) quantities  and  n .
+3.3 Principal component analysis
+The principal axes
+Sparse kernel PCA proceeds by nding the principal axes of the covariance model
+C =  2 I +  T W. These are identical to those of  T W, but with eigenvalues
+all  2 larger. Letting e
+ = W 1
+2 , then, we need the eigenvectors of e
+ T e
+.
+Using the technique of Section 2, if the eigenvectors of e
+ e
+ T
+= W 1
+2  T W 1
+2 =
+W 1
+2 KW 1
+2 are e
+U, with corresponding eigenvalues e
+, then the eigevectors/values
+fU; g of C that we desire are given by:
+U =  T W 1
+2 e
+U e
+ 1
+2
+; (15)
+ = e
++  2 I: (16)
+Computing projections
+Again, we can't compute the eigenvectors U explicitly in (15), but we can compute
+the projections of a general feature vector   onto the principal axes:
+ T
+ U =  T
+  T W 1
+2
+e
+U e
+ 1
+2 = b
+k T
+
+b
+P; (17)
+where b k  is the sparse vector containing the non-zero weighted elements of k  ,
+dened earlier. The corresponding rows of W 1
+2 e
+U e
+ 1
+2
+are combined into a sin-
+gle projecting matrix b
+P, each column of which gives the coe∆cients of the kernel
+functions for the evaluation of each principal component.
+3.4 Computing Reconstruction Error
+The squared reconstruction error in kernel space for a test vector   is given by:
+k(I UU T )  k 2 = k(x  ; x  ) b
+k T
+
+b
+K 1 b
+k  ; (18)
+with b
+K the kernel matrix evaluated only for the representing vectors.
+4 Examples
+To obtain sparse kernel PCA projections, we rst specify the noise variance  2 ,
+which is the the amount of variance per co-ordinate that we are prepared to allow
+to be explained by the (structure-free) isotropic noise rather than with the principal
+axes (this choice is a surrogate for deciding how many principal axes to retain in
+conventional kernel PCA). Unfortunately, the measure is in feature space, which
+makes it rather more di∆cult to interpret than if it were in data space (equally so,
+of course, for interpretation of the eigenvalue spectrum in the non-sparse case).
+
+We apply sparse kernel PCA to the Gaussian data of Figure 1 earlier, with the same
+kernel function and specifying  = 0:25, deliberately chosen to give nine representing
+kernels so as to facilitate comparison. Figure 2 shows the nine principal component
+projections based on the approximated covariance matrix, and gives qualitatively
+equivalent results to Figure 1 while utilising only 10% of the kernels. Figure 3 shows
+the data and highlights those examples corresponding to the nine kernels with non-
+zero weights. Note, although we do not consider this aspect further here, that these
+representing vectors are themselves highly informative of the structure of the data
+(i.e. with a Gaussian kernel, for example, they tend to represent distinguishable
+clusters). Also in Figure 3, contours of reconstruction error, based only on those
+nine kernels, are plotted and indicate that the nonlinear model has more faithfully
+captured the structure of the data than would standard linear PCA.
+0.199 0.184 0.161
+0.082 0.074 0.074
+0.074 0.072 0.071
+Figure 2: The nine principal component projections obtained by sparse kernel PCA.
+To further illustrate the delity of the sparse approximation, we analyse the 200
+training examples of the 7-dimensional `Pima Indians diabetes' database [1]. Fig-
+ure 4 (left) shows a plot of reconstruction error against the number of principal
+components utilised by both conventional kernel PCA and its sparse counterpart,
+with  2 chosen so as to utilise 20% of the kernels (40). An expected small reduc-
+tion in accuracy is evident in the sparse case. Figure 4 (right) shows the error on
+the associated test set when using a linear support vector machine to classify the
+data based on those numbers of principal components. Here the sparse projections
+actually perform marginally better on average, a consequence of both randomness
+and, we note with interest, presumably some inherent complexity control implied
+by the use of a sparse approximation.
+
+-0.6 -0.4 -0.2 0 0.2 0.4 0.6
+-0.4
+-0.3
+-0.2
+-0.1
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+Figure 3: The data with the nine representing kernels circled and contours of reconstruc-
+tion error (computed in feature space although displayed as a function of x) overlaid.
+0 5 10 15 20 25
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+Reconstruction
+error
+Standard
+Sparse
+0 5 10 15 20 25
+60
+70
+80
+90
+100
+110
+Test
+set
+errors
+Figure 4: RMS reconstruction error (left) and test set misclassications (right) for num-
+bers of retained principal components ranging from 1{25. For the standard case, this was
+based on all 200 training examples, for the sparse form, a subset of 40. A Gaussian kernel
+of width 10 was utilised, which gives near-optimal results if used in an SVM classication.
+References
+[1] B. D. Ripley. Pattern Recognition and Neural Networks. Cambridge University Press,
+Cambridge, 1996.
+[2] S. Romdhani, S. Gong, and A. Psarrou. A multi-view nonlinear active shape model
+using kernel PCA. In Proceedings of the 1999 British Machine Vision Conference,
+pages 483{492, 1999.
+[3] D. B. Rubin and D. T. Thayer. EM algorithms for ML factor analysis. Psychometrika,
+47(1):69{76, 1982.
+[4] B. Scholkopf, A. Smola, and K.-R. Muller. Nonlinear component analysis as a kernel
+eigenvalue problem. Neural Computation, 10:1299{1319, 1998. Technical Report No.
+44, 1996, Max Planck Institut fur biologische Kybernetik, Tubingen.
+[5] M. E. Tipping. The Relevance Vector Machine. In S. A. Solla, T. K. Leen, and K.-R.
+Muller, editors, Advances in Neural Information Processing Systems 12, pages 652{658.
+Cambridge, Mass: MIT Press, 2000.
+[6] M. E. Tipping and C. M. Bishop. Probabilistic principal component analysis. Journal
+of the Royal Statistical Society, Series B, 61(3):611{622, 1999.
+

@@ -1,0 +1,534 @@
+Multiagent Planning with Factored MDPs
+Carlos Guestrin
+Computer Science Dept
+Stanford University
+guestrin@cs.stanford.edu
+Daphne Koller
+Computer Science Dept
+Stanford University
+koller@cs.stanford.edu
+Ronald Parr
+Computer Science Dept
+Duke University
+parr@cs.duke.edu
+Abstract
+We present a principled and efficient planning algorithm for cooperative multia­
+gent dynamic systems. A striking feature of our method is that the coordination
+and communication between the agents is not imposed, but derived directly from
+the system dynamics and function approximation architecture. We view the en­
+tire multiagent system as a single, large Markov decision process (MDP), which
+we assume can be represented in a factored way using a dynamic Bayesian net­
+work (DBN). The action space of the resulting MDP is the joint action space of
+the entire set of agents. Our approach is based on the use of factored linear value
+functions as an approximation to the joint value function. This factorization of
+the value function allows the agents to coordinate their actions at runtime using
+a natural message passing scheme. We provide a simple and efficient method
+for computing such an approximate value function by solving a single linear pro­
+gram, whose size is determined by the interaction between the value function
+structure and the DBN. We thereby avoid the exponential blowup in the state and
+action space. We show that our approach compares favorably with approaches
+based on reward sharing. We also show that our algorithm is an efficient alterna­
+tive to more complicated algorithms even in the single agent case.
+1 Introduction
+Consider a system where multiple agents, each with its own set of possible actions and its
+own observations, must coordinate in order to achieve a common goal. We want to find a
+mechanism for coordinating the agents' actions so as to maximize their joint utility. One
+obvious approach to this problem is to represent the system as a Markov decision process
+(MDP), where the ``action'' is a joint action for all of the agents and the reward is the total
+reward for all of the agents. Unfortunately, the action space is exponential in the number
+of agents, rendering this approach impractical in most cases. Alternative approaches to
+this problem have used local optimization for the different agents, either via reward/value
+sharing [11, 13] or direct policy search [10].
+We present a novel approach based on approximating the joint value function as a linear
+combination of local value functions, each of which relates only to the parts of the system
+controlled by a small number of agents. We show how such factored value functions al­
+low the agents to find a globally optimal joint action using a very natural message passing
+scheme. We provide a very efficient algorithm for computing such a factored approxima­
+tion to the true value function using a linear programming approach. This approach is of
+independent interest, as it is significantly faster and compares very favorably to previous
+approximate algorithms for single agent MDPs. We also compare our multiagent algorithm
+to the multiagent reward and value sharing algorithms of Schneider et al. [11], showing that
+our algorithm achieves superior performance which in fact is close to the achievable opti­
+mum for this class of problems.
+
+A 1
+A
+A A
+1
+Q
+2
+Q 4
+Q
+3
+Q
+A 3
+A 3
+AA
+AA
+AA
+R 1
+R 1
+3 33
+1 1
+R R
+R
+R R
+(a) (b)
+Figure 1: (a) Coordination graph for a 4­agent problem. (b) A DBN for a 4­agent MDP.
+2 Cooperative Action Selection
+We begin by considering a simpler problem of selecting a globally optimal joint action
+in order to maximize the joint immediate value achieved by a set of agents. Suppose we
+have a collection of agents, where each agent j chooses an action A j . We use A to denote
+fA 1 ; : : : ; A g g. Each agent j has a local Q function Q j , which represents its local contri­
+bution to the total utility function. The agents are jointly trying to maximize Q =
+P
+j Q j .
+An agent's local Q j function might be influenced by its action and those of some other
+agents; we define the scope Scope[Q j ] ae A to be the set of agents whose action influences
+Q j . Each Q j may be further decomposed as a linear combination of functions that involve
+fewer agents; in this case, the complexity of the algorithm may be further reduced.
+Our task is to select a joint action a that maximizes
+P
+j Q j (a). The fact that the Q j
+depend on the actions of multiple agents forces the agents to coordinate their action choices.
+We can represent the coordination requirements of the system using a coordination graph,
+where there is a node for each agent and an edge between two agents if they must directly
+coordinate their actions to optimize some particular Q i . Fig. 1(a) shows the coordination
+graph for an example where Q = Q 1 (a 1 ; a 2 ) +Q 2 (a 2 ; a 4 ) +Q 3 (a 1 ; a 3 ) +Q 4 (a 3 ; a 4 ). A
+graph structure suggests the use of a cost network [5], which can be solved using non­serial
+dynamic programming [1] or a variable elimination algorithm which is virtually identical
+to variable elimination in a Bayesian network.
+The key idea is that, rather than summing all functions and then doing the maximization,
+we maximize over variables one at a time. Specifically, when maximizing over a l , only
+summands involving a l participate in the maximization. Let us begin our optimization
+with agent 4. To optimize A 4 , functions Q 1 and Q 3 are irrelevant. Hence, we obtain:
+max
+a1 ;a2 ;a3
+Q 1 (a 1 ; a 2 ) +Q 3 (a 1 ; a 3 ) + max
+a4
+[Q 2 (a 2 ; a 4 ) +Q 4 (a 3 ; a 4 )]:
+We see that to optimally choose A 4 , the agent must know the values of A 2 and A 3 . In
+effect, it is computing a conditional strategy, with a (possibly) different action choice for
+each action choice of agents 2 and 3. Agent 4 can summarize the value that it brings to
+the system in the different circumstances using a new function e 4 (A 2 ; A 3 ) whose value
+at the point a 2 ; a 3 is the value of the internal max expression. Note that e 4 introduces a
+new induced communication dependency between agents A 2 and A 3 , the dashed line in
+Fig. 1(a).
+Our problem now reduces to computing max a1 ;a2 ;a3 Q 1 (a 1 ; a 2 ) + Q 3 (a 1 ; a 3 ) +
+e 4 (a 2 ; a 3 ), having one fewer agent. Next, agent 3 makes its decision, giving:
+max a1 ;a2 Q 1 (a 1 ; a 2 ) + e 3 (a 1 ; a 2 ), where e 3 (a 1 ; a 2 ) = max a3 [Q 3 (a 1 ; a 3 ) + e 1 (a 2 ; a 3 )].
+Agent 2 now makes its decision, giving e 2 (a 1 ) = max a2 [Q 1 (a 1 ; a 2 ) + e 3 (a 1 ; a 2 )], and
+agent 1 can now simply choose the action a 1 that maximizes e 1 = max a1 e 2 (a 1 ).
+We can recover the maximizing set of actions by performing the entire process in re­
+verse: The maximizing choice for e 1 selects the action a \Lambda
+1 for agent 1. To fulfill its commit­
+ment to agent 1, agent 2 must choose the value a \Lambda
+2 which maximizes e 2 (a \Lambda
+1 ). This, in turn,
+forces agent 3 and then agent 4 to select their actions appropriately.
+
+In general, the algorithm maintains a set F of functions, which initially contains
+fQ 1 ; : : : ; Q g g. The algorithm then repeats the following steps: (1) Select an unelimi­
+nated agent A l . (2) Take all e 1 ; : : : ; e L 2 F whose scope contains A l . (3) Define a new
+function e = max a l
+P
+j e j and introduce it into F ; the scope of e is [ L
+j=1 Scope[e j ] \Gamma fA l g.
+As above, the maximizing action choices are recovered by sending messages in the reverse
+direction. The cost of this algorithm is linear in the number of new ``function values'' intro­
+duced, or exponential in the induced width of the coordination graph [5]. Furthermore, each
+agent does not need to communicate directly with every other agent, instead the necessary
+communication bandwidth will also be the induced width of the graph, further simplifying
+the coordination mechanism. We note that this algorithm is essentially a special case of the
+algorithm used to solve influence diagrams with multiple parallel decisions [7] (as is the
+one in the next section). However, to our knowledge, these ideas have not been applied to
+the problem of coordinating the decision making process of multiple collaborating agents.
+3 One­Step Lookahead
+We now consider two elaborations to the action selection problem of the previous section.
+First, we assume that the agents are acting in a space described by a set of discrete state vari­
+ables, X = fX 1 : : : Xn g, where each X i takes on values in some finite domain Dom(X i ).
+A state x defines a value x i 2 Dom(X i ) for each variable X i . The scope of the local Q j
+functions that comprise the value can include both action choices and state variables. We
+assume that the agents have full observability of the relevant state variables, so by itself,
+this extension is fairly trivial: The Q j functions define a conditional cost network. Given
+a particular state x 1 ; : : : ; xn , the agents instantiate the state variables and then solve the
+cost network as in the previous section. However, we note that the agents do not actually
+need to have access to all of the state variables: agent j only needs to observe the variables
+that are in the scope of its local Q j function, thereby decreasing considerably the amount
+of information each agent needs to observe.
+The second extension is somewhat more complicated: We assume that the agents are
+trying to maximize the sum of an immediate reward and a value that they expect to receive
+one step in the future. We describe the dynamics of the system G using a dynamic decision
+network (DDN) [4]. Let X i denote the variable X i at the current time and X 0
+i the variable
+at the next step. The transition graph of a DDN is a two­layer directed acyclic graph G
+whose nodes are fA 1 ; : : : ; A g ; X 1 ; : : : ; Xn ; X 0
+1 ; : : : ; X 0
+n g, and where only nodes in X 0
+have parents. We denote the parents of X 0
+i in the graph by Parents(X 0
+i ). For simplicity
+of exposition, we assume that Parents(X 0
+i ) ` X [ A. (This assumption can be relaxed,
+but our algorithm becomes somewhat more complex.) Each node X 0
+i is associated with a
+conditional probability distribution (CPD) P (X 0
+i j Parents(X 0
+i )). The transition probabil­
+ity P (x 0 j x; a) is then defined to be
+Q
+i P (x 0
+i j u i ), where u i is the value in x; a of the
+variables in Parents(X 0
+i ). The immediate rewards are a set of functions r 1 ; : : : ; r g , and the
+next­step values are a set of functions h 1 ; : : : ; h g . Here, we assume that both r i 's and h i 's
+are functions that depend only on a small set of variables.
+Fig. 1(b) shows a DDN for a simple four­agent problem, where the ovals represent the
+variables X i and the rectangles the agent actions. The diamond nodes in the first time step
+represent the immediate reward, while the h nodes in the second time step represent the
+future value associated with a subset of the state variables.
+For any setting of the state variables, x, the agents aim to maximize V(x) =
+max a1 ;::: ;ag
+P g
+j=1 [r j (x; a)+
+P
+x 0
+P (x 0 j x; a)h j (x 0 )], i.e., the immediate reward plus the
+expected value of the next state. The expectation is a summation over an exponential num­
+ber of future states. As shown in [8], this can be simplified substantially. For example, if we
+consider the function h 1 (X 0
+1 ) in Fig. 1(b), we can see that its expected value is a function
+only of X 1 ; A 1 ; A 2 . More generally, we define g j (x; a) =
+P
+x 0
+P (x 0 j x; a)h j (x 0 ). Recall
+our assumption that the scope of each h j is only a small subset of variables C j . Then,
+
+the scope of g j is \Gamma(C j ) = [X 0
+i 2C 0
+j
+Parents(X 0
+i ). Specifically, g j (x; a) =
+P
+c 0
+j
+P (c 0
+j j
+z j )h j (c 0
+j ), where z j is a value of \Gamma(C j ). Note that the cost of the computation depends
+linearly on jDom(\Gamma(C j ))j, which depends on C j (the scope of h j ) and on the complexity
+of the process dynamics.
+By replacing the expectation with the backprojection, we can once again generate a set
+of local Q functions Q j = r j +g j , and apply our coordination graph algorithm unchanged.
+4 Markov Decision Processes
+We now turn our attention to the substantially more complex case where the agents are
+acting in a dynamic environment, and are jointly trying to maximize their expected long­
+term return. The Markov Decision Process (MDP) framework formalizes this problem. An
+MDP is defined as a 4­tuple (X; A; R; P ) where: X is a finite set of N = jXj states; A
+is a set of actions; R is a reward function R : X \Theta A 7! IR, such that R(x; a) represents
+the reward obtained in state x after taking action a; and P is a Markovian transition model
+where P (x 0 j x; a) represents the probability of going from state x to state x 0 with action
+a. We assume that the MDP has an infinite horizon and that future rewards are discounted
+exponentially with a discount factor fl 2 [0; 1).
+The optimal value function V \Lambda is defined so that the value of a state must be the maxi­
+mal value achievable by any action at that state. More precisely, we define QV (x; a) =
+R(x; a) + fl
+P
+x 0
+P (x 0 j x; a)V(x 0 ), and the Bellman operator T \Lambda to be T \Lambda V(x) =
+max a QV (x; a). The optimal value function V \Lambda is the fixed point of T \Lambda : V \Lambda = T \Lambda V \Lambda .
+A stationary policy ß for an MDP is a mapping ß : X 7! A, where ß(x) is the action the
+agent takes at state x. For any value function V , we can define the policy obtained by acting
+greedily relative to V : Greedy(V)(x) = arg max a QV (x; a). The greedy policy relative to
+the optimal value function V \Lambda is the optimal policy ß \Lambda = Greedy(V \Lambda ).
+There are several algorithms for computing the optimal policy. One is via linear pro­
+gramming. Numbering the states in X as x 1 ; : : : ; xN , our variables are V 1 ; : : : ; VN , where
+V i represents V(x i ). The LP is:
+Minimize:
+P
+i ff(x i )V i ;
+Subject to: V i – R(x i ; a) + fl
+P
+l P (x 0
+l j x i ; a)V k 8x i 2 X; a 2 A:
+The state relevance weights ff are any convex weights, with ff(x) ? 0 and
+P
+x ff(x) = 1.
+In our setting, the state space is exponentially large, with one state for each as­
+signment x to fX 1 ; : : : ; Xn g. We use the common approach of restricting attention to
+value functions that are compactly represented as a linear combination of basis functions
+H = fh 1 ; : : : ; h k g. A linear value function over H is a function V that can be written as
+V(x) =
+P k
+j=1 w j h j (x) for some coefficients w = (w 1 ; : : : ; w k ) 0 .
+The LP approach can be adapted to use this value function representation [12]:
+Variables: w 1 ; : : : ; w k ;
+Minimize:
+P
+j ff j w j ;
+Subject to:
+P k
+j=1 w j h j (x i ) – R(x i ; a)+
+fl
+P
+x 0
+l
+P (x 0
+l j x i ; a)
+P k
+j=1 w j h j (x 0
+l ); 8x i 2 X; a 2 A:
+Where ff j =
+P
+x i ff(x i )h j (x i ). This transformation has the effect of reducing the number
+of free variables in the LP to k but the number of constraints remains jXj \Theta jAj. There
+is, in general, no guarantee as to the quality of the approximation
+P k
+j=1 w j h j , but recent
+work of de Farias and Van Roy [3] provides some analysis of the error relative to that of
+the best possible approximation in the subspace, and some guidance as to selecting the ff's
+so as to improve the quality of the approximation.
+
+5 Factored MDPs
+Factored MDPs [2] allow the representation of large structured MDPs by using a dynamic
+Bayesian network to represent the transition model. Our representation of the one­step
+transition dynamics in Section 3 is precisely a factored MDP, where we factor not only the
+states but also the actions. In [8], we proposed the use of factored linear value functions
+to approximate the value function in a factored MDP. These value functions are a weighted
+linear combination of basis functions, as above, but each basis function is restricted to de­
+pend only on a small subset of state variables. The h functions in Fig. 1(b) are an example.
+If we had a value function V represented in this way, then we could use our algorithm of
+Section 3 to implement Greedy(V) by having the agents use our message passing coordina­
+tion algorithm at each step. (Here we have only one function h per agent, but our approach
+extends trivially to the case of multiple h functions.)
+In previous work [9, 6], we presented algorithms for computing approximate value func­
+tions of this form for factored MDPs. These algorithms can circumvent the exponential
+blowup in the number of state variables, but explicitly enumerate the action space of the
+MDP, making them unsuitable for the exponentially large action space in multiagent MDPs.
+We now provide a novel algorithm based on the LP of the previous section. In particular,
+we show how we can solve this LP exactly in closed form, without explicitly enumerating
+the exponentially many constraints.
+Our first task is to compute the coefficients ff j in the objective function. Note that, ff j =
+P
+x ff(x)h j (x) =
+P
+c j
+ff(c j )h j (c j ), as basis h j has scope restricted to C j . Here, ff(c j )
+represents the marginal of the state relevance weights ff over C j . Thus, the coefficients ff j
+can be pre­computed efficiently if ff is represented compactly by its marginals ff(C j ). Our
+experiments used uniform weights ff(x) = 1
+jXj
+, thus, ff(c j ) = 1
+jC j j
+.
+We must now deal with the exponentially large constraint set. Using the backprojection
+from Section 3, we can rewrite our constraints as:
+k
+X
+j=1
+w j h j (x) – R(x; a) + fl
+k
+X
+j=1
+w j g j (x; a); 8x 2 X; a 2 A
+where g j (x; a) =
+P
+x 0 P (x 0 j x; a)h j (x 0 ). Note that this exponentially large set of linear
+constraints can be replaced by a single, equivalent, non­linear constraint:
+0 – max
+x;a
+R(x; a) +
+k
+X
+j=1
+w j [flg j (x; a) \Gamma h j (x)]:
+In a factored MDP, the reward function R is represented as the sum of local rewards
+P
+i r i .
+Furthermore, the basis h j and its backprojection g j are also functions that depend only
+on a small set of variables. Thus, the right side of the constraint can be viewed as the
+sum of restricted scope functions parameterized by w. For a fixed w, we can compute
+the maximum over fx; ag using a cost network, as in Section 2. If w is not specified, the
+maximization induces a family of cost networks parameterized by w. As we showed in [6],
+we can turn this cost network into a compact set of LP constraints on the free variable w.
+More generally, suppose we wish to enforce the constraint 0 – max y F w (y), where
+F w (y) =
+P
+j f w
+j (y) such that each f j has a restricted scope. Here, the superscript w
+indicates that each f j might be multiplied by a weight w, but this dependency is linear.
+Consider the cost network used to maximize F w ; let e by any function used in the network,
+including the original f j 's, and let Z be its scope. For any assignment z to Z, we introduce
+a variable u e
+z , whose value represents e(z), into the linear program. For the initial functions
+f w
+j , we include the constraint that u f j
+z = f w
+j (z). As f w
+j is linear in w, this constraint is
+linear in the LP variables. Now, consider a new function e introduced into F by eliminating
+a variable Y l . Let e 1 ; : : : ; e L be the functions extracted from F , with scope Z 1 ; : : : ; ZL
+
+ffl Offline:
+1. Select a set of restricted scope basis functions fh1 ; : : : ; hkg.
+2. Apply efficient LP­based approximation algorithm offline (Section 5) to compute co­
+efficients fw1 ; : : : ; wkg of the approximate value function V =
+P
+j
+w j h j .
+3. Use the one­step lookahead planning algorithm (Section 3) with V as a value function
+estimate to compute local Q j functions for each agent.
+ffl Online: At state x:
+1. Each agent j instantiates Q j with values of state variables in scope of Q j .
+2. Agents apply coordination graph algorithm (Section 2) with local Q j functions to
+coordinate approximately optimal global action.
+Figure 2: Algorithm for multiagent planning with factored MDPs
+respectively. As in the cost network, we want that u e
+z = max y l [
+P L
+j=1 u e j
+z j ] where z j is the
+value of Z j in the instantiation (z; y l ). We enforce this by introducing a set of constraints
+into our LP: u e
+z –
+P L
+j=1 u e j
+z j 8y l . The last function generated in the elimination, e m , has
+an empty domain. We introduce the additional constraint 0 – u em , which is equivalent to
+the global constraint 0 – max y F w (y).
+In the case of cooperative multiagent MDPs, the actions of the individual agents be­
+come variables in the cost network, so that the set Y is simply X [ A. The functions
+f w
+j are simply the local functions corresponding to the rewards r j , the bases h j and their
+backprojections g j . We can thus write down constraints that enforce
+P k
+j=1 w j h j (x) –
+R(x; a) + fl
+P
+x 0 P (x 0 j x; a)
+P k
+j=1 w j h j (x 0 ) over the entire exponential state space and
+joint action space using a number of constraints which is only exponential in the induced
+tree width of the cost network, rather than exponential in the number of actions and state
+variables in the problem.
+A traditional single agent is, of course, a special case of the multiagent case. The LP ap­
+proach described in this section provides an attractive alternative to the methods described
+in [9] and [6]. In particular, our approach requires that we solve a single LP, whose size is
+essentially the size of the cost network. The approach of [6] (which is substantially more
+efficient than that of [9]) requires that we solve an LP for each step in policy iteration,
+and each LP contains constraints corresponding to multiple cost networks (whose number
+depends on the complexity of the policy representation). Furthermore, the LP approach
+eliminates the restrictions on the action model made in [9, 6].
+Our overall algorithm for multiagent planning with factored MDPs in shown in Fig. 2.
+6 Experimental results
+We first validate our approximate LP approach by comparing the quality of the solution
+to the approximate policy iteration (PI) approach of [6]. As the approximate PI algorithm
+is not able to deal with the exponentially large action spaces of multiagent problems, we
+compare these two approaches on the single agent SysAdmin problem presented in [6], on
+a unidirectional ring network of up to 32 machines (over 4 billion states). As shown in
+Fig. 3(b), our new approximate LP algorithm for factored MDPs is significantly faster than
+the approximate PI algorithm. In fact, approximate PI with single­variable basis functions
+variables is more costly than the LP approach using basis functions over consecutive triples
+of variables. As shown in Fig. 3(c), for singleton basis functions, the approximate PI policy
+obtains slightly better performance for some problem sizes. However, as we increase the
+number of basis functions for the approximate LP formulation, the value of the resulting
+policy is much better. Thus, in this problem, our new approximate linear programming
+formulation allows us to use more basis functions and to obtain a resulting policy of higher
+value, while still maintaining a faster running time.
+We constructed a multiagent version of the SysAdmin problem, applied to various net­
+
+0
+0 5 35 0
+0 40
+Figure 3: (a) Network topologies used in our experiments. Graphs: Approximate LP versus
+approximate PI on single agent SysAdmin on unidirectional ring: (b) running time; (c)
+estimated value of policy.
+0
+2 4 6 8 16
+4
+2 6 8 16
+4
+5
+Figure 4: (a) Running time for approximate LP for increasing number of agents. Policy
+performance of approximate LP and DR/DRF: (b) on ``star''; (c) on ``ring of rings''.
+work architectures shown in Fig. 3(a). Each machine is associated with an agent A i and
+two variables: Status S i 2 fgood, faulty, deadg, and Load L i 2 fidle, loaded, process suc­
+cessfulg. A dead machine increases the probability that its neighbors will become faulty
+and die. The system receives a reward of 1 if a process terminates successfully. If the
+Status is faulty, processes take longer to terminate. If the machine dies, the process is lost.
+Each agent A i must decide whether machine i should be rebooted, in which case the Status
+becomes good and any running process is lost. For a network of n machines, the number
+of states in the MDP is 9 n and the joint action space contains 2 n possible actions, e.g., a
+problem with 30 agents has over 10 28 states and a billion possible actions.
+We implemented the factored approximate linear programming and the message pass­
+ing coordination algorithms in Matlab, using CPLEX as the LP solver. We experimented
+with two types of basis functions: ``single'', which contains an indicator basis function for
+each value of each S i and L i ; and ``pair'' which, in addition, contains indicators over joint
+assignments of the Status variables of neighboring agents. We use fl = 0:95.
+As shown in Fig. 4(a), the total running time of the algorithm grows linearly in the
+number of agents, for each fixed network and basis type. This is the expected asymptotic
+behavior, as each problem has a fixed induced tree width of the cost network. (The induced
+tree width for pair basis on the ``ring of rings'' problem was too large.)
+For comparison, we also implemented the distributed reward (DR) and distributed value
+function (DRF) algorithms of Schneider et al. [11]. Here we used 10000 learning iterations,
+with learning and exploration rates starting at 0:1 and 1:0 respectively and a decaying
+schedule after 5000 iterations; the observations for each agent were the status and load of its
+machine. The results of the comparison are shown in Fig. 4(b) and (c). We also computed
+a utopic upper bound on the value of the optimal policy by removing the (negative) effect
+of the neighbors on the status of the machines. This is a loose upper bound, as a dead
+neighbor increases the probability of a machine dying by about 50%. For both network
+topologies tested, the estimated value of the approximate LP solution using single basis
+was significantly higher than that of the DR and DRF algorithms. Note that the single
+
+basis solution requires no coordination when acting, so this is a ``fair'' comparison to DR
+and DRF which also do not communicate while acting. If we allow for pair bases, which
+implies agent communication, we achieve a further improvement in terms of estimated
+value. The policies obtained tended to be intuitive: e.g., for the ``star'' topology with pair
+basis, if the server becomes faulty, it is rebooted even if loaded. but for the clients, the
+agent waits until the process terminates or the machine dies before rebooting.
+7 Conclusion
+We have provided principled and efficient approach to planning in multiagent domains.
+Rather than placing a priori restrictions on the communication structure between agents,
+we first choose the form of an approximate value function and derive the optimal commu­
+nication structure given the value function architecture. This approach provides a unified
+view of value function approximation and agent communication. We use a novel linear
+programming technique to find an approximately optimal value function. The inter­agent
+communication and the LP avoid the exponential blowup in the state and action spaces,
+having computational complexity dependent, instead, upon the induced tree width of the
+coordination graph used by the agents to negotiate their action selection. By exploiting
+structure in both the state and action spaces, we can deal with considerably larger MDPs
+than those described in previous work. In a family of multiagent network administration
+problems with over 10 28 states and over a billion actions, we have demonstrated near opti­
+mal performance which is superior to a priori reward or value sharing schemes. We believe
+the methods described herein significantly further extend the efficiency, applicability and
+general usability of factored value functions and models for the control of dynamic systems.
+Acknowledgments: This work was supported by ONR under MURI ``Decision Making Under
+Uncertainty'', the Sloan Foundation, and the first author was also supported by a Siebel scholarship.
+References
+[1] U. Bertele and F. Brioschi. Nonserial Dynamic Programming. Academic Press, 1972.
+[2] C. Boutilier, T. Dean, and S. Hanks. Decision theoretic planning: Structural assumptions and
+computational leverage. Journal of Artificial Intelligence Research, 11:1 -- 94, 1999.
+[3] D.P. de Farias and B. Van Roy. The linear programming approach to approximate dynamic
+programming. submitted to the IEEE Transactions on Automatic Control, January 2001.
+[4] T. Dean and K. Kanazawa. A model for reasoning about persistence and causation. Computa­
+tional Intelligence, 5(3):142--150, 1989.
+[5] R. Dechter. Bucket elimination: A unifying framework for reasoning. Artificial Intelligence,
+113(1--2):41--85, 1999.
+[6] C. Guestrin, D. Koller, and R. Parr. Max­norm projections for factored MDPs. In Proc. 17th
+IJCAI, 2001.
+[7] F. Jensen, F. Jensen, and S. Dittmer. From influence diagrams to junction trees. In Uncer­
+tainty in Artificial Intelligence: Proceedings of the Tenth Conference, pages 367--373, Seattle,
+Washington, July 1994. Morgan Kaufmann.
+[8] D. Koller and R. Parr. Computing factored value functions for policies in structured MDPs. In
+Proceedings of the Sixteenth International Joint Conference on Artificial Intelligence (IJCAI­
+99). Morgan Kaufmann, 1999.
+[9] D. Koller and R. Parr. Policy iteration for factored MDPs. In Proc. 16th UAI, 2000.
+[10] L. Peshkin, N. Meuleau, K. Kim, and L. Kaelbling. Learning to cooperate via policy search. In
+Proc. 16th UAI, 2000.
+[11] J. Schneider, W. Wong, A. Moore, and M. Riedmiller. Distributed value functions. In Proc.
+16th ICML, 1999.
+[12] P. Schweitzer and A. Seidmann. Generalized polynomial approximations in Markovian decision
+processes. Journal of Mathematical Analysis and Applications, 110:568 -- 582, 1985.
+[13] D. Wolpert, K. Wheller, and K. Tumer. General principles of learning­based multi­agent sys­
+tems. In Proc. 3rd Agents Conference, 1999.
+

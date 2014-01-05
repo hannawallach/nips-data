@@ -1,0 +1,420 @@
+Invariant Pattern Recognition by Semidefinite Programming Machines
+
+Thore Graepel Microsoft Research Ltd. Cambridge, UK thoreg@microsoft.com Ralf Herbrich Microsoft Research Ltd. Cambridge, UK rherb@microsoft.com
+
+Abstract Knowledge about local invariances with respect to given pattern transformations can greatly improve the accuracy of classification. Previous approaches are either based on regularisation or on the generation of virtual (transformed) examples. We develop a new framework for learning linear classifiers under known transformations based on semidefinite programming. We present a new learning algorithm-- the Semidefinite Programming Machine (SDPM)--which is able to find a maximum margin hyperplane when the training examples are polynomial trajectories instead of single points. The solution is found to be sparse in dual variables and allows to identify those points on the trajectory with minimal real-valued output as virtual support vectors. Extensions to segments of trajectories, to more than one transformation parameter, and to learning with kernels are discussed. In experiments we use a Taylor expansion to locally approximate rotational invariance in pixel images from USPS and find improvements over known methods.
+
+1 Introduction One of the central problems of pattern recognition is the exploitation of known invariances in the pattern domain. In images these invariances may include rotation, translation, shearing, scaling, brightness, and lighting direction. In addition, specific domains such as handwritten digit recognition may exhibit invariances such as line thinning/thickening and other non-uniform deformations [8]. The challenge is to combine the training sample with the knowledge of invariances to obtain a good classifier. Possibly the most straightforward way of incorporating invariances is by including virtual examples into the training sample which have been generated from actual examples by the application of the invariance T : R × Rn  Rn at some fixed   R, e.g. the method of virtual support vectors [7]. Images x subjected to the transformation T(,·) describe highly non-linear trajectories or manifolds in pixel space. The tangent distance [8] approximates the distance between the trajectories (manifolds) by the distance between their tangent vectors (planes) at a given value  = 0 and can be used with any kind of distance-based classifier. Another approach, tangent prop [8], incorporates the invariance T directly into the objective function for learning by penalising large values of the derivative of the classification function w.r.t. the given
+
+
+transformation parameter. A similar regulariser can be applied to support vector machines [1]. We take up the idea of considering the trajectory given by the combination of training vector and transformation. While data in machine learning are commonly represented as vectors x  Rn we instead consider more complex training examples each of which is represented as a (usually infinite) set {T(,xi) :   R}  Rn , (1) which constitutes a trajectory in Rn. Our goal is to learn a linear classifier that separates well the training trajectories belonging to different classes. In practice, we may be given a "standard" training example x together with a differentiable transformation T representing an invariance of the learning problem. The problem can be solved if the transformation T is approximated by a transformation T polynomial in , e.g., ~ a Taylor expansion of the form
+
+r r
+
+j ·
+
+1 djT(,xi) j! dj
+
+= T(,xi)  ~ j · (Xi)j, . · (2)
+
+j=0 =0 j=0
+
+Our approach is based on a powerful theorem by Nesterov [5] which states that the set P2 of polynomials of degree 2l non-negative on the entire real line is a convex set can be formulated as a semidefinite program (SDP). Recall that an SDP [9] is given by a linear objective function minimised subject to a linear matrix inequality (LMI), minimise c w subject to A(w) := wjAj - B 0, (3)
+
++ l
+
+representable by positive semidefinite (psd) constraints. Hence, optimisation over P2 + l
+
+n
+
+wRn
+
+with Aj  Rm
+
+×m
+
+j=1
+
+The LMI A(w) for all j  {0,...,n}. 0 means that
+
+A(w) is required to be positive semidefinite, i.e., that for all v  Rn we have correspond to infinitely many linear constraints. This expressive power can be used to enforce constraints for training examples as given by (1), i.e., constraints required to hold for all values   R. Based on this representability theorem for non-negative polynomials we develop a learning algorithm--the Semidefinite Programming Machine (SDPM)--that maximises the margin on polynomial training samples, much like the support vector machine [2] for ordinary single vector data. 2 Semidefinite Programming Machines Linear Classifiers and Polynomial Examples We consider binary classification problems and linear classifiers. Given a training sample ((x1,y1),...,(xm,ym))  (Rn × {-1,+1})m we aim at learning a weight vector1 w  Rn to classify examples x by y (x) = sign w x . Assuming linear separability of the training sample the principle of empirical risk minimisation recommends finding a weight vector w such that for all i  {1,...,m} we have yiw xi  0. As such this constitutes a linear feasibility problem and is easily solved by the perceptron algorithm [6]. Additionally requiring the solution to maximise the margin leads to the well-known quadratic program of support vector learning [2]. In order to be able to cope with known invariances T(,·) we would like to generalise the above setting to the following feasibility problem: find w  Rn such that i  {1,...,m} :   R : yiw xi ()  0, (4)
+
+v A(w)v = n j=1 wj v Ajv - v Bv  0 which reveals that LMI constraints
+
+1 We omit an explicit threshold to unclutter the presentation.
+
+
+)x(
+
+ 2
+
+0.65 0.6 0.55 0.5 0.45 0.4 0.35 0.3 0.25 0.2
+
+SVM version space
+
+0.1 0.2
+
+0.3 1(x) 0.4 0.5 SDPM version space
+
+Figure 1: (Left) Approximated trajectories for rotated USPS images (2) for r = 1 (dashed line) and r = 2 (dotted line). The features are the mean pixel intensities in the top and bottom half of the image. (Right) Set of weight vectors w which are consistent with the six images (top) and the six trajectories (bottom). The SDPM version space is smaller and thus determines the weight vector more precisely. The dot corresponds to the separating plane in the left plot.
+
+that is, we would require the weight vector to classify correctly every transformed training example xi () := T(,xi) for every value of the transformation parameter . The situation is illustrated in Figure 1. In general, such a set of constraints leads to a very complex and difficult-to-solve feasibility problem. As a consequence, we consider only transformations T(,x) of polynomial form, i.e., xi () := T(,xi) = Xi , each polynomial example xi () being represented by a polynomial in the row vectors of ~
+
+~ ~ ~
+
+Xi  R( r+1)×n , with  := (1,,...,r) . Then the problem (4) can be written as
+
+find w  Rn such that i  {1,...,m} :   R : yiw Xi   0, (5)
+
+which is equivalent to finding a weight vector w such that the polynomials pi () := yiw Xi  are non-negative everywhere, i.e., pi  Pr . The following proposition by
+
++
+
+Nesterov [5] paves the way for an SDP formulation of the above problem if r = 2l. Proposition 1 (SD Representation of Non-Negative Polynomials [5]). The set P2 of polynomials non-negative everywhere on the real line is SD-representable:
+
++ l
+
+1. For every P 0 the polynomial p() =  P is non-negative everywhere.
+
+2. For every polynomial p  P2 there exists a P + l 0 such that p() =  P.
+
+Proof. Any polynomial p  P2 can be written as p() =  P, where P = P  l
+
+hence p  P2 . Statement 2: Every non-negative polynomial p  P2 can be written as
+
+a sum of squared polynomials [4], hence qi  Pl : p() =
+
+where P := i qiqi
+
+i i
+
+q2 () = 
+
+i qiqi 
+
+0 and qi is the coefficient vector of polynomial qi.
+
+R( l+1)×(l+1) . Statement 1: P
+
++ l
+
+0 implies   R : p() =  P = P2
+
++ l
+
+1
+
+2  0,
+
+Maximising Margins on Polynomial Samples Here we develop an SDP formulation for learning a maximum margin classifier given the polynomial constraints
+
+
+(5). It is well-known that SDPs include quadratic programs as a special case [9]. The squared objective w is minimised by replacing it with an auxiliary variable t
+
+2
+
+subject to a quadratic constraint t  w complement lemma,
+
+minimise subject to (w,t) 1t 2
+
+2 that is written as an LMI using Schur's
+
+F(w,t) := In w w t
+
+n
+
+0,
+
+and i : G(w,Xi,yi) := G0 + wjGj (Xi)· ,yi ,j 0. (6)
+
+j=1
+
+This constitutes an SDP as in (3) by the fact that a block-diagonal matrix is psd if and only if all its diagonal blocks are psd. For the sake of illustration consider the case of l = 0 (the simplest non-trivial case). The matrix G(w,Xi,yi) reduces to a scalar yiw xi - 1, which translates into the standard SVM constraint yiw xi  1 linear in w.
+
+For the case l = 1 we have G(w,Xi,yi)  R2
+
+G(w,Xi,yi) =
+
+×2 and
+
+yiw (Xi)0 - 1 ,·
+
+yiw (Xi)1
+
+1 2
+
+,·
+
+1 2
+
+yiw (Xi)1 ,·
+
+. (7)
+
+yiw (Xi)2 ,·
+
+Although we require G(w,Xi,yi) to be psd the resulting optimisation problem can be formulated in terms of a second-order cone program (SOCP) because the matrices involved are only 2 × 2.2 For the case l  2 the resulting program constitutes a genuine SDP. Again for the sake of illustration we consider the case l = 2 first. Since a polynomial p of degree four is in p() =  P has six degrees of freedom we require one auxiliary variable ui per
+
+fully determined by its five coefficients p0,...,p4, but the symmetric matrix P  R3 ×3
+
+training example, G(w,ui,Xi,yi) =
+
+1 2
+
+ 
+
+2yiw (Xi)0 - 2 yiw (Xi)1 ,·
+
+yiw (Xi)1
+
+yiw (Xi)2 - ui yiw (Xi)3
+
+,·
+
+,·
+
+2ui ,·
+
+yiw (Xi)2 - ui ,·
+
+yiw (Xi)3 yiw (Xi)4
+
+,· ,·
+
+,·
+
+ 
+
+.
+
+In general, since a polynomial of degree 2l has 2l + 1 coefficients and a symmetric (l + 1) × (l + 1) matrix has (l + 1)(l + 2)/2 degrees of freedom we require (l - 1)l/2 auxiliary variables. Dual Program and Complementarity Let us consider the dual SDPs corresponding to the optimisation problems above. For the sake of clarity, we restrict the presentation to the case l = 1. The dual of the general SDP (3) is given by maximise tr(B) subject to j  {1,...,n} : tr(Aj) = cj;  0, where we introduced a matrix  of dual variables. The complementarity conditions for the optimal solution (w,t) read A((w,t)) = 0. The dual formulation of (6) with matrix (7) combined with the F(w,t) part of the complementarity conditions reads
+
+Rm ×m
+
+m m m
+
+maximise yiyj [x(i,i,i,Xi)] [x(j,j,j,Xj)] +
+
+(,,)R3 m
+
+i=1 j=1
+
+1 -2 ~ ~ i
+
+i=1
+
+subject to i  {1,...,m} : Mi := i i i i 0, (8)
+
+2 The characteristic polynomial of a 2×2 matrix is quadratic and has at most two solutions.
+
+The condition that the lower eigenvalue be non-negative can be expressed as a second-order cone constraint. The SOCP formulation--if applicable--can be solved more efficiently than the SDP formulation.
+
+
+where we define extrapolated training examples x(i,i,i,Xi) := i(Xi)0 + i(Xi)1 + i(Xi)2 . As before this program with quadratic objective and psd con-
+
+,·
+
+,· ,·
+
+straints can be formulated as a standard SDP in the form (3) and is easily solved by a standard SDP solver3. In addition, the complementarity conditions reveal that the optimal weight vector w can be expanded as
+
+m
+
+w = yix(i,i,i,Xi) , ~ (9)
+
+~
+
+i=1
+
+in analogy to the corresponding result for support vector machines [2]. It remains to analyse the complementarity conditions related to the example-related G(w,Xi,yi) constraints in (6). Using (7) and assuming primal and dual feasibility we obtain for all i  {1,...,m} at the solution (w,t,Mi ),
+
+G(w,Xi,yi) · Mi = 0, the trace of which translates into yiw [i (Xi)0 + i (Xi)1 + i (Xi)2 ] = i .
+
+,     ,· ,· ,·
+
+(10)
+
+(11)
+
+These relations enable us to characterise the solution by the following propositions: Proposition 2 (Sparse Expansion). The expansion (9) of w in terms of Xi is sparse: Only those examples Xi ("support vectors") may have non-zero expansion coefficients i which lie on the margin, i.e., for which det(Gi (w,Xi,yi)) = 0. Fur-
+
+
+
+thermore, in this case i = 0 implies i = i = 0. Proof. We assume i = 0 and derive a contradiction. From G(w,Xi,yi)
+
+
+
+  
+
+0 we
+
+conclude using Proposition 1 that for all   R we have yiw ((Xi)0 + (Xi)1 + 2(Xi)2 ) > 1. Furthermore, we conclude from (10) that det(Mi ) = i i - i = 0, which together with the assumption i = 0 implies that there exists ~  R such that
+
+,· ,·   2
+
+,·
+
+
+
+i = i and i = i /i = ~2i . Inserting this into (11) leads to a contradiction,
+
+   2  
+
+hence i = 0. Then, det(Mi ) = 0 implies i = 0 and the fact that G(w,Xi,yi)
+
+  , 
+
+0  yiw (Xi)2 = 0 ensures that i = 0 holds as well. Proposition 3 (Truly Virtual Support Vectors). For all examples Xi lying on the margin, i.e., satisfying det(G(w,Xi,yi)) = 0 and det(Mi ) = 0 there exist i  R  {} such that the optimal weight vector w can be written as
+
+,·
+
+m m
+
+i yixi (i) =  ~ w = yii (Xi)0 + i (Xi)1 + i (Xi)2 ,· ,·
+
+i=1 i=1
+
+  2
+
+~
+
+,
+
+,·
+
+Proof. (sketch) We have det(Mi ) = - = 0. We only need to consider i = 0, in which case there exists i such that i = i i and i = i i . The other cases
+
+     2 
+
+are ruled out by the complementarity conditions (10). Based on this proposition it is possible not only to identify which examples Xi are used in the expansion of the optimal weight vector w, but also the corresponding values i of the transformation parameter . This extends the idea of virtual support
+
+
+
+vectors [7] in that Semidefinite Programming Machines are capable of finding truly virtual support vectors that were not explicitly provided in the training sample.
+
+3 We used the SDP solver SeDuMi together with the LMI parser Yalmip under MATLAB
+
+2 
+
+(see also http://www-user.tu-chemnitz.de/~helmberg/semidef.html).
+
+
+3 Extensions to SDPMs Optimisation on a Segment In many applications it may not be desirable to enforce correct classification on the entire trajectory given by the polynomial example x(). In particular, when the polynomial is used as a local approximation to a global ~ invariance we would like to restrict the example to a segment of the trajectory. To this end consider the following corollary to Proposition 1. Corollary 1 (SD-Representability on a segment [5]). For any l  N, the set Pl (-,) of polynomials non-negative on a segment [-,] is SD-representable.
+
++
+
+Proof. (sketch) Consider a polynomial p  Pl (-,) where p := x  q := x  1 + x2 · [p((2x2(1 + x2)- - 1))]. If q  P2 is non-negative everywhere then p is non-negative in [-,].
+
+l 1
+
++ l
+
++
+
+l i=0 pixi and
+
+The proposition shows how we can restrict the examples x() to a segment   [-,] ~ by effectively doubling the degree of the polynomial used. This is the SDPM version used in the experiments in Section 4. Note that the matrix G(w,Xi,yi) is sparse because the resulting polynomial contains only even powers of . Multiple Transformation Parameters In practice it would be desirable to treat more than one transformation at once. For example, in handwritten digit recognition transformations like rotation, scaling, translation, shearing, thinning/thickening etc. may all be relevant [8]. Unfortunately, Proposition 1 only holds for polynomials in one variable. However, its first statement may be generalised to polynomials of more than one variable: for every psd matrix P 0 the polynomial p() =  P is non-negative everywhere, even if i is any monomial in 1,...,D. This means, that optimisation is only over a subset of these polynomials4. Considering polynomials of degree two and  := (1,1,...,D) we have,
+
+xi ()   ~ denotes the gradient and
+
+xi (0) x (0)
+
+ i
+
+ 
+
+
+
+xi (0)
+
+ xi (0)
+
+ ,
+
+
+
+where  denotes the Hessian operator.
+
+Note that the scaling behaviour with regard to the number D of parameters is more benign than that of the naive method of adding virtual examples to the training sample on a grid. Such a procedure would incur an exponential growth in the number of examples, whereas the approximation above only exhibits a linear growth in the size of the matrices involved. Learning with Kernels Support vector machines derive much of their popularity from the flexibility added by the use of kernels [2, 7]. Due to space restrictions we cannot discuss kernels in detail. However, taking the dual SDPM (8) as a starting point and assuming the Taylor expansion (2) the crucial point is that in order to represent the polynomial trajectory in feature space we need to differentiate through the kernel function. Let us assume a feature map  : Rn  F  RN and k : X × X  R be the kernel function corresponding to  in the sense that x,x  X : [(x)] [(x)] = k (x,x). ~ ~ ~
+
+4 There exist polynomials in more than one variable that are non-negative everywhere yet
+
+cannot be written as a sum of squares and are hence not SD-representable.
+
+
+0.2 0.18 0.16 0.14 0.12 0.1 0.08
+
+error
+
+SDPM
+
+0.2 0.18 0.16 0.14 0.12 0.1 0.08 0.06 0.04 0.02 0 0
+
+0.14
+
+0.12
+
+0.1
+
+0.08 error
+
+0.06
+
+SDPM
+
+0.04
+
+0.02
+
+0.05
+
+0.1 0.15 0.2
+
+(a)
+
+0.25 0.3 0.35 0.1 SVM error
+
+(b)
+
+0.15 0.2 0 0 0.02 0.04 0.06 0.08 0.1 0.12 0.14
+
+VSVM error
+
+(c)
+
+Figure 2: (a) A linear classifier learned with the SDPM on 10 2D-representations of the USPS digits "1" and "9" (see Figure 1 for details). Note that the "support" vector is truly virtual since it was never directly supplied to the algorithm (inset zoom-in). (b) Mean test errors of classifiers learned with the SVM vs. SDPM (see text) and (c) virtual SVM vs. SDPM algorithm on 50 independent training sets of size m = 20 for all 45 digit classification tasks.
+
+The Taylor expansion (2) is now carried out in F. Then an inner product expression between data points xi and xj differentiated, respectively, u and v times reads
+
+N
+
+( (xi)
+
+k( u,v)
+
+u) ( (xj) =
+
+(xi,xj)
+
+v)
+
+dus(x()) du ·
+
+ 
+
+s=1 x=xi,=0
+
+dvs(x(~)) ~ d~v
+
+ 
+
+.
+
+x=xj,~=0 ~
+
+The kernel trick may help avoid the sum over N feature space dimensions, however, it does so at the cost of additional terms by the product rule of differentiation. It turns out that for polynomials of degree r = 2 the exact calculation of elements of the kernel matrix is already O n4 and needs to be approximated efficiently in practice. 4 Experimental Results In order to test and illustrate the SDPM we used the well-known USPS data set of 16 × 16 pixel images in [0,1] of handwritten digits. We considered the transformation rotation by angle  and calculated the first and second derivatives xi ( = 0) and xi ( = 0) based on an image representation smoothed by a Gaussian of variance 0.09. For the purpose of illustration we calculated two simple features, averaging the first and the second 128 pixel intensities, respectively. Figure 2 (a) shows a plot of 10 training examples of digits "1" and "9" together with the quadratically approximated trajectories for   [-20,20]. The examples are separated by the solution found with an SDPM restricted to the same segment of the trajectory. Following Propositions 2 and 3 the weight vector found is expressed as a linear combination of truly virtual support vectors that had not been supplied in the training sample directly (see inset). In a second experiment, we probed the performance of the SDPM algorithm on the full feature set of 256 pixel intensities using 50 training sets of size m = 20 for each of the 45 one-versus-one classification tasks between all of the digits from "0" to "9" from the USPS data set. For each task, the digits in one class were rotated by -10 and the digits of the other class by +10. We compared the performance of the SDPM algorithm to the performance of the original support vector machine (SVM) [2] and the virtual support vector machine (VSVM) [7] measured on independent test sets of size 250. The VSVM takes the support vectors of the ordinary SVM run and is trained on a sample that contains these support vectors together with transformed versions rotated by -10 and +10 in the quadratic approximation. The results are
+
+
+shown in the form of scatter plots of the errors for the 45 tasks in Figure 2 (b) and (c). Clearly, taking into account the invariance is useful and leads to SDPM performance superior to the ordinary SVM. The SDPM also performs slightly better than the VSVM, however, this could be attributed to the pre-selection of support vectors to which the transformation is applied. It is expected that for increasing number D of transformations the performance improvement becomes more pronounced because in high dimensions most volume is concentrated on the boundary of the convex hull of the polynomial manifold. 5 Conclusion We introduced Semidefinite Programming Machines as a means of learning on infinite families of examples given in terms of polynomial trajectories or--more generally-- manifolds in data space. The crucial insight lies in the SD-representability of nonnegative polynomials which allows us to replace the simple non-negativity constraint in algorithms such as support vector machines by positive semidefinite constraints. While we have demonstrated the performance of the SDPM only on very small data sets it is expected that modern interior-point methods make it possible to scale SDPMs to problems of m  105 - 106 data points, in particular in primal space where the number of variables is given by the number of features. This expectation is further supported by the following: (i) The resulting SDP is well structured in the sense that A(w,t) is block-diagonal with many small blocks. (ii) It may often be sufficient to satisfy the constraints--e.g., by a version of the perceptron algorithm for semidefinite feasibility problems [3]--without necessarily maximising the margin. Open questions remain about training SDPMs with multiple parameters and about the efficient application of SDPMs with kernels. Finally, it would be interesting to obtain learning theoretical results regarding the fact that SDPMs effectively make use of an infinite number of (non IID) training examples. References [1] O. Chapelle and B. Sch¨olkopf. Incorporating invariances in non-linear support vector machines. In T. G. Dietterich, S. Becker, and Z. Ghahramani, editors, Advances in Neural Information Processing Systems 14, pages 609­616, Cambridge, MA, 2002. MIT Press. [2] C. Cortes and V. Vapnik. Support vector networks. Machine Learning, 20:273­297, 1995. [3] T. Graepel, R. Herbrich, A. Kharechko, and J. Shawe-Taylor. Semidefinite programming by perceptron learning. In S. Thrun, L. Saul, and B. Sch¨olkopf, editors, Advances in Neural Information Processing Systems 16. MIT Press, 2004. [4] A. Nemirovski. Five lectures on modern convex optimization, 2002. Lecture notes of the C.O.R.E. Summer School on Modern Convex Optimization. [5] Y. Nesterov. Squared functional systems and optimization problems. In H. Frenk, K. Roos, T. Terlaky, and S. Zhang, editors, High Performance Optimization, pages 405­ 440. Kluwer Academic Press, 2000. [6] F. Rosenblatt. The perceptron: A probabilistic model for information storage and organization in the brain. Psychological Review, 65(6):386­408, 1958. [7] B. Sch¨olkopf. Support Vector Learning. R. Oldenbourg Verlag, M¨unchen, 1997. Doktorarbeit, TU Berlin. Download: http://www.kernel-machines.org. [8] P. Simard, Y. LeCun, J. Denker, and B. Victorri. Transformation invariance in pattern recognition, tangent distance and tangent propagation. In G. Orr and M. K., editors, Neural Networks: Tricks of the trade. Springer, 1998. [9] L. Vandenberghe and S. Boyd. Semidefinite programming. SIAM Review, 38(1):49­95, 1996.
+
+

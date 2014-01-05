@@ -1,0 +1,573 @@
+Tempo Tracking and Rhythm
+Quantization by Sequential Monte Carlo
+Ali Taylan Cemgil and Bert Kappen
+SNN, University of Nijmegen
+NL 6525 EZ Nijmegen
+The Netherlands
+{cemgil,bert}@mbfys.kun.nl
+Abstract
+We present a probabilistic generative model for timing deviations
+in expressive music performance. The structure of the proposed
+model is equivalent to a switching state space model. We formu-
+late two well known music recognition problems, namely tempo
+tracking and automatic transcription (rhythm quantization) as l-
+tering and maximum a posteriori (MAP) state estimation tasks.
+The inferences are carried out using sequential Monte Carlo in-
+tegration (particle ltering) techniques. For this purpose, we have
+derived a novel Viterbi algorithm for Rao-Blackwellized particle l-
+ters, where a subset of the hidden variables is integrated out. The
+resulting model is suitable for realtime tempo tracking and tran-
+scription and hence useful in a number of music applications such
+as adaptive automatic accompaniment and score typesetting.
+1 Introduction
+Automatic music transcription refers to extraction of a high level description from
+musical performance, for example in form of a music notation. Music notation can
+be viewed as a list of the pitch levels and corresponding timestamps.
+Ideally, one would like to recover a score directly from sound. Such a representation
+of the surface structure of music would be very useful in music information retrieval
+(Music-IR) and content description of musical material in large audio databases.
+However, when operating on sampled audio data from polyphonic acoustical signals,
+extraction of a score-like description is a very challenging auditory scene analysis
+task [13].
+In this paper, we focus on a subproblem in music-ir, where we assume that exact
+timing information of notes is available, for example as a stream of MIDI 1 events
+1 Musical Instruments Digital Interface. A standard communication protocol especially
+designed for digital instruments such as keyboards. Each time a key is pressed, a MIDI
+keyboard generates a short message containing pitch and key velocity. A computer can tag
+each received message by a timestamp for real-time processing and/or \recording" into a
+le.
+
+from a digital keyboard.
+A model for tempo tracking and transcription is useful in a broad spectrum of ap-
+plications. One example is automatic score typesetting, the musical analog of word
+processing. Almost all score typesetting applications provide a means of automatic
+generation of a conventional music notation from MIDI data.
+In conventional music notation, onset time of each note is implicitly represented
+by the cumulative sum of durations of previous notes. Durations are encoded by
+simple rational numbers (e.q. quarter note, eight note), consequently all events in
+music are placed on a discrete grid. So the basic task in MIDI transcription is to
+associate discrete grid locations with onsets, i.e. quantization.
+However, unless the music is performed with mechanical precision, identication of
+the correct association becomes di∆cult. Consequently resulting scores have often
+very poor quality. This is due to the fact that musicians introduce intentional (and
+unintentional) deviations from a mechanical prescription. For example timing of
+events can be deliberately delayed or pushed. Moreover, the tempo can uctuate
+by slowing down or accelerating. In fact, such deviations are natural aspects of
+expressive performance; in the absence of these, music tends to sound rather dull.
+Robust and fast quantization and tempo tracking is also an important requirement
+in interactive performance systems. These are emerging applications that \listen"
+to the performance for generating an accompaniment or improvisation in real time
+[10, 12]. At last, such models are also useful in musicology for systematic study and
+characterization of expressive timing by principled analysis of existing performance
+data.
+2 Model
+Consider the following generative model for timing deviations in music
+c k = c k 1 +  k 1 (1)
+! k = ! k 1 +  k (2)
+ k =  k 1 + 2 !k (c k c k 1 ) (3)
+y k =  k +  k (4)
+In Eq. 1, c k denotes the grid location of k'th onset in a score. The interval between
+two consecutive onsets in the score is denoted by  k 1 . For example consider the
+notation
+
+
+
+which encodes  1:3 = [1 0:5 0:5], hence c 1:4 = [0 1 1:5 2]. We
+assign a prior of form p(c k ) / exp( d(c k )) where d(c k ) is the number of signicant
+digits in the binary expansion of the fraction of c k [1]. One can check that such a
+prior prefers simpler notations, e.g. p(
+
+
+6
+
+
+6
+
+) < p(
+
+
+
+). We note that c k are
+drawn from an innite (but discrete) set and are increasing in k, i.e c k  c k 1 . To
+allow for dierent time signatures and alternative rhythmic subdivisions, one can
+introduce additional hidden variables [1], but this is not addressed in this paper.
+Eq. 2 denes a prior over possible tempo deviations. We denote the logarithm of
+the period (inverse tempo) by !. For example if the tempo is 60 beats per minute
+(bpm), ! = log 1sec = 0. Since tempo appears as a scale variable in mapping grid
+locations on a score to the actual performance time, we have chosen to represent it
+in the logarithmic scale (eventually a gamma distribution can also be used). This
+representation is both perceptually plausible and mathematically convenient since a
+symmetric noise model on ! assigns equal probabilities to equal relative changes in
+tempo. We take  k to be a Gaussian random variable with N (0;  2  k Q). Depending
+
+upon the interval between consecutive onsets, the model scales the noise covariance;
+longer jumps in the score allow for more freedom in uctuating the tempo. Given
+the ! sequence, Eq. 3 denes a model of noiseless onsets with variable tempo. We
+will denote the pair of hidden continuous variables by z k = ( k ; ! k ).
+Eq. 4 denes the observation model. Here y k is the observed onset time of the
+k'th onset in the performance. The noise term  k models small scale expressive
+deviations in timing of individual notes and has a Gaussian distribution parame-
+terized by N (( k 1 ); ( k 1 )). Such a parameterization is useful for appropriate
+quantization of phrases (short sequences of notes) that are shifted or delayed as a
+whole [1].
+In reality, a random walk model for tempo such as in Eq. 2 is not very realistic.
+Tempo deviations are usually more smooth. In the dynamical model framework
+such smooth deviations can be allowed by increasing the dimensionality of ! by
+include higher order \inertia" variables [2]. In this case we simply rewrite Eq. 2 as
+! k = A! k 1 +  k
+and take a diagonal Q. Accordingly, the observation model (Eq. 4) changed such
+that ! k is replaced by C! k where C = [1 0 : : : 0].
+The graphical model is shown in Figure 1. The model is similar to a switching
+state space model, that has been recently applied in the context of music tran-
+scription [11]. The dierences are in parameterization and more importantly in the
+inference method.
+c 1
+##
+## #
+#
+#
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+: : :
+##
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# c k 1
+##
+##
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+c k
+##
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+: : :
+z 1
+##
+## : : :
+## z k 1
+##
+##
+z k
+##
+: : :
+y 1 : : : y k 1 y k : : :
+Figure 1: Graphical Model. The pair of continuous hidden variables ( k ; ! k ) is
+denoted by z k . Both c and z are hidden; only the onsets y are observed.
+We dene tempo tracking as a ltering problem
+z 
+k = argmax
+zk
+X
+c k
+p(c k ; z k jy 1:k ) (5)
+and rhythm transcription as a MAP state estimation problem
+c 
+1:K = argmax
+c 1:K
+p(c 1:K jy 1:K ) (6)
+p(c 1:K jy 1:K ) =
+Z
+dz 1:K p(c 1:K ; z 1:K jy 1:K ) (7)
+The exact computation of the quantities in Eq. 6 and Eq. 5 is intractable due to
+the explosion in the number of mixture components required to represent the exact
+posterior at each step k. Consequently we will use Monte Carlo approximation
+techniques.
+
+3 Sequential Monte Carlo Sampling
+Sequential Monte Carlo sampling (a.k.a. particle ltering) is an integration method
+especially powerful for inference in dynamical systems. See [4] for a detailed review
+of state of the art. At each step k, the exact marginal posterior over hidden states
+x k is approximated by an empirical distribution of form
+p(x k jy 1:k ) 
+N
+X
+i=1
+w (i)
+k ∆(x k x (i)
+k ) (8)
+where x (i)
+k are a set of points obtained by sampling from a proposal distribution
+and w (i)
+k are associated importance weights such that
+P N
+i=1 w (i)
+k = 1. Particles
+at step k are evolved to k + 1 by sequential importance sampling and resampling
+methods [6]. Once a set of discrete sample points is obtained during the forward
+phase by sampling, particle approximations to quantities such as the smoothed
+marginal posterior p(x k jy 1:K ) or the maximum a posteriori state sequence (Viterbi
+path) x 
+1:K can be obtained e∆ciently. Due to the discrete nature of the approximate
+representation, resulting algorithms are closely related to standard smoothing and
+Viterbi algorithms in Hidden Markov models [9, 7, 6].
+Unfortunately, if the hidden state space is of high dimensionality, sampling can be
+ine∆cient. Hence increasingly many particles are needed to accurately represent the
+posterior. Consequently, the estimation of \o-line" quantities such as p(x k jy 1:K )
+and x 
+1:K becomes very costly since one has to store all past trajectories.
+For some models, including the one proposed here, one can identify substructures
+where integrations, conditioned on certain nodes can be computed analytically [5].
+Conditioned on c 1:k , the model reduces to the (extended) 2 Kalman lter. In this
+case the joint marginal posterior is represented as a mixture
+p(c k ; z k jy 1:k ) 
+N
+X
+i=1
+w (i)
+k p(z k jc (i)
+k ; y 1:k )∆(c k c (i)
+k ) (9)
+The particular case of Gaussian p(z k jc (i)
+k ; y 1:k ) is extensively used in diverse appli-
+cations [8] and reported to give superior results when compared to standard particle
+ltering [3, 6].
+3.1 Particle Filtering
+We assume that we have obtained a set of particles from ltered posterior p(c k jy 1:k ).
+Due to lack of space we do not give the details of the particle ltering algorithm
+but refer the reader to [6]. One important point to note is that we have to use the
+optimal proposal distribution given as
+^
+p(c k jc (i)
+k 1 ; y 1:k ) /
+R
+dz k 1:k p(y k jz k ; c k ; c (i)
+k 1 )
+p(z k ; c k jz k 1 ; c (i)
+k 1 )p(z k 1 jc (i)
+k 1 ; y 1:k 1 ) (10)
+Since the state-space of c k is eectively innite, this step is crucial for e∆ciency.
+Evaluation of the proposal distribution amounts to looking forward and selecting
+a set of high probability candidate grid locations for quantization. Once c (i)
+k are
+obtained we can use standard Kalman ltering algorithms to update the Gaussian
+potentials p(z k jc (i)
+k ; y 1:k ). Thus tempo tracking problem as stated in Eq. 5 is readily
+solved.
+2 We linearize the nonlinear observation model 2 ! k (ck ck 1 ) around the expectation
+h!k i.
+
+3.2 Modied Viterbi algorithm
+The quantization problem in Eq. 6 can only be solved approximately. Since z
+is integrated over, in general all c k become coupled and the Markov property is
+lost, i.e. p(c 1:K jy 1:K ) is in general not a chain. One possible approximation, that
+we adapt also here, is to assume smoothed estimates are not much dierent from
+ltered estimates [8] i.e.
+p(c k ; z k jc k 1 ; z k 1 ; y 1:K )  p(c k ; z k jc k 1 ; z k 1 ; y 1:k ) (11)
+and to write
+p(c 1:K jy 1:K ) 
+Z
+dz 1:K p(c 1 z 1 jy 1 )
+K
+Y
+k=2
+p(c k ; z k jc k 1 ; z k 1 ; y 1:k )
+/
+Z
+dz 1:K p(y 1 jz 1 ; c 1 )p(z 1 ; c 1 )
+K
+Y
+k=2
+p(y k jz k ; c k ; c k 1 )p(z k ; c k ; jz k 1 ; c k 1 )
+If we plug in the mixture approximation in Eq. 9 and take the arg max log on both
+sides we obtain a sum that can be stepwise optimized using the Viterbi algorithm [9].
+The standard Viterbi algorithm for particle lters [7] denes a transition ma-
+trix T k 1 = f(c (j)
+k jc (i)
+k 1 ) between each pair of particles at consecutive time slices.
+Here, f is a state transition distribution that can be evaluated pointwise and
+T k 1 can be computed on the y by evaluating f at (c (j)
+k ; c (i)
+k 1 ). In contrast,
+the modied Viterbi algorithm replaces the pointwise evaluation by an expec-
+tation under p(z k ; z k 1 jc (j)
+k ; c (i)
+k 1 ; y 1:k ) where the transition matrix is dened as
+T k 1 (j; i) = ^
+p(c (j)
+k jc (i)
+k 1 ; y 1:k ). In this case, each entry of T is computed by one step
+Kalman likelihood evaluation.
+1. Initialization. For i = 1 : N
+∆ 1 (i) = log p(c (i)
+1 ) + log ^
+p(y 1 jc (i)
+1 )
+2. Recursion. For j = 1 : N , k = 2 : K
+T k 1 (j; i) = log ^
+p(c (j)
+k jc (i)
+k 1 ; y 1:k ) (See Eq. 10)
+∆ k (j) = max
+i
+f∆ k 1 (i) + T k 1 (j; i)g
+  k (j) = arg max
+i
+f∆ k 1 (i) + T k 1 (j; i)g
+3. Termination.
+r K = arg max
+i
+∆ K (i)
+c 
+K = c (rK )
+K
+4. Backtracking. For k = K 1 : 1 : 1
+r k =   k+1 (r k+1 )
+c 
+k = c (r k )
+k
+Since the tempo trajectories can be integrated out online, we need to only store
+the links   k and quantization locations c (i)
+k . Consequently, the random walk tempo
+prior can be replaced by a richer model as in Eq. 5, virtually without additional
+computational or storage cost. An outline of the algorithm is shown in Figure 2.
+Of course, the e∆ciency and accuracy of our approach depends heavily onto the
+assumption in Eq. 11, that the T matrix based on ltered estimates is accurate.
+
+-0.5 0.5 1 1.5 2 2.5 3 3.5
+-0.8
+-0.6
+-0.4
+-0.2
+0
+0.2
+0.4
+0.6
+w
+-0.5 0 0.5 1.5 2 2.5 3.5
+-0.8
+-0.6
+-0.4
+-0.2
+0
+0.2
+0.4
+0.6
+w
+Figure 2: Outline of the algorithm. Left: forward ltering phase. The ellipses
+correspond to the conditionals p(z k jc (n)
+k ; y 1:k ). Vertical dotted lines denote the ob-
+servations y k . At each step k, particles with low likelihood are discarded. Surviving
+particles are linked to their parents. Right: The transition matrix T k 1 between
+each generation (forall pairs of c (j)
+k ; c (i)
+k 1 ) is computed by standard Kalman lter
+likelihood equations. Note that T k 1 can be discarded once the forward messages
+∆ k are computed and only the backward links   1:K and corresponding c k need to
+be stored. When all onsets y 1:K are observed, the MAP sequence c 
+1:K is computed
+by backtracking.
+4 Simulation Results
+We have tested tempo tracking and quantization performance of the model on
+two dierent examples. The rst example is a repeating \son-clave" pattern
+7
+>
+
+
+>
+
+
+
+7 (c = [1 2 4 5:5 7 : : : ]) with uctuating tempo 3 . Such
+syncopated rhythms are usually hard to transcribe and make it di∆cult to track
+the tempo even for experienced human listeners. Moreover, since onsets are absent
+at prominent beat locations, standard beat tracking algorithms usually loose track.
+We observe that for various realistic tempo uctuations and observation noise level,
+the particle lter is able to identify the correct tempo trajectory and the corre-
+sponding quantization (Figure 3, above).
+The second example is a piano arrangement of the Beatles song (Yesterday) per-
+formed by a professional classical pianist on a MIDI grand piano. This is a poly-
+phonic piece, i.e. the arrangement contains chords and events occurring at the same
+time. We model polyphony by allowing c k c k 1 = 0. In this case, since the original
+arrangement is known, we estimate the true tempo trajectory by Kalman ltering
+after clamping c 1:K . As shown in Figure 3, the particle lter estimate and the true
+tempo trajectory are almost identical.
+5 Discussion and Conclusion
+There are several advantages oered by particle ltering approach. The algorithm
+is suitable for real time implementation. Since the implementation is easy, this pro-
+vides an important exibility in the models one can employ. Although we have not
+3 We modulate the tempo deterministically according to !k = 0:3 sin(2ck=32). The
+observation noise variance is R = 0:0005.
+
+0 2 4 6 8 10 12 14 16
+-1
+-0.8
+-0.6
+-0.4
+-0.2
+0
+0.2
+0.4
+0.6
+0.8
+1
+t
+w
+0 10 20 30 40 50 60 70 80 90
+-0.5
+0
+0.5
+1
+t
+w
+Figure 3: Above: Tempo tracking results for the clave pattern with 4 particles. Each
+circle denotes the mean ( (n)
+k ; ! (n)
+k ). The diameter of each particle is proportional to the
+normalized importance weight at each generation. '*' denote the true (; !) pairs. Below:
+Tracking results for \Yesterday". '*' denote the mean of the ltered z 1:K after clamping
+to true c 1:K . Small circles denote the mean z 1:K corresponding to the estimated MAP
+trajectory c 
+1:K
+using 10 particles.
+
+addressed issues such as learning and online adaptation in this paper, parameters
+of the model can also treated as hidden variables and can be eventually integrated
+out similar to the tempo trajectories.
+Especially in real time music applications ne tuning and careful allocation of com-
+putational resources is of primary importance. Particle ltering is suitable since one
+can simply reduce the number of particles when computational resources become
+overloaded.
+Motivated by the advantages of the particle ltering approach, we are currently
+working on a real time implementation of the particle lter based tempo tracker for
+eventual automatic accompaniment generation such as an adaptive drum machine.
+Consequently, the music is quantized such that it can be typeset in a notation
+program.
+Acknowledgements
+This research is supported by the Technology Foundation STW, applied science
+division of NWO and the technology programme of the Dutch Ministry of Economic
+Aairs.
+References
+[1] A. T. Cemgil, P. Desain, and H. Kappen. Rhythm quantization for transcription.
+Computer Music Journal, 24:2:60{76, 2000.
+[2] A. T. Cemgil, H. Kappen, P. Desain, and H. Honing. On tempo tracking: Tempogram
+representation and kalman ltering. Journal of New Music Research, Accepted for
+Publication.
+[3] R. Chen and J. S. Liu. Mixture kalman lters. J. R. Statist. Soc., 10, 2000.
+[4] A. Douchet, N. de Freitas, and N. J. Gordon, editors. Sequential Monte Carlo Methods
+in Practice. Springer-Verlag, New York, 2000.
+[5] A. Douchet, N. de Freitas, K. Murphy, and S. Russell. Rao-blackwellised particle
+ltering for dynamic bayesian networks. In Uncertainty in Articial Intelligence,
+2000.
+[6] A. Douchet, S. Godsill, and C. Andrieu. On sequential monte carlo sampling methods
+for bayesian ltering. Statistics and Computing, 10(3):197{208, 2000.
+[7] S. Godsill, A. Douchet, and M. West. Maximum a posteriori sequence estimation
+using monte carlo particle lters. Annals of the Institute of Statistical Mathematics.,
+2000.
+[8] K. P. Murphy. Switching kalman lters. Technical report, Dept. of Computer Science,
+University of California, Berkeley, 1998.
+[9] L. R. Rabiner. A tutorial in hidden markov models and selected applications in speech
+recognation. Proc. of the IEEE, 77(2):257{286, 1989.
+[10] C. Raphael. A probabilistic expert system for automatic musical accompaniment.
+Journal of Computational and Graphical Statistics, Accepted for Publication, 1999.
+[11] C. Raphael. A mixed graphical model for rhythmic parsing. In to appear in Proc. of
+Uncertainty in AI, 2001.
+[12] B. Thom. Unsupervised learning and interactive jazz/blues improvisation. In Pro-
+ceedings of the AAAI2000. AAAI Press, 2000.
+[13] Barry L. Vercoe, William G. Gardner, and Eric D. Scheirer. Structured audio: Cre-
+ation, transmission, and rendering of parametric sound representations. Proc. IEEE,
+86:5:922{940, May 1998.
+

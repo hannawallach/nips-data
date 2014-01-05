@@ -1,0 +1,429 @@
+Sparse Representation for Gaussian Process
+Models
+Lehel Csat’ o and Manfred Opper
+Neural Computing Research Group
+School of Engineering and Applied Sciences
+B4 7ET Birmingham, United Kingdom
+fcsatol,oppermg@aston.ac.uk
+Abstract
+We develop an approach for a sparse representation for Gaussian Process
+(GP) models in order to overcome the limitations of GPs caused by large
+data sets. The method is based on a combination of a Bayesian online al­
+gorithm together with a sequential construction of a relevant subsample
+of the data which fully specifies the prediction of the model. Experi­
+mental results on toy examples and large real­world datasets indicate the
+efficiency of the approach.
+1 Introduction
+Gaussian processes (GP) [1; 15] provide promising non­parametric tools for modelling
+real­world statistical problems. Like other kernel based methods, e.g. Support Vector Ma­
+chines (SVMs) [13], they combine a high flexibility of the model by working in high (often
+1) dimensional feature spaces with the simplicity that all operations are ``kernelized'' i.e.
+they are performed in the (lower dimensional) input space using positive definite kernels.
+An important advantage of GPs over other non­Bayesian models is the explicit probabilistic
+formulation of the model. This does not only provide the modeller with (Bayesian) confi­
+dence intervals (for regression) or posterior class probabilities (for classification) but also
+immediately opens the possibility to treat other nonstandard data models (e.g. Quantum
+inverse statistics [4]).
+Unfortunately the drawback of GP models (which was originally apparent in SVMs as well,
+but has now been overcome [6]) lies in the huge increase of the computational cost with
+the number of training data. This seems to preclude applications of GPs to large datasets.
+This paper presents an approach to overcome this problem. It is based on a combination of
+an online learning approach requiring only a single sweep through the data and a method
+to reduce the number of parameters representing the model.
+Making use of the proposed parametrisation the method extracts a subset of the examples
+and the prediction relies only on these basis vectors (BV). The memory requirement of the
+algorithm scales thus only with the size of this set. Experiments with real­world datasets
+confirm the good performance of the proposed method. 1
+1 A different approach for dealing with large datasets was suggested by V. Tresp [12]. His method
+
+2 Gaussian Process Models
+GPs belong to Bayesian non­parametric models where likelihoods are parametrised by a
+Gaussian stochastic process (random field) a(x x x) which is indexed by the continuous input
+variable x x x. The prior knowledge about a is expressed in the prior mean and the covariance
+given by the kernel K 0 (x x x;x x x 0 ) = Cov(a(x x x); a(x x x 0 )) [14; 15]. In the following, only zero
+mean GP priors are used.
+In supervised learning the process a(x x x) is used as a latent variable in the likelihood
+P (yja(x x x)) which denotes the probability of output y given the input x x x. Based on a set
+of input­output pairs (x x xn ; yn ) with x x xn 2 R m and yn 2 R (n = 1; N ) the Bayesian learn­
+ing method computes the posterior distribution of the process a(x x x) using the prior and
+likelihood [14; 15; 3].
+Although the prior is a Gaussian process, the posterior process usually is not Gaussian
+(except for the special case of regression with Gaussian noise). Nevertheless, various ap­
+proaches have been introduced recently to approximate the posterior averages [11; 9]. Our
+approach is based on the idea of approximating the true posterior process pfag by a Gaus­
+sian process qfag which is fully specified by a covariance kernel K t (x x x;x x x 0 ) and posterior
+mean ha(x x x)i t , where t is the number of training data processed by the algorithm so far.
+Such an approximation could be formulated within the variational approach, where q is
+chosen such that the relative entropy D(q; p) :
+= E q ln dq
+dp is minimal [9]. However, in this
+formulation, the expectation is over the approximate process q rather than over p. It seems
+intuitively better to minimise the other KL divergence given by D(p; q) :
+= E p ln dp
+dq , be­
+cause the expectation is over the true distribution. Unfortunately, such a computation is
+generally not possible. The following online approach can be understood as an approxima­
+tion to this task.
+3 Online learning for Gaussian Processes
+In this section we briefly review the main idea of the Bayesian online approach (see e.g. [5])
+to GP models. We process the training data sequentially one after the other. Assume we
+have a Gaussian approximation to the posterior process at time t. We use the next example
+t + 1 to update the posterior using Bayes rule via
+~
+p(a a a) =
+P (y t+1 ja(x x x t+1 ))p t (a a a)
+hP (y t+1 ja(x x x t+1 ))i t
+Since the resulting posterior ~
+p(a a a) is non­Gaussian, we project it to the closest Gaussian
+process q which minimises the KL divergence D(~p; q). Note, that now the new approxi­
+mation q is on ''correct'' side of the KL divergence. The minimisation can be performed
+exactly, leading to a match of the means and covariances of ~
+p and q. Since ~
+p is much less
+complex than the full posterior, it is possible to write down the changes in the first two
+moments analytically [2]:
+ha(x x x)i t+1 = ha(x x x)i t + b 1 K t (x x x;x x x t+1 )
+K t+1 (x x x;x x x 0 ) = K t (x x x;x x x 0 ) + b 2 K t (x x x;x x x t+1 )K t (x x x t+1 ; x x x 0 )
+(1)
+where the scalar coefficients b 1 and b 2 are:
+b 1 = @ a t
+lnhP (y t+1 ja(x x x t+1 ))i t b 2 = @ 2
+a t
+lnhP (y t+1 ja(x x x t+1 ))i t (2)
+with averaging performed with respect to the marginal Gaussian distribution of the process
+variable a at input x x x t+1 . Note, that this yields a one dimensional integral! Derivatives are
+is based on splitting the data­set into smaller subsets and training individual GP predictors on each of
+them. The final prediction is achieved by a specific weighting of the individual predictors.
+
+F
+F
+F
+F (F,...,F)
+1
+res
+F t+1
+^
+k
+t+1 1 t
+L
+t+1
+F
+g t+1
+F res
+^
+F t+1
+(a) (b)
+Figure 1: Projection of the new input  t+1 to the subspace spanned by previous inputs.
+^
+ t+1 is the projection to the linear span of f i g i=1;t , and  res the residual vector. Sub­
+figure (a) shows the projections to the subspace, and (b) gives a geometric picture of the
+``measurable part'' of the error  t+1 from eq. (8).
+taken with respect to ha(x x x)i t . Note also that this procedure does not equal the extended
+Kalman filter which involves linearisations of likelihoods, whereas in our approach it is
+possible to use non­smooth likelihoods (e.g. noise free classifications) without problems.
+It turns out, that the recursion (1) is solved by the parametrisation
+ha(x x x)i t =
+X t
+i=1 K 0 (x x x;x x x i ) t (i)
+K t (x x x;x x x 0 ) = K 0 (x x x;x x x 0 ) +
+X t
+i;j=1 K 0 (x x x;x x x i )C t (ij)K 0 (x x x j ; x x x 0 ) (3)
+such that in each on­line step, we have to update only the vector of 's and the matrix
+of C's. For notational convenience we use vector    t = [ t (1); : : : ;  t (N )] T and matrix
+C C C t = fC t (ij)g i;j=1;N . Zero­mean GP with kernel K 0 is used as the starting point for the
+algorithm:    0 = 0 and C C C 0 = 0 will be the starting parameters.
+The update of the parameters defined in (3) is found to be
+   t+1 =    t + b 1 [C t k k k t+1 + e e e t+1 ]
+C C C t+1 = C C C t + b 2 [C C C t k k k t+1 + e e e t+1 ] [C C C t k k k t+1 + e e e t+1 ] T (4)
+with k k k t+1 = [K 0 (x x x 1 ; x x x t+1 ); : : : ; K 0 (x x x t ; x x x t+1 )] T , e e e t+1 the t + 1­th unit vector (all compo­
+nents except t + 1­th are zero), and the scalar coefficients b 1 and b 2 computed from (2).
+The serious drawback of this approach, which it shares with many other kernel methods, is
+the quadratic increase of the matrix size with the training data.
+4 Sparse representation
+We use the following idea for reducing the increase of the size of C and  (for a similar ap­
+proach see [8]). We consider the feature expansion of the kernel K 0 (x x x;x x x 0 ) = (x x x) T (x x x 0 )
+and decompose the new feature vector (x x x t+1 ) as a linear combination of the previous
+features and a residual  res :
+(x x x t+1 ) = ^
+ t+1 +  res =
+X t
+i=1 ^ e i (x x x i ) + res (5)
+where ^
+ t+1 is the projection of  t+1 to the previous inputs and ^ e e e t+1 = [^e 1 ; : : : ; ^
+e t ] T are
+the coordinates of ^
+ t+1 with respect to the basis f i g i=1;t . We can then re­express the GP
+means:
+ha(x x x)i t+1 =
+X t
+i=1 ^
+ t+1 (i)(x x x i ) T (x x x) +  t+1  T
+res (x x x) (6)
+
+with ^
+ t+1 (i) =  t+1 (i) + ^ e t+1 (i) t+1 (t + 1) and  t+1 the residual (or novelty factor)
+associated with the new feature vector. The vector ^ e t+1 and the residual term  t+1 are all
+expressed in terms of kernels:
+^ e e e t+1 =K K K ( 1)
+B k k k t+1  t+1 = k 
+t+1 k k k T
+t+1 K K K ( 1)
+B k k k t+1 (7)
+with K K KB (ij) = fK 0 (x x x i ; x x x j )g i;j=1;t and k 
+t+1 = K 0 (x x x t+1 ; x x x t+1 ). The relation between
+the quantities ^ e e e t+1 and  t+1 is illustrated in Figure 1.
+Neglecting the last term in the decomposition of the new input (5) and performing the
+update with the resulting vector is equivalent to the update rule (4) with e e e t+1 replaced by
+^ e e e t+1 . Note that the dimension of parameter space is not increased by this approximative
+update. The memory required by the algorithm scales quadratically only with the size of
+the set of ``basis vectors'', i.e. those examples for which the full update (4) is made. This
+is similar to Support Vectors [13], without the need to solve the (high dimensional) convex
+optimisation problem. It is also related to the kernel PCA and the reduced set method [8]
+where the full solution is computed first and then a reduced set is used for prediction.
+Replacing the input vector  t+1 by its projection on the linear span of the BVs when
+updating the GP parameters induces changes in the GP 2 . However, the replacement of the
+true feature vector by its approximation leaves the mean function unchanged at each BV i =
+1; t. That is, the functions ha(x x x)i t+1 from (6) and h^a(x x x)i t+1 =
+P t
+i=1 ^
+ t+1 (i)K 0 (x x x i ; x x x)
+have the same value at all x x x l . The change at x x x t+1 is
+" t+1 = jha(x x x t+1 )i t+1 h^a(x x x t+1 )i t+1 j = jb 1 j t+1 (8)
+with b 1 the factor from (2).
+As a consequence, a good approximation to the full GP solution is obtained if the input
+for which we have only a small change in the mean function of the posterior process is not
+included in the set of BVs. The change is given by " t+1 and the decision of including x x x t+1
+or not is based on the ``score'' associated to it.
+The absence of matrix inversions is an important issue when dealing with large datasets.
+The matrix inversion from the projection equation (7) can be avoided by iterative inversion 3
+of the Gram matrix Q Q Q =K K K 1
+B :
+Q Q Q t+1 =Q Q Q t +  1
+t+1 (^e ^
+e ^
+e t+1 e e e t+1 ) (^e ^
+e ^ e t+1 e e e t+1 ) T (9)
+An important comment is that if the new input is in the linear span of the BVs, then it will
+not be included in the basis set, avoiding thus: 1.) the small singular values of the matrix
+K K KB and 2.) the redundancy in representing the problem.
+4.1 Deleting a basis vector
+The above section gave a method to leave out a vector that is not significant for the predic­
+tion purposes. However, it did not provide us with a method to eliminate one of the already
+existing BV­s.
+Let us assume that an input x x x t+1 has just been added to the set of BVs. Since we know that
+an addition had taken place, the update rule (4) with the t + 1­th unit vector e e e t+1 was last
+performed. Since the model parameters at the previous step had an empty t + 1­th row and
+column, the parameters before the full update can be identified.
+The removal of the last basis vector can be done with the following steps: 1) computing
+the parameters before the update of the GP and 2) performing a reduced update of the
+2 Equation (7) also minimises the KL­distance between the full posterior (the one that increases
+parameter space) and a parametric distribution using only the old BVs.
+3 A guide is available from Sam Roweis: http://www.gatsby.ucl.ac.uk/roweis/notes.html
+
+t+1
+1 .. t t+1 1 .. t t+1
+1
+..
+t
+a *
+t+1
+c *
+C (t)
+a
+a (t)
+C * T
+C *
+C
+Q * T q *
+(t)
+t+1
+Q *
+Q t+1
+Q
+Figure 2: Decomposition of model parameters for the update equation (10).
+model without the inclusion of the basis vector (eq. (4) using ^
+e e e t+1 ). The updates for model
+parameters   , C C C, and Q Q Q are ``inverted'' by inverting the coupled equations (4) and (9):
+^
+   =    (t)   Q Q Q 
+q 
+^
+C C C = C C C (t)
++ c  Q Q Q  Q Q Q T
+q 2
+1
+q 
+h
+Q Q Q  C C C T +C C C  Q Q Q T
+i
+^
+Q Q Q =Q Q Q (t) Q Q Q  Q Q Q T
+q
+(10)
+where the elements needed to update the model are extracted from the extended parameters
+as illustrated in Figure 2.
+The consequence of the identification permits us to evaluate the score for the last BV. But
+since the order of the BVs is approximately arbitrary, we can assign a score to each BV
+" i =
+j   t+1 (i)j
+Q Q Q t+1 (i; i) : (11)
+Thus we have a method to estimate the score of each basis vector at any time and to elimi­
+nate the one with the least contribution to the GP output (the mean), providing a sparse GP
+with a full control over memory size.
+5 Simulation results
+To apply the online learning rules (4), the data likelihood for the specific problem has to be
+averaged with respect to a Gaussian. Using eq. (2), the coefficients b 1 and b 2 are obtained.
+The marginal of the GP at x x x t+1 is a normal distribution with mean ha(x x x t+1 )i t =    T
+t k k k t+1
+and variance  2
+x x x t+1
+= k 
+t+1 +k k k T
+t+1 C C C t k k k t+1 where the GP parameters at time t are considered.
+As a first example, we consider regression with Gaussian output noise  2
+0 for which
+lnhP (y t+1 ja(x x x t+1 ))i t =
+1
+2
+ln
+
+2( 2
+0 +  2
+x x x t+1
+)
+ (y t+1 ha(x x x t+1 i t ) 2
+2( 2
+0 +  2
+x x x t+1
+) 2
+: (12)
+For classification we use the probit model. The outputs are binary y 2 f1; 1g and the
+probability is given by the error function (where u = ya= 0 ):
+P (yja) = Erf
+ ya
+ 0
+
+=
+1
+p
+2
+Z u
+1
+dte t 2 =2
+The averaged log­likelihood for the new data point at time t is:
+hP (y t+1 ja(x x x t+1 ))i = Erf
+0
+@ y t+1    T
+t k k k t+1
+q
+ 2
+0 +  2
+x x x t+1
+1
+A (13)
+
+-3 -2 -1 0 1 2 3
+-0.4
+-0.2
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+100 150 200 250 300 350 400 450 500 550
+5
+5.5
+6
+6.5
+7
+7.5
+8
+# of Basis Vectors
+Test
+Errors
+Single sweep
+Two sweeps
+(a) (b)
+Figure 3: Simulation results for regression (a) and classification (b). For details see text.
+For the regression case we have chosen the toy data model y = sin(x)=x +  where  is
+a zero­mean Gaussian random variable with variance  2
+0 and an RBF kernel. Figure 3.a
+shows the result of applying the algorithm for 600 input data and restricting the number
+of BVs to 20. The dash­dotted line is the true function, the continuous line is the ap­
+proximation with the Bayesian standard deviation plotted by dotted lines (a gradient­like
+approximation for the output noise based on maximising the likelihood (12) lead us to the
+variance with which the data has been generated).
+For classification we used the data from the US postal database 4 of handwritten zip codes
+together with an RBF kernel. The database has 7291 training and 2007 test data of 16  16
+grey­scale images. To apply the classification method to this database, 10 binary classifi­
+cation problems were solved and the final output was the class with the largest probability.
+The same BVs have been considered for each classifier and if a deletion was required, the
+BV having the minimum cumulative score was deleted. The cumulative score was cho­
+sen to be the maximum of the scores for each classifier. Figure 3.b shows the test error
+as a function of the size of the basis set. We find that the test error is rather stable over
+a considerable range of basis set sizes. Also a comparison with a second sweep through
+the data shows that the algorithm seems to have already extracted the relevant information
+out of the data within a single sweep. Using a polynomial kernel for the USPS dataset and
+500 BVs we achieved a test error of 4:83%, which compares favourably with other sparse
+approaches [10; 8] but uses smaller basis sets than the SVM (2540 reported in [8]).
+We also applied our algorithm to the NIST dataset 5 which contains 60000 data. Using a
+fourth order polynomial kernel with only 500 BVs we achieved a test error of 3:13% and
+we expect that improvements are possible by using a kernel with tunable hyperparameters.
+The possibility of computing the posterior class probabilities allows us to reject data. When
+the test data for which the maximum probability was below 0:5 was rejected, the test error
+was 1:53% with 1:60% of rejection rate.
+4 From: http://www.kernel­machines.org/data.html
+5 Available from: http://www.research.att.com/”yann/ocr/mnist/
+
+6 Conclusion and further research
+This paper presents a sparse approximation for GPs similar to the one found in SVMs [13]
+or relevance vector machines [10]. In contrast to these other approaches our algorithm
+is fully online and does not construct the sparse representation from the full data set (for
+sequential optimisation for SVM see [6]).
+An important open question (besides the issue of model selection) is how to choose the
+minimal size of the set of basis vectors such that the predictive performance is not much
+deteriorated by the approximation involved. In fact, our numerical classification experi­
+ments suggest that the prediction performance is considerably stable when the basis set is
+above a certain size. It would be interesting if one could relate this minimum size to the
+effective dimensionality of the problem being defined as the number of feature dimensions
+which are well estimated by the data. One may argue as follows: Replacing the true kernel
+by a modified (finite dimensional) one which contains only the well estimated features will
+not change the predictive power. On the other hand, for kernels with a feature space of
+finite dimensionality M , it is easy to see that we need never more than M basis vectors,
+because of linear dependence. Whether such reasoning will lead to a practical procedure
+for choosing the appropriate basis set size, is a question for further research.
+7 Acknowledgement
+This work was supported by EPSRC grant no. GR/M81608.
+References
+[1] J. M. Bernardo and A. F. Smith. Bayesian Theory. John Wiley & Sons, 1994.
+[2] L. Csat’o, E. Fokou’e, M. Opper, B. Schottky, and O. Winther. Efficient approaches to Gaussian
+process classification. In NIPS, volume 12, pages 251--257. The MIT Press, 2000.
+[3] M. Gibbs and D. J. MacKay. Efficient implementation of Gaussian processes. Technical report,
+http://wol.ra.phy.cam.ac.uk/mackay/abstracts/gpros.html, 1999.
+[4] J. C. Lemm, J. Uhlig, and A. Weiguny. A Bayesian approach to inverse quantum statistics.
+Phys.Rev.Lett., 84:2006, 2000.
+[5] M. Opper. A Bayesian approach to online learning. In Saad [7], pages 363--378.
+[6] J. C. Platt. Fast training of Support Vector Machines using sequential minimal optimisation. In
+Advances in Kernel Methods (Support Vector Learning).
+[7] D. Saad, editor. On­Line Learning in Neural Networks. Cambridge Univ. Press, 1998.
+[8] B. Sch˜olkopf, S. Mika, C. J. Burges, P. Knirsch, K.­R. M˜uller, G. R˜atsch, and A. J. Smola. Input
+space vs. feature space in kernel­based methods. IEEE Transactions on Neural Networks,
+10(5):1000--1017, September 1999.
+[9] M. Seeger. Bayesian model selection for Support Vector Machines, Gaussian processes and
+other kernel classifiers. In S. A. Solla, T. K. Leen, and K.­R. M˜uller, editors, NIPS, vol­
+ume 12. The MIT Press, 2000.
+[10] M. Tipping. The Relevance Vector Machine. In S. A. Solla, T. K. Leen, and K.­R. M˜uller,
+editors, NIPS, volume 12. The MIT Press, 2000.
+[11] G. F. Trecate, C. K. I. Williams, and M. Opper. Finite­dimensional approximation of Gaussian
+processes. In M. S. Kearns, S. A. Solla, and D. A. Cohn, editors, NIPS, volume 11. The
+MIT Press, 1999.
+[12] V. Tresp. A Bayesian committee machine. Neural Computation, accepted.
+[13] V. N. Vapnik. The Nature of Statistical Learning Theory. Springer­Verlag, New York, NY, 1995.
+[14] C. K. I. Williams. Prediction with Gaussian processes. In M. I. Jordan, editor, Learning in
+Graphical Models. The MIT Press, 1999.
+[15] C. K. I. Williams and C. E. Rasmussen. Gaussian processes for regression. In D. S. Touretzky,
+M. C. Mozer, and M. E. Hasselmo, editors, NIPS, volume 8. The MIT Press, 1996.
+

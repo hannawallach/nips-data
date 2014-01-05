@@ -1,0 +1,296 @@
+Dynamical Modeling with Kernels for Nonlinear Time Series Prediction
+
+Liva Ralaivola Laboratoire d'Informatique de Paris 6 Universite´ Pierre et Marie Curie 8, rue du capitaine Scott F-75015 Paris, FRANCE liva.ralaivola@lip6.fr Florence d'Alche­Buc ´ Laboratoire d'Informatique de Paris 6 Universite´ Pierre et Marie Curie 8, rue du capitaine Scott F-75015 Paris, FRANCE florence.dalche@lip6.fr
+
+Abstract We consider the question of predicting nonlinear time series. Kernel Dynamical Modeling (KDM), a new method based on kernels, is proposed as an extension to linear dynamical models. The kernel trick is used twice: first, to learn the parameters of the model, and second, to compute preimages of the time series predicted in the feature space by means of Support Vector Regression. Our model shows strong connection with the classic Kalman Filter model, with the kernel feature space as hidden state space. Kernel Dynamical Modeling is tested against two benchmark time series and achieves high quality predictions.
+
+1 Introduction Prediction, smoothing and filtering are traditional tasks applied to time series. The machine learning community has recently paid a lot of attention to these problems and especially to nonlinear time series prediction in various areas such as biological signals, speech or financial markets. To cope with non linearities, extensions of the Kalman filter [5, 4] have been proposed for filtering and smoothing while recurrent artificial neural networks [2] and support vector regressors [7, 8] have been developed for prediction purposes. In this paper, we focus on prediction tasks and introduce a powerful method based on the kernel trick [1], which has been successfully used in tasks ranging from classification and regression to data analysis (see [13, 15] for details). Time series modeling is addressed by extending the framework of observable linear dynamical systems [12] to the feature space defined by a kernel. The predictions are realized in the feature space and are then transformed to obtain the corresponding preimages in the input space. While the proposed model could be used for smoothing as well as filtering, we here focus on the prediction task. A link to the Kalman filter can be drawn by noticing that given the efficiency of our model for the prediction task it can be used as a hidden transition process in the Kalman filter setting. The paper is organized as follows. In the next section, we describe how the modeling of a time series can take place in the feature space and explain how to solve the preimage problem by a learning strategy. In the third section, we present prediction results achieved by our model In the fourth section, the estimation algorithm is discussed and its link to the Kalman filter is highlighted. We finally conclude by giving some perspectives to our work.
+
+
+2 Principles of Dynamical Modeling with Kernels 2.1 Basic Formulation The problem we address is that of modeling d-dimensional nonlinear real-valued time series defined as from an observed sequence x1:T = {x1, . . . , xT } produced by this model, where h is a (possibly unknown) nonlinear function and u a noise vector. Modeling such a series can be done with the help of recurrent neural networks [2] or support vector machines [7]. In this work, we instead propose to deal with this problem by extending linear dynamical modeling thanks to the kernel trick. Instead of considering the observation sequence x1:T = {x1,...,xT}, we consider the sequence x1:T = {(x1), . . . , (xT )}, where  is a mapping from Rd to H and k its associated kernel function [15] such that k(v1, v2) = (v1), (v2) v1,v2  Rd, ·,· being the
+
+xt +1 = h(xt) + u (1)
+
+inner product of H. The Kernel Dynamical Model (KDM) obtained can be written as: xt+1 = Axt + µ + 
+
+(2)
+
+where A is the process transition matrix, µ an offset vector,   H a gaussian isotropic noise of magnitude 2 and xt stands for (xt). We are going to show that it is possible to apply the maximum likelihood principle to identify 2, A and µ and come back to the input space thanks to preimages determination. 2.2 Estimation of the Model Parameters Learning the parameters of the model (2) by maximum likelihood given an observation sequence x1:T merely consists in optimizing the associated log-likelihood L(x1:T , )1: L(x1:T;) = ln P (x1 ) P (xt |xt-1)
+
+T
+
+t=2
+
+g(µ1 , 1 ) - 1 22
+
+T
+
+= xt - Axt-1 - µ 2 1 - p(T - 1)ln2 2
+
+t=2
+
+where p is the dimension of H, g(µ1, 1) is a function straightforward to compute which we let aside as it does not add any complexity in setting the gradient of L to 0. Indeed, performing this task leads to the equations:
+
+T T T
+
+X xt 
+
+t=2
+
+X xt-  1
+
+t=2
+
+X "xt 
+
+t=2
+
+X
+
+t=2
+
+T
+
+T
+
+T
+
+xt- - 1 
+
+1 T - 1
+
+X xt X xt-
+
+  t=2 T
+
+1
+
+t=2
+
+T
+
+A =
+
+!
+
+(3)
+
+
+
+!- 1
+
+
+
+xt- - 1 1 T - 1
+
+X xt- X xt-   1 t=2 1
+
+t=2
+
+µ =
+
+1 T - 1 1 p(T - 1)
+
+- Axt- 1 
+
+" (4)
+
+2 = xt - Axt- - µ 1   2 (5)
+
+1
+
+ := {A, µ, 2, µ1 , 1 }, and µ1 and 1 are the parameters of the gaussian vector x1 .  
+
+
+which require to address two problems: inverting a matrix which could be of infinite dimension (e.g., if a gaussian kernel is used) and/or singular (equation (3)) and making a division by the dimension of the feature space (p in equation (5)). A general solution to circumvent these problems is to introduce an orthonormal basis U = {u1,...,um} for the subspace Hx of H spanned by x1:T. For instance, U can be obtained
+
+
+
+by computing the set of principal components with non-zero eigenvalues of x1:T following the procedure proposed in [6]. Once such a set of vectors is available, trying to find good parameters for the model (2) is equivalent to finding an m-dimensional linear dynamical model for the sequence z1:T = {z1, . . . , zT } where zt is the vector of coordinates of xt
+
+
+
+with respect to U, i.e.: zt =
+
+xt , u1 xt , u2 ··· xt , um t = 1,...,T. (6)
+
+Given z1:T , the following linear dynamical model has to be considered:
+
+zt +1 = Azzt + µz + z (7)
+
+where z is again a gaussian noise vector of variance 2. Determining a basis of Hx allows to learn the linear dynamical model (7). As it is based on the coordinates of the observed vectors x1, . . . , xT with respect to the basis, it is equivalent to learning (2). The parameters
+
+
+
+are estimated thanks to equations (3), (4) and (5) where xt is replaced with zt and p with m. For the sake of generalization ability, it might be useful to choose Az as simple as possible [15]. To do this, we put a penalization on matrices Az having large values, by imposing a prior distribution pA on Az defined as: pA(Az)  exp(-2 trace (AzAz)),  > 0. The computation of the maximum a posteriori values for A, µ and 2 is very similar to (3), (4) and (5) except that a few iterations of gradient ascent have to be done. 2.3 Back to the Input Space: the Preimage Problem The problem Predicting the future observations with model (7) gives vectors in the feature space H while vectors from the input space Rd are needed. Given a vector z in H, finding a good vector x in Rd such that (x) is as close as possible to z is known as the preimage problem. Mika et al. [6] propose to tackle this problem considering the optimization problem:
+
+min (x) - z
+
+x
+
+This problem can be solved efficiently by gradient descent techniques for gaussian kernels. Nevertheless, it may require several optimization phases with different starting points to be ran when other kernels are used (e.g. polynomial kernels of some particular degree). Here, we propose to use Support Vector Regression (SVR) to solve the preimage problem. This avoids any local minimum problem and allows to benefit from the fact that we have to work with vectors from the inner product space H. In addition, using this strategy, there is no need to solve an optimization problem each time a preimage has to be computed. SVR and Preimages Learning Given a sample dataset S = {(z1, y1), . . . , (z , y )} with pairs in Z × R, the SVR algorithm assumes a structure on Z given by a kernel kz and its associated mapping  and feature space H (see [15]). It proceeds as follows (see [14] and [15] for further details). Given a real positive value , the algorithm determines a function f such that (a) it maps each zi to a value not having deviation larger than 
+
+2 .
+
+
+from yi, and (b) it is as flat as possible. This function computes its output as f(z) =
+
+i=1 (i - i)kz(zi, z) + b where the vectors  and  are the solutions of the problem
+
+1 - ( + ) + y ( - ) - (( - )KZ( - ) + 2 1 ( - ) = 0   0,   0 1 C (
+
+
+
+max ,
+
+s.t.
+
+ +  ))
+
+The vectors involved in this program are of dimension , with 1 = [1 ··· 1] , 0 = [0 ··· 0] ,  = [ ··· ] , y = [y1 ··· y ] and KZ is the Gram matrix KZij = kz(zi, zj). Here,  is the parameter of the Vapnik's -insensitive quadratic loss function and C is a user-defined constant penalizing data points which fail to meet the -deviation constraint. In our case, we are interested in learning the mapping from Hx to Rd. In order to learn this mapping, we construct d (the dimension of input space) SVR machines f1, . . . , fd. Each fi is trained to estimate the ith coordinate of the vector xt given the coordinates vector zt of xt with respect to U. Denoting by zu the function which maps a vector x to its coordinate vector z in U, the d machines provide the mapping :
+
+ : Hx x  Rd  [f1(zu(x))···fd(zu(x))] (8)
+
+which can be used to estimate the preimages. Using , and noting that the program involved by the SVR algorithm is convex, the estimation of the preimages does not have to deal with any problem of local minima.
+
+3 Numerical Results In this section we present experiments on highly nonlinear time series prediction with Kernel Dynamical Modeling. As the two series we consider are one dimensional we use the following setup. Each series of length T is referred to as x1:T . In order to model it, we introduce an embedding dimension d and a step size  such that vectors xt = (xt, xt-, . . . , xt-(d-1)) are considered. We compare the perfomances of KDM to the performances achieved by an SVR for nonlinear time series analysis [7, 8], where and SVR penalization constant C) are computed with respect to the one-step prediction error measured on a test set, while the value of  is set to 1e-4. Prediction quality is assessed on an independent validation sequence on which root mean squared error (RMSE) is computed. Two kinds of prediction capacity are evaluated. The first one is a one-step prediction when after a prediction has been made, the true value is used to estimate the next time series output. The second one is a multi-step or trajectory prediction, where the prediction made by a model serves as a basis for the future predictions. In order to make a prediction for a time t > T, we suppose that we are provided with the vector xt-1, which may have been observed or computed. We determine the coordinates zt-1 of xt-1 with respect to U and infer the value of zt by zt = Azzt-1 + µz (see equation (7));  is then used to recover an estimation of xt+1 (cf. equation (8)). In all our experiments we have made the crude ­yet efficient­ choice of the linear kernel for kz.
+
+the mapping associating xt to xt + is learned. The hyperparameters (kernel parameter
+
+
+1.3 1.2 1.1 1 0.9 0.8 0.7 0.6 0.5 0.4
+
+250
+
+200
+
+150
+
+100
+
+50
+
+0 0 20 40 60 80 100 0 50 100 150 200 250 300 350
+
+Figure 1: (left) 100 points of the Mackey-Glass time series MG17, (right) the first 350 points of the Laser time series.
+
+Table 1: Error (RMSE) of one-step and trajectory predictions for gaussian and polynomial kernels for the time series MG17. The regularizing values used for KDM are in subscript. The best results are italicized. Gaussian Polynomial
+
+Algo. SVR KDM0 KDM0.
+
+1
+
+KDM1 KDM10 KDM100
+
+1S 0.0812 0.0864 0.0863 0.0859 0.0844 0.0899 100S 0.2361 0.2906 0.2893 0.2871 0.2140 0.1733 1S 0.1156 0.1112 0.1112 0.1117 0.1203 0.0970 100S 0.2975 0.2775 0.2956 0.1964 0.1744
+
+3.1 Mackey-Glass Time Series Prediction The Mackey-Glass time series comes from the modeling of blood cells production evolution. It is a one-dimensional signal determined by
+
+dx(t) dt = -0.1x(t) + 0.2x(t -  ) 1 + x(t -  )10
+
+which, for values of  greater than 16.8, shows some highly nonlinear chaotic behavior (see Figure 1 left). We focus on MG17, for which  = 17, and construct embedding vectors of size d = 6 into six "independent" datasets, the first one S1 containing x1+(d-1), the second one S2, x2+(d-1), . . . , and the sixth one S6, xd. Learning is done as follows. The first 100 points of S1 are used to learning, while the first 100 points of S2 serve to choose the hyperparameters. The prediction error is measured with respect to the points in the range 201 to 300 of S1. Table 1 reports the RMSE error obtained with gaussian and polynomial kernels, where 1S and 100S respectively stand for one-step prediction and multi-step prediction over the 100 future observations. SVR one-step prediction with gaussian kernel gives the best RMSE. None of the tested regularizers allows KDM to perform better, even if the prediction error obtained with them is never more than 10% away from SVR error.
+
+and step size  = 6. As xt is used to predict xt + , the whole dataset can be divided
+
+
+Table 2: Error (RMSE) of one-step and trajectory predictions for gaussian and polynomial kernels for the time series Laser. The regularizing values used for KDM are in subscript. Gaussian Polynomial
+
+Algo. SVR KDM0 KDM0.
+
+1
+
+KDM1 KDM10 KDM100
+
+1S 15.81 67.95 16.59 13.96 15.18 18.65 100S 67.57 416.2 69.65 70.16 66.82 56.53 1S 18.14 43.92 22.37 18.13 17.39 17.61 100S 66.73 68.90 69.60 70.65 69.43 53.84
+
+KDM trajectory prediction with gaussian kernel and regularizer  = 100 leads to the best error. It is around 17% lower than that of SVR multi-step prediction while KDM with no regularizer gives the poorest prediction, emphasizing the importance of the regularizer. Regarding one-step prediction with polynomial kernel, there is no significant difference between the performance achieved by SVR and that of KDM, when regularizer is 0, 0.1, 1 or 10. For a regularizer  = 100, KDM however leads to the best one-step prediction error, around 16% lower than that obtained by SVR prediction. The dash '-' appearing in the first line of the table means that the trajectory prediction made by the SVR with a polynomial kernel has failed to give finite predictions. On the contrary, KDM never shows this kind of behavior. For a regularizer value of  = 100, it even gives the best trajectory prediction error. 3.2 Laser Time Series Prediction The Laser time series is the dataset A from the Santa Fe competition. It is a univariate time series from an experiment conducted in a physics laboratory (Figure 1 (right) represents the first 350 points of the series). An embedding dimension d = 3 and a step size  = 1 are used. The dataset is divided as follows. The first 100 points are used for training, whereas the points in the range 201 to 300 provide a test set to select hyperparameters. The validation error (RMSE) is evaluated on the points in the range 101 to 200. Table 2 reports the validation errors obtained for the two kinds of prediction. The most striking information provided by this table is the large error archieved by KDM with no regularizer when a gaussian kernel is used. Looking at the other RMSE values corresponding to different regularizers, the importance of penalizing transition matrices with large entries is underlined. Besides, when the regularizer  is appropriately chosen, we see that KDM with a gaussian kernel can achieve very good predictions, for the one-step prediction and the multi-step prediction as well. KDM one-step best prediction error is however not as far from SVR one-step prediction (about 10% lower) than KDM multi-step is from its SVR counterpart (around 16% lower). When a polynomial kernel is used, we observe that KDM with no regularizer provides poor results with regards to the one-step prediction error. Contrary to what occurs with the use of a gaussian kernel, KDM with no regularization does not show bad multi-step prediction ability. Looking at the other entries of this table once again shows that KDM can give very good predictions when a well-suited regularizer is chosen. Hence, we notice that the best multi-step prediction error of KDM is above 19% better than that obtained by SVR
+
+
+multi-step prediction. 4 Discussion 4.1 Another Way of Choosing the Parameters The introduction of a basis U allows to find the parameters of KDM without computing any inversion of infinite dimensional matrices or division by the dimension of H. There is, however a more elegant way to find these parameters when 2 is assumed to be known. In this case, equation (5) needs not to be considered any longer. Considering the prior pA(A)  exp(- 22 trace (A A)), for a user defined , the maximum a posteriori for A is obtained as:
+
+
+
+T T T
+
+X xt 
+
+t=2
+
+xt- - 1
+
+T
+
+X xt-
+
+
+
+1
+
+t=2
+
+
+
+1 T - 1
+
+
+
+xt- - 1
+
+X xt X xt-
+
+  t=2
+
+T
+
+1 T - 1
+
+1
+
+t=2
+
+A =
+
+!
+
+T
+
+I +
+
+X xt- X xt-
+
+  1 t=2
+
+1
+
+t=2
+
+!-1
+
+.
+
+Introducing the matrix X = [x1 ··· xT ], the T-dimensional vectors f := [0 1 ··· 1] , and M = diag (g) - gg /(T - 1), A can be rewritten as
+
+g := [1 ··· 1 0], the T × T matrix P = (Pij) = (i,j +1 ) defining J = P - f g/(T - 1)
+
+-1
+
+A
+
+= =
+
+XJX
+
+1 XJ 
+
+I + XMX
+
+1 I - KM(I +  1 MKM  )-1M X
+
+thanks to the Sherman-Woodbury formula, K being the Gram matrix associated to x1:T . It is thus possible to directly determine the matrix A when 2 is known, the same holding for µ since equation (5) remains unchanged. 4.2 Link to Kalman Filtering The usual way to recover a noisy nonlinear signal is to use the Extended Kalman Filter (EKF) or the Unscented Kalman Filter (UKF) [4]. The use of these algorithms involves two steps. First, the clean dynamics, as given by h in equation (1) is learned by a regressor, e.g., a multilayer perceptron. Given a noisy time series from the same driving process h, EKF and UKF then process that series by respectively a first-order linearization of h and an efficient 'sampling' method to determine the clean signal. Apart from the latter essential approximations done by these algorithms, the core of EKF and UKF resembles that of classical Kalman filtering (and smoothing). Regarding the performances of KDM to learn a complex dynamics, it could be directly used to model the process h. In addition, its matricial formulation is suitable to the traditional matrices computations involved by the filtering task (see [5, 11] for details). Hence, a link between KDM and Kalman filtering has been the purpose of [9, 10] where a nonlinear Kalman filter based on the use of kernels is proposed: the ability of the proposed model to address the modeling of nonlinear dynamics is demonstrated, while the classical procedures (even the EM algorithm) associated to linear dynamical systems remain valid. 5 Conclusion and Future Work Three main results are presented: first, we introduce KDM, a kernel extension of linear dynamical models and show how the kernel trick allows to learn a linear model in a feature
+
+
+space associated to a kernel. Second, an original and efficient solution based on learning has been applied for the preimage problem. Third, Kernel Dynamical Model can be linked to the Kalman filter model with a hidden state process living in the feature space. In the framework of time series prediction, KDM proves to work very well and to compete with the best time series predictors particularly on long time range prediction. To conclude, this work can lead to several future directions. All classic tasks involving a dynamic setting such as filtering/predicting (e.g., tracking) and smoothing (e.g., time series denoising) can be tackled by our approach and have to be tested. As pointed out by [9, 10], the kernel approach can also be applied to linear dynamical models with hidden states to provide a kernelized version of the Kalman filter, particularly allowing the implementation of an exact nonlinear EM procedure (involving closed form equations as the method proposed by [3]). Besides, the use of kernel opens the door to dealing with structured data, making KDM a very attractive tool in many areas such as bioinformatics, texts and video application. Lastly, from the theoretical point of view, a very interesting issue is that of the actual noise corresponding to a gaussian noise in a feature space. References [1] B. Boser, I. Guyon, and V. Vapnik. A Training Algorithm for Optimal Margin Classifiers. In Proc. of the 5th Annual Workshop on Comp. Learning Theory, volume 5, 1992. [2] G. Dorffner. Neural networks for time series processing. Neural Network World, 6(4):447­468, 1996. [3] Z. Ghahramani and S. Roweis. Learning nonlinear dynamical systems using an em algorithm. In M. S. Kearns, S. A. Solla, and D. A. Cohn, editors, Advances in Neural Information Processing Systems, volume 11, pages 599­605. MIT Press, 1999. [4] S. Julier and J. Uhlmann. A New Extension of the Kalman Filter to Nonlinear Systems. In Int. Symp. Aerospace/Defense Sensing, Simul. and Controls, 1997. [5] R. E. Kalman. A New Approach to Linear Filtering and Prediction Problems. Transactions of the ASME­Journal of Basic Engineering, 82(Series D):35­45, 1960. [6] S. Mika, B. Sch¨olkopf, A. J. Smola, K.-R. M¨uller, M. Scholz, and G. R¨atsch. Kernel PCA and De-Noising in Feature Spaces. In NIPS. MIT Press, 1999. [7] S. Mukherjee, E. Osuna, and F. Girosi. Nonlinear prediction of chaotic time series using support vector machines. In Proc. of IEEE NNSP'97, 1997. [8] K. M¨uller, A. Smola, G. R¨atsch, B. Sch¨olkopf, J. Kohlmorgen, and V. Vapnik. Predicting Time Series with Support Vector Machines. In W. Gerstner, A. Germond, M. Hasler, and J.-D. Nicoud, editors, Artificial Neural Networks - ICANN'97, pages 999­1004. Springer, 1997. [9] L. Ralaivola. Modelisation et apprentissage de concepts et de systemes dynamiques. PhD thesis, [10] L. Ralaivola and F. d'Alch´e-Buc. Filtrage de Kalman non lin´eaire a` l'aide de noyaux. In Actes du 19eme Symposium GRETSI sur le traitement du signal et des images, 2003. [11] A-V.I. Rosti and M.J.F. Gales. Generalised linear Gaussian models. Technical Report CUED/FINFENG/TR.420, Cambridge University Engineering Department, 2001. [12] S. Roweis and Z. Ghahramani. A unifying review of linear Gaussian models. Neural Computation, 11(2):305­345, 1997. [13] B. Sch¨olkopf and A. J. Smola. Learning with Kernels, Support Vector Machines, Regularization, Optimization and Beyond. MIT University Press, 2002. [14] A. Smola and B. Sch¨olkopf. A Tutorial on Support Vector Regression. Technical Report NC2TR-1998-030, NeuroCOLT2, 1998. [15] V. Vapnik. Statistical Learning Theory. John Wiley and Sons, inc., 1998.
+
+´ Universit´e Paris 6, France, 2003. `
+
+

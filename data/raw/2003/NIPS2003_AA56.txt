@@ -1,0 +1,292 @@
+Laplace Propagation
+
+Alex J. Smola, S.V.N. Vishwanathan Machine Learning Group ANU and National ICT Australia Canberra, ACT, 0200 {smola, vishy}@axiom.anu.edu.au Eleazar Eskin Department of Computer Science Hebrew University Jerusalem Jerusalem, Israel, 91904 eeskin@cs.columbia.edu
+
+Abstract We present a novel method for approximate inference in Bayesian models and regularized risk functionals. It is based on the propagation of mean and variance derived from the Laplace approximation of conditional probabilities in factorizing distributions, much akin to Minka's Expectation Propagation. In the jointly normal case, it coincides with the latter and belief propagation, whereas in the general case, it provides an optimization strategy containing Support Vector chunking, the Bayes Committee Machine, and Gaussian Process chunking as special cases.
+
+1 Introduction Inference via Bayesian estimation can lead to optimization problems over rather large data sets. Exact computation in these cases is often computationally intractable, which has led to many approximation algorithms, such as variational approximation [5], or loopy belief propagation. However, most of these methods still rely on the propagation of the exact probabilities (upstream and downstream evidence in the case of belief propagation), rather than an approximation. This approach becomes costly if the random variables are real valued or if the graphical model contains large cliques. To fill this gap, methods such as Expectation Propagation (EP) [6] have been proposed, with explicit modifications to deal with larger cliques and real-valued variables. EP works by propagating the sufficient statistics of an exponential family, that is, mean and variance for the normal distribution, between various factors of the posterior. This is an attractive choice only if we are able to compute the required quantities explicitly (this means that we need to solve an integral in closed form). Furthermore computation of the mode of the posterior (MAP approximation) is a legitimate task in its own right -- Support Vector Machines (SVM) fall into this category. In the following we develop a cheap version of EP which requires only the Laplace approximation in each step and show how this can be applied to SVM and Gaussian Processes. Outline of the Paper We describe the basic ideas of LP in Section 2, show how it applies to Gaussian Processes (in particular the Bayes Committee Machine of [9]) in Section 3, prove that SVM chunking is a special case of LP in Section 4, and finally demonstrate in experiments the feasibility of LP (Section 5).
+
+
+2 Laplace Propagation Let X be a set of observations and denote by  a parameter we would like to infer by
+
+studying p(|X). This goal typically involves computing expectations Ep can only rarely be computed exactly. Hence we approximate (|X)
+
+Ep (|X)
+
+Varp (|X)
+
+[] []
+
+ argmax -log p(|X) =: ^
+
+2
+
+  [-log p(|X)]| =^
+
+[], which (1) (2)
+
+This is commonly referred to as the Laplace-approximation. It is exact for normal distributions and works best if  is strongly concentrated around its mean. Solving for ^ can be costly. However, if p(|X) has special structure, such as being the product of several simple terms, possibly each of them dependent only on a small number of variables at a time, computational savings can be gained. In the following we present an algorithm to take advantage of this structure by breaking up (1) into smaller pieces and optimizing over them separately. 2.1 Approximate Inference For the sake of simplicity in notation we drop the explicit dependency of  on X and as in p() = ti(). (3)
+
+[6] we assume that N
+
+i=1
+
+Our strategy relies on the assumption that if we succeed in finding good approximations of each of the terms ti() by t~i() we will obtain an approximate maximizer ~ of p() by maximizing p~() := t~i(). Key is a good approximation of each of the ti at the maximum of p(). This is ensured by maximizing p~i() := ti() t~i(). (4)
+
+i
+
+N
+
+j=1,j=i
+
+and subsequent use of the Laplace approximation of ti() at ~i := argmax p~i() as the new estimate t~i(). This process is repeated until convergence. The following lemma shows that this strategy is valid: Lemma 1 (Fixed Point of Laplace Propagation) For all second-order fixed points the following holds:  is a fixed point of Laplace propagation if and only if it is a local optimum of p(). Proof Assume that  is a fixed point of the above algorithm. Then the first order optimality conditions require  log p~i() = 0 for all i and the Laplace approximation yields  log t~i() =  log ti() and  log t~i() =  log ti(). Consequently, up to second
+
+2 2
+
+order, the derivatives of p, p~i, and p agree at , which implies that  is a local optimum. ~ Next assume that  is locally optimal. Then again,  log p~i() have to vanish, since the Laplace approximation is exact up to second order. This means that also all t~i will have an optimum at ~, which means that  is a fixed point. The next step is to establish methods for updating the approximations t~i of ti. One option is to perform such updates sequentially, thereby improving only one t~i at a time. This is advantageous if we can process only one approximation at a time. For parallel processing, however, we will perform several operations at a time, that is, recompute several t~i() and merge the new approximations subsequently. We will see how the BCM is a one-step approximation of LP in the parallel case, whereas SV chunking is an exact implementation of LP in the sequential case.
+
+
+2.2 Message Passing Message passing [7] has been widely successful for inference in graphical models. Assume that we can split  into a (not necessarily disjoint) set of coordinates, say C1,...,CN , such that p() = tN(Ci). (5)
+
+N
+
+i=1
+
+Then the goal of computing a Laplace approximation of p~i reduces to computing a Laplace approximation for the subset of variables Ci, since these are the only coordinates ti depends on.
+
+Note that an update in Ci means that only terms sharing variables with Ci are affected. For directed graphical models, these are the conditional probabilities governing the parents and children of Ci. Hence, to carry out calculations we only need to consider local information regarding t~i(Ci).
+
+76540123
+
+765401233????76540123
+
+
+
+5
+
+1????76540123 4
+
+2  76540123
+
+In the example above 3 depends on (1,2) and (4,5) are conditionally independent of
+
+1 and 2, given 3. Consequently, we may write p() as p() = p(1)p(2)p(3|1,2)p(4|3)p(5|3).
+
+(6)
+
+To find the Laplace approximation corresponding to the terms involving 3 we only need to consider p(3|1,2) itself and its neighbors "upstream" and "downstream" of 3 containing 1,2,3 in their functional form. This means that LP can be used as a drop-in replacement of exact inference in message passing algorithms. The main difference being, that now we are propagating mean and variance from the Laplace approximation rather than true probabilities (as in message passing) or true means and variances (as in expectation propagation).
+
+3 Bayes Committee Machine In this section we show that the Bayes Committee Machine (BCM) [9] corresponds to one step of LP in conjunction with a particular initialization, namely constant t~i. As a result, we extend BCM into an iterative method for improved precision of the estimates. 3.1 The Basic Idea
+
+Let us assume that we are given a set of sets of observations, say, Z1,...,ZN, which are conditionally independent of each other, given a parameter , as depicted in the figure on the right.
+
+Repeated application of Bayes rule allows us@ABCrewrite the conditional densityGFED|Z) as $
+
+Z1 to ZN p(
+
+N N
+
+p(Zi|)  p1 -N ()
+
+GFEDju jjjjj@ABCzv GFED jjjjjvvv Z2
+
+jjjvjvjv89:; IIIIII@ABC
+
+ ?>=<II ...
+
+p(|Z)  p(Z|)p() = p() p(|Zi). (7)
+
+i=1 i=1
+
+Finally, Tresp and coworkers [9] find Laplace approximations for p(|Zi)  p(Zi|)p() with respect to . These results are then combined via (7) to come up with an overall estimate of p(|X,Y ).
+
+
+3.2 Rewriting The BCM The repeated invocation of Bayes rule seems wasteful, yet it was necessary in the context of the BCM formulation to explain how estimates from subsets could be combined in a committee like fashion. To show the equivalence of BCM with one step of LP recall the p(|Z) = c · p() p(Zi|), (8)
+
+third term of (7). We have N
+
+i=1 :=t0() :=ti()
+
+where c is a suitable normalizing constant. In Gaussian processes, we generally assume that p() is normal, hence t0() is quadratic. This allows us to state the LP algorithm to find the mode and curvature of p(|Z): Algorithm 1 Iterated Bayes Committee Machine Initialize t~0  cp() and t~i()  const. repeat Compute new approximations t~i() in parallel by finding Laplace approximations to p~i, as defined in (4). Since t0 is normal, t~0() = t0(). For i = 0 we obtain p~i = ti() t~i(). (9)
+
+N N
+
+t~i() = p()p(Zi|)
+
+j=0,j=i j=1,j=i
+
+until Convergence Return argmax t0() N i=1
+
+t~i().
+
+Note that in the first iteration (9) can be written as p~i  p()p(Zi|), since all remaining terms t~i are constant. This means that after the first update t~i is identical to the estimates obtained from the BCM. Whereas the BCM stops at this point, we have the liberty to continue the approximation and also the liberty to choose whether we use a parallel or a sequential update regime, depending on the number of processing units available. As a side-effect, we obtain a simplified proof of the following: Theorem 2 (Exact BCM [9]) For normal distributions the BCM is exact, that is, the Iterated BCM converges in one step.
+
+Proof For normal distributions all t~i are exact, hence p() = which shows that p~ = p. ti() = t~i() = p~(),
+
+i i
+
+Note that [9] formulates the problem as one of classification or regression, that is Z = (X,Y ), where the labels Y are conditionally independent, given X and the parameter . This, however, does not affect the validity of our reasoning. 4 Support Vector Machines The optimization goals in Support Vector Machines (SVM) are very similar to those in Gaussian Processes: essentially the negative log posterior - log p(|Z) corresponds to the objective function of the SV optimization problem. This gives hope that LP can be adapted to SVM. In the following we show that SVM chunking [4] and parallel SVM training [2] can be found to be special cases of LP. Taking logarithms of (3) and defining i() := - log ti() (and () := - log t~i() analogously) ~ we obtain the following formulation of LP in log-space.
+
+
+Algorithm 2 Logarithmic Version of Laplace Propagation Initialize i() ~ repeat Choose index i  {1,...,N} Minimize i() + j() and replace i() by a Taylor approximation at the
+
+N
+
+~ ~
+
+j=1,i=j
+
+minimum i of the above expression. until All i agree
+
+4.1 Chunking To show that SV chunking is equivalent to LP in logspace, we briefly review the basic ideas of chunking. The standard SVM optimization problem is
+
+m
+
+minimize (,b) :=  ,b
+
+subject to
+
+1 2 2 + C c(xi,yi,f(xi))
+
+(10) i=1
+
+f(xi) = ,(xi) + b
+
+Here (x) is the map into feature space such that k(x,x ) = (x), (x ) and
+
+c(x,y,f(x)) is a loss function penalizing the deviation between the estimate f(x) and the observation y. We typically assume that c is convex. For the rest of the deviation we let c(x,y,f(x)) = max(0,1 - yf(x)) (the analysis still holds in the general case, however it becomes considerably more tedious). The dual of (10) becomes minimize ijyiyjKijk(xi,xj) - i s.t. yii = 0 and i  [0,C] (11) The basic idea of chunking is to optimize only over subsets of the vector  at a time. Denote by Sw the set of variables we are using in the current optimization step, let w be the corresponding vector, and by f the variables which remain unchanged. Likewise denote
+
+m m m
+
+
+
+1 2
+
+i,j=1 i=1 i=1
+
+by yw,yf the corresponding parts of y, and let H = Hww Hwf Hfw Hff be the quadratic
+
+matrix of (11), again split into terms depending on w and f respectively. Then (11), restricted to w can be written as [4]
+
+1 minimize wHwww+f Hfww-
+
+w 2
+
+i s.t. yww+yf f = 0, i  [0,C] (12)
+
+iSw
+
+4.2 Equivalence to LP We now show that the correction terms arising from chunking are the same as those arising from LP. Denote by S1,...,SN a partition of {1,...m} and define
+
+0(,b) := 1 2  2 and i(,b) := C c(xj,yj,f(xj)). (13)
+
+jSi
+
+Then 0 = 0, since 0 is purely quadratic, regardless of where we expand 0. As for i ~ (with i = 0) we have
+
+i = ~ yjj (xj), + yjjb = i, + bib (14)
+
+jSi jSi
+
+
+where j  Cc (xj,yj,f(xj)), i :=
+
+case minimization over i() +
+
+1 2  2 + C
+
+j=i
+
+jSi yjj(xj), and bi := jSi yjj.1 In this
+
+j() amounts to minimizing ~
+
+c(xj,yj,f(xj)) + C [ j, + bjb] s.t. f(xj) = , (xj) + b.
+
+jSi j/Si 
+
+Skipping technical details, the dual optimization problem is given by
+
+minimize jlyjylk(xj,kl) - j -
+
+
+
+subject to
+
+j,lSi jSi
+
+yjj - j  [0,C] and jSi jSi
+
+1 2
+
+jlyjylk(xj,kl) yjj = 0.
+
+jSi,lSi (15)
+
+The latter is identical to (12), the optimization problem arising from chunking, provided that we perform the substitution j = -j for all j  Si. To show this last step, note that at optimality null has to be an element of the subdifferential
+
+of i() with respect to ,b. Taking derivatives of i +
+
+  -C
+
+j=i
+
+c (xj,yj,f(xj)) - C
+
+i implies ~ j.
+
+(16)
+
+jSi j=i
+
+Matching up terms in the expansion of  we immediately obtain j = -j. Finally, to start the approximation scheme we need to consider a proper initialization of i. ~ In analogy to the BCM setting we use i = 0, which leads precisely to the SVM chunking ~ method, where one optimizes over one subset at a time (denoted by Si), while the other sets are fixed, taking only their linear contribution into account. LP does not require that all the updates of t~i (or i) be carried out sequentially. Instead, we ~ can also consider parallel approximations similar to [2]. There the optimization problem is split into several small parts and each of them is solved independently. Subsequently the estimates are combined by averaging. This is equivalent to one-step parallel LP: with the initialization i = 0 for all i = 0 ~ solving the SV optimization problem on the corresponding subset Si (as we saw in the previous section). Hence, the linear terms i,bi arising from the approximation i(,b) = ~ C i, + Cbib lead to the overall approximation
+
+and 0 = 0 = ~ 1 2  2 we minimize i + j in parallel. This is equivalent to ~ j=i
+
+(,b) = ~ i(,b) = ~ 1 2  2 + i, , (17)
+
+i i
+
+with the joint minimizer being the average of the individual solutions. 5 Experiments To test our ideas we performed a set of experiments with the widely available Web and Adult datasets from the UCI repository [1]. All experiments were performed on a 2.4 MHz Intel Xeon machine with 1 GB RAM using MATLAB R13. We used a RBF kernel with 2 = 10 [8], to obtain comparable results. We first tested the performance of Gaussian process training with Laplace propogation using a logistic loss function. The data was partitioned into chunks of roughly 500 samples each and the maximum of columns in the low rank approximation [3] was set to 750.
+
+1 Note that we had to replace the equality with set inclusion due to the fact that c is not everywhere
+
+differentiable, hence we used sub-differentials instead.
+
+
+We summarize the performance of our algorithm in Table 1. TFactor refers to the time (in seconds) for computing the low rank factorization while TTrain denotes the training time for the Gaussian process. We empirically observed that on all datasets the algorithm converges in less than 3 iterations using serial updates and in less than 6 iterations using parallel updates.
+
+Dataset Adult1 Adult2 Adult3 Adult4 Adult5 Adult6 Adult7 TFactor 16.38 20.07 24.41 36.29 56.82 89.78 119.39 TSerial 25.72 33.02 47.05 75.71 97.57 232.45 293.45 TParallel 53.90 75.76 106.88 202.88 169.79 348.10 559.23 Dataset Web1 Web2 Web3 Web4 Web5 Web6 Web7 TFactor 20.33 36.27 37.09 69.9 68.15 129.86 213.54 TSerial 34.33 67.65 92.36 168.88 225.13 261.23 483.52 TParallel 93.47 88.37 212.04 251.92 249.15 663.07 838.36
+
+Table 1: Gaussian process training with serial and parallel Laplace propogation.
+
+We conducted another set of experiments to test the speedups obtained by seeding the SMO with values of  obtained by performing one iteration of Laplace propogation on the dataset. As before we used a RBF kernel with 2 = 10. We partitioned the Adult1 and Web1 datasets into 5 chunks each while the Adult4 and Web4 datasets were partitioned into 10 chunks each. The freely available SMOBR package was modified and used for our experiments. For simplicity we use the C-SVM and vary the regularization parameter. TParallel, TSerial and TNoMod refer to the times required by SMO to converge when using one iteration of parallel/serial/no LP on the dataset.
+
+Adult1
+
+TParallel 2.84 5.57 5.48 107.37 TSerial 2.04 3.99 7.25 110.07 C 0.1 0.5 1.0 5.0 TNoMod 7.650 9.215 10.885 307.135 C 0.1 0.5 1.0 5.0 TParallel 20.42 46.29 80.33 1921.19
+
+Adult4 TSerial 13.26 40.82 64.37 1500.42
+
+TNoMod 59.935 63.645 107.475 1427.925
+
+Table 2: Performance of SMO Initialization on the Adult dataset.
+
+C 0.1 0.5 1.0 5.0 TParallel 21.36 34.64 61.15 224.15
+
+Web1 TSerial 15.65 35.66 38.56 62.41
+
+TNoMod 27.34 60.12 63.745 519.67 C 0.1 0.5 1.0 5.0 TParallel 63.76 140.61 254.84 1959.08
+
+Web4 TSerial 77.05 149.80 298.59 3188.75
+
+TNoMod 95.10 156.525 232.120 2223.225
+
+Table 3: Performance of SMO Initialization on the Web dataset.
+
+As can be seen our initialization significantly speeds up the SMO in many cases sometimes acheving upto 4 times speed up. Although in some cases (esp for large values of C) our method seems to slow down convergence of SMO. In general serial updates seem to perform better than parallel updates. This is to be expected since we use the information from other blocks as soon as they become available in case of the serial algorithm while we completely ignore the other blocks in the parallel algorithm.
+
+
+6 Summary And Discussion Laplace propagation fills the gap between Expectation Propagation, which requires exact computation of first and second order moments, and message passing algorithms when optimizing structured density functions. Its main advantage is that it only requires the Laplace approximation in each computational step, while being applicable to a wide range of optimization tasks. In this sense, it complements Minka's Expectation Propagation, whenever exact expressions are not available. As a side effect, we showed that Tresp's Bayes Committee Machine and Support Vector Chunking methods are special instances of this strategy, which also sheds light on the fact why simple averaging schemes for SVM, such as the one of Colobert and Bengio seem to work in practice. The key point in our proofs was that we split the data into disjoint subsets. By the assumption of independent and identically distributed data it followed that the variable assignments are conditionally independent from each other, given the parameter , which led to a favorable factorization property in p(|Z). It should be noted that LP allows one to perform chunking-style optimization in Gaussian Processes, which effectively puts an upper bound on the amount of memory required for optimization purposes. Acknowledgements We thank Nir Friedman, Zoubin Ghahramani and Adam Kowalczyk for useful suggestions and discussions. References [1] C. L. Blake and C. J. Merz. UCI repository of machine learning databases, 1998. [2] R. Collobert, S. Bengio, and Y. Bengio. A parallel mixture of svms for very large scale problems. In Advances in Neural Information Processing Systems. MIT Press, 2002. [3] S. Fine and K. Scheinberg. Efficient SVM training using low-rank kernel representations. Journal of Machine Learning Research, 2:243­264, Dec 2001. http://www.jmlr.org. [4] T. Joachims. Making large-scale SVM learning practical. In B. Scholkopf, C. J. C. Burges, and A. J. Smola, editors, Advances in Kernel Methods--Support Vector Learn¨ ing, pages 169­184, Cambridge, MA, 1999. MIT Press. [5] M. I. Jordan, Z. Gharamani, T. S. Jaakkola, and L. K. Saul. An introduction to variational methods for graphical models. In Learning in Graphical Models, volume M. I. Jordan, pages 105­162. Kluwer Academic, 1998. [6] T. Minka. Expectation Propagation for approximative Bayesian inference. PhD thesis, MIT Media Labs, Cambridge, USA, 2001. [7] J. Pearl. Probabilistic Reasoning in Intelligent Systems. Morgan-Kaufman, 1988. [8] J. C. Platt. Sequential minimal optimization: A fast algorithm for training support vector machines. Technical Report MSR-TR-98-14, Microsoft Research, 1998. [9] V. Tresp. A Bayesian committee machine. Neural Computation, 12(11):2719­2741, 2000.
+
+

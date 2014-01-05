@@ -1,0 +1,550 @@
+Intrinsic Dimension Estimation Using Packing Numbers
+
+Balazs Kegl Department of Computer Science and Operations Research University of Montreal CP 6128 succ. Centre-Ville, Montreal, Canada H3C 3J7 ´ kegl@iro.umontreal.ca ´ ´
+
+Abstract We propose a new algorithm to estimate the intrinsic dimension of data sets. The method is based on geometric properties of the data and requires neither parametric assumptions on the data generating model nor input parameters to set. The method is compared to a similar, widelyused algorithm from the same family of geometric techniques. Experiments show that our method is more robust in terms of the data generating distribution and more reliable in the presence of noise. 1 Introduction High-dimensional data sets have several unfortunate properties that make them hard to analyze. The phenomenon that the computational and statistical efficiency of statistical techniques degrade rapidly with the dimension is often referred to as the "curse of dimensionality". One particular characteristic of high-dimensional spaces is that as the volumes of constant diameter neighborhoods become large, exponentially many points are needed for reliable density estimation. Another important problem is that as the data dimension grows, sophisticated data structures constructed to speed up nearest neighbor searches rapidly become inefficient. Fortunately, most meaningful, real life data do not uniformly fill the spaces in which they are represented. Rather, the data distributions are observed to concentrate to nonlinear manifolds of low intrinsic dimension. Several methods have been developed to find low-dimensional representations of high-dimensional data, including Principal Component Analysis (PCA), Self-Organizing Maps (SOM) [1], Multidimensional Scaling (MDS) [2], and, more recently, Local Linear Embedding (LLE) [3] and the ISOMAP algorithm [4]. Although most of these algorithms require that the intrinsic dimension of the manifold be explicitly set, there has been little effort devoted to design and analyze techniques that estimate the intrinsic dimension of data in this context. There are two principal areas where a good estimate of the intrinsic dimension can be useful. First, as mentioned before, the estimate can be used to set input parameters of dimension reduction algorithms. Certain methods (e.g., LLE and the ISOMAP algorithm) also require a scale parameter that determines the size of the local neighborhoods used in the algorithms. In this case, it is useful if the dimension estimate is provided as a function of the scale (see Figure 1 for an intuitive example where the intrinsic dimension of the data
+
+
+depends on the resolution). Nearest neighbor searching algorithms can also profit from a good dimension estimate. The complexity of search data structures (e.g., kd-trees and R-trees) increase exponentially with the dimension, and these methods become inefficient if the dimension is more than about 20. Nevertheless, it was shown by Chavez et al. [5] ´ that the complexity increases with the intrinsic dimension of the data rather then with the dimension of the embedding space.
+
+(c) D 1 (b) D 2
+
+Figure 1: Intrinsic dimension D at different resolutions. (a) At very small scale the data looks zero-dimensional. (b) If the scale is comparable to the PSfrag replacements noise level, the intrinsic dimension seems larger than expected. (c) The "right" scale in terms of noise and curvature. (d) At very large scale the global dimension dominates.
+
+(d) D 2 (a) D 0
+
+In this paper we present a novel method for intrinsic dimension estimation. The estimate is based on geometric properties of the data, and requires no parameters to set. Experimental results on both artificial and real data show that the algorithm is able to capture the scale dependence of the intrinsic dimension. The main advantage of the method over existing techniques is its robustness in terms of the generating distribution. The paper is organized as follows. In Section 2 we introduce the field of intrinsic dimension estimation, and give a short overview of existing approaches. The proposed algorithm is described in Section 3. Experimental results are given in Section 4. 2 Intrinsic dimension estimation Informally, the intrinsic dimension of a random vector X is usually defined as the number of "independent" parameters needed to represent X. Although in practice this informal notion seems to have a well-defined meaning, formally it is ambiguous due to the existence of space-filling curves. So, instead of this informal notion, we turn to the classical concept of topological dimension, and define the intrinsic dimension of X as the topological dimension of the support of the distribution of X . For the definition, we need to introduce some notions. Given a topological space X , the covering of a subset S is a collection C of open subsets in X whose union contains S. A refinement of a covering C of S is another covering C such that each set in C is contained in some set in C. The following definition is based on the observation that a d-dimensional set can be covered by open balls such that each point belongs to maximum (d +1) open balls. Definition 1 A subset S of a topological space X has topological dimension Dtop (also known as Lebesgue covering dimension) if every covering C of S has a refinement C in which every point of S belongs to at most (Dtop +1) sets in C , and Dtop is the smallest such integer. The main technical difficulty with the topological dimension is that it is computationally difficult to estimate on a finite sample. Hence, practical methods use various other definitions of the intrinsic dimension. It is common to categorize intrinsic dimension estimating methods into two classes, projection techniques and geometric approaches. Projection techniques explicitly construct a mapping, and usually measure the dimension by using some variants of principal component analysis. Indeed, given a set Sn =
+
+
+{ofX1X,,..probably  Xmost 1,...,n of data points drawn independently from the distribution the eigenstructure of the covariance matrix C of Sn. In this approach, Dpca is defined as the number of eigenvalues of C that are larger than a given threshold. The first disadvantage of the technique is the requirement of a threshold parameter that determines which eigenvalues are to discard. In addition, if the manifold is highly nonlinear, Dpca will characterize the global (intrinsic) dimension of the data rather than the local dimension of the manifold. Dpca will always overestimate Dtop; the difference depends on the level of nonlinearity of the manifold. Finally, Dpca can only be used if the covariance matrix of Sn can be calculated (e.g., when X = Rd). Although in Section 4 we will only consider Euclidean data sets, there are certain applications where only a distance metric d : X ×X  R+ {0} and the matrix of pairwise distances D = [di ] = d(xi,xj) are given. . , Xn}, Xi the , i =
+
+obvious way to estimate the intrinsic dimension is by looking at
+
+j
+
+Bruske and Sommer [6] present an approach to circumvent the second problem. Instead of doing PCA on the original data, they first cluster the data, then construct an optimally topology preserving map (OPTM) on the cluster centers, and finally, carry out PCA locally on the OPTM nodes. The advantages of the method are that it works well on non-linear data, and that it can produce dimension estimates at different resolutions. At the same time, the threshold parameter must still be set as in PCA, moreover, other parameters, such as the number of OPTM nodes, must also be decided by the user. The technique is similar in spirit to the way the dimension parameter of LLE is set in [3]. The algorithm runs in O(n2d) time (where n is the number of points and d is the embedding dimension) which is slightly worse than the O(ndDpca) complexity of the fast PCA algorithm of Roweis [7] when computing Dpca. Another general scheme in the family of projection techniques is to turn the dimensionality reduction algorithm from an embedding technique into a probabilistic, generative model [8], and optimize the dimension as any other parameter by using cross-validation in a maximum likelihood setting. The main disadvantage of this approach is that the dimension estimate depends on the generative model and the particular algorithm, so if the model does not fit the data or if the algorithm does not work well on the particular problem, the estimate can be invalid. The second basic approach to intrinsic dimension estimation is based on geometric properties of the data rather then projection techniques. Methods from this family usually require neither any explicit assumption on the underlying data model, nor input parameters to set. Most of the geometric methods use the correlation dimension from the family of fractal dimensions due to the computational simplicity of its estimation. The formal definition is based on the observation that in a D-dimensional set the number of pairs of points closer to each other than r is proportional to rD. Definition 2 Given a finite set Sn = {x1,...,xn} of a metric space X , let
+
+n n
+
+Cn(r) =
+
+2 n(n-1)  
+
+i=1 j=i+1
+
+I{ xi-xj <r}
+
+the correlation integral is defined as C(r) = limn
+
+where IA is the indicator function of the event A. For a countable set S = {x1,x2,...}  X ,
+
+ n
+
+logC(r). logr
+
+C (r). If the limit exists, the correlation
+
+dimension of S is defined as
+
+Dcorr = lim
+
+r0
+
+For a finite sample, the zero limit cannot be achieved so the estimation procedure usually
+
+consists of plotting logC(r) versus logr and measuring the slope
+
+logC(r) logr
+
+of the linear part
+
+
+of the curve [9, 10, 11]. To formalize this intuitive procedure, we present the following definition.
+
+is Definition 3 The scale-dependent correlation dimension of a finite set Sn = {x1,...,xn}
+
+Dcorr(r1,r2) =
+
+logC(r2)-logC(r1). logr2 -logr1
+
+on the manifold is nearly uniform. However, using a non-uniform distribution on the same It is known that Dcorr  Dtop and that Dcorr approximates well Dtop if the data distribution manifold, the correlation dimension can severely underestimate the topological dimension. To overcome this problem, we turn to the capacity dimension, which is another member of the fractal dimension family. For the formal definition, we need to introduce some more of a set S  X is the minimum number of open balls B(x0,r) = {x  X |d(x0,x) < r} whose concepts. Given a metric space X with distance metric d(·,·), the r-covering number N(r) union is a covering of S. The following definition is based on the observation that the covering number N(r) of a D-dimensional set is proportional to r-D. Definition 4 The capacity dimension of a subset S of a metric space X is
+
+Dcap = -rlim 0 logN(r). logr
+
+The principal advantage of Dcap over Dcorr is that Dcap does not depend on the data distribution on the manifold. Moreover, if both Dcap and Dtop exist (which is certainly the case in machine learning applications), it is known that the two dimensions agree. In spite of that, Dcap is usually discarded in practical approaches due to the high computational cost of its estimation. The main contribution of this paper is an efficient intrinsic dimension estimating method that is based on the capacity dimension. Experiments on both synthetic and real data confirm that our method is much more robust in terms of the data distribution than methods based on the correlation dimension.
+
+3 Algorithm Finding the covering number even of a finite set of data points is computationally difficult. To tackle this problem, first we redefine Dcap by using packing numbers rather than covering numbers. Given a metric space X with distance metric d(·,·), a set V  X is said to be r-separated if d(x,y)  r for all distinct x,y  V . The r-packing number M(r) of a set S  X is defined as the maximum cardinality of an r-separated subset of S. The following proposition follows from the basic inequality between packing and covering numbers N(r)  M(r)  N(r/2). Proposition 1 Dcap = -rlim . For a finite sample, the zero limit cannot be achieved so, similarly to the correlation dimension, we need to redefine the capacity dimension in a scale-dependent manner. Definition 5 The scale-dependent capacity dimension of a finite set Sn = {x1,...,xn} is
+
+0
+
+logM(r) logr
+
+Dcap(r1,r2) = - logM(r2)-logM(r1). logr2 -logr1
+
+
+maximum independent vertex set MI(Gr) of the graph Gr(V,E) with vertex set V = Sn Finding M(r) for a data set Sn = {x1,...,xn} is equivalent to finding the cardinality of a results that show that for a general graph, even the approximation of MI(G) within a factor and edge set E = {(xi,xj)|d(xi,xj) < r}. This problem is known to be NP-hard. There are of n1 , for any  > 0, is NP-hard [12]. On the positive side, it was shown that for such
+
+-
+
+geometric graphs as Gr, MI(G) can be approximated arbitrarily well by polynomial time algorithms [13]. However, approximating algorithms of this kind scale exponentially with the data dimension both in terms of the quality of the approximation and the running time1 so they are of little practical use for d > 2. Hence, instead of using one of these algorithms, we apply the following greedy approximation technique. Given a data set Sn, we start with an empty set of centers C, and in an iteration over Sn we add to C data points that are at a distance of at least r from all the centers in C (lines 4 to 10 in Figure 2). The estimate M(r) is the cardinality of C after every point in Sn has been visited. The procedure is designed to produce an r-packing but certainly underestimates the packing number of the manifold, first, because we are using a finite sample, and second, because in general M(r) < M(r). Nevertheless, we can still obtain a good estimate for Dcap by using M(r) in the place of M(r) in Definition 5. To see why, observe that, for a good estimate for Dcap, it is enough if we can estimate M(r) with a constant multiplicative bias independent of r. Although we have no formal proof that the bias of M(r) does not change with r, the simple greedy procedure described above seems to work well in practice. Even though the bias of M(r) does not affect the estimation of Dcap as long as it does not change with r, the variance of M(r) can distort the dimension estimate. The main source of the variance is the dependence of M(r) on the the order of the data points in which they are visited. To eliminate this variance, we repeat the procedure several times on random permutations of the data, and compute the estimate Dpack by using the average of the logarithms of the packing numbers. The number of repetitions depends on r1, r2, and a preset parameter that determines the accuracy of the final estimate (set to 99% in all experiments) . The complete algorithm is given formally in Figure 2. The running time of the algorithm is O nM(r)d where r = min(r1,r2). At smaller scales, where M(r) is comparable with n, it is O n2d . On the other hand, since the variance of the estimate also tends to be smaller at smaller scales, the algorithm iterates less for the same accuracy. 4 Experiments The two main objectives of the four experiments described here is to demonstrate the ability of the method to capture the scale-dependent behavior of the intrinsic dimension, and to underline its robustness in terms of the data generating distribution. In all experiments, the estimate Dpack is compared to the correlation dimension estimate Dcorr. Both dimensions are measured on consecutive pairs of a sequence r1,...,rm of resolutions, and the estimate In the first three experiments the manifold is either known or can be approximated easily. In these experiments we use a two-sided multivariate power distribution with density
+
+is plotted halfway between the two parameters (i.e., D(ri,ri +1 ) is plotted at (ri + ri +1 )/2.)
+
+d d
+
+
+
+i=1
+
+p(x) = I{x [-1,1]d} p 2 1-|x(i | ) p-1 (1)
+
+1
+
+1 k d Typically, the computation of an independent vertex set of G of size at least 1- MI(G)
+
+requires O(nkd) time.
+
+
+PACKINGDIMENSION(Sn,r1,r2,) 1
+
+2 3 4 5 6 7 8 9 10 11 12 13 14
+
+for  1 to  do Permute Sn randomly for k  1 to 2 do C  0/ for i  1 to n do for j  1 to |C| do if d Sn[i],C[j] if j < n+1 then j  n+1
+
+< rk then
+
+C  C {Sn[i]} Lk[ ] = log|C| µ(L2)-µ(L1) logr1
+
+Dpack = - logr2 -
+
+if > 10 and 1.65 return Dpack (logr2-logr1) 2 (L1)+2(L2) < Dpack  (1 - )/2 then
+
+PSfrag replacements
+
+(a) D (b) D (c) D (d) D 0 2 1 2
+
+Figure 2: The algorithm returns the packing dimension estimate Dpack(r1,r2) of a data set Sn with  accuracy nine times out of ten. PSfrag replacements
+
+(a) D 0
+
+with different exponents p to generate uniform (p = 1) and non-uniform data sets on the The first synthetic data is that of Figure 1. We generated 5000 points on a spiral-shaped
+
+manifold.
+
+(b) D (c) D (d) D 2 1 2
+
+Dcorr
+
+manifold with a small uniform perpendicular noise. The curves in Figure 3(a) reflect the
+
+Dpack
+
+scale-dependency observed in Figure 1. As the distribution becomes uneven, Dcorr severely p = 1
+
+underestimates Dtop while Dpack remains stable.
+
+(a) Spiral
+
+p = 2 p = 3 p = 5 p = 8 p = 2
+
+(b) Hypercube
+
+2.5
+
+Dpack Dcorr 6
+
+Dcorr, p = 1 Dpack, p = 1 Dcorr, p = 3 Dpack, p = 3
+
+2 5
+
+Dpack, p = 1 Dcorr, p = 1 Dpack, p = 3 Dcorr, p = 3
+
+1.5
+
+p = 1 p = 3 p = 5 p = 8
+
+4
+
+D D
+
+1 p = 1 3 d = 4
+
+d = 6 d = 5 d = 4 d = 3 d = 2 d = 3
+
+0.5
+
+0
+
+0 0.2 0.4 0.6 0.8 1
+
+p = 3 p = 5 p = 8 1.2
+
+2
+
+{ { } d = 5 } d = 6
+
+0.25
+
+} d = 2
+
+0.1 1.4
+
+1 0.05
+
+0.15 0.2 0.3
+
+r r
+
+Figure 3: Intrinsic dimension of (a) a spiral-shaped manifold and (b) hypercubes of different dimensions. The curves reflect the scale-dependency observed in Figure 1. The more uneven the distribution, the more Dcorr underestimates Dtop while Dpack remains relatively stable. The second set of experiments were designed to test how well the methods estimate the dimension of 5000 data points generated in hypercubes of dimensions two to six (Figure 3(b)). In general, both Dcorr and Dpack underestimates Dtop. The negative bias grows with the dimension, probably due to the fact that data sets of equal cardinality become
+
+
+sparser in a higher dimensional space. To compensate this bias on a general data set, CamastraPSfragVinciarelli [10] propose to correct the estimate by the bias observed on a uniformly generated data set of the same cardinality. Our experiment shows that, in the case of Dcorr, this calibrating2 procedure(b) D fail if the2distribution(b)isDhighly non-uniform. On the(c)other hand,PSfrag replacements1 more reliablePSfrag replacements1 relative stability
+
+PSfrag replacements PSfrag replacements PSfrag replacements and replacements PSfrag replacements PSfrag replacements PSfrag replacements PSfrag replacements PSfrag replacements PSfrag replacements
+
+(a) D (b) D
+
+0 (a) D 0 (a) D 0 (a) D 0 (a) D 0 (a) D 0 (a) D 0 (a) D 0 (a) D 0 (a) D 0
+
+can
+
+2 (b) D 2 (b) D 2 (b) D (b) D 2 2 (b) D (b) D 2 2 (b) D 2
+
+PSfrag replacements1
+
+(c) D (d) D (a) D
+
+PSfrag replacements1 D
+
+of Dpack. 20 (d) D (a) D
+
+(b) D Dcorr2 (c) DDpack1
+
+20
+
+(b) D Dcorr2
+
+PSfrag replacements1
+
+(c) D (d) D (a) D
+
+20
+
+D Dcorr2
+
+PSfrag replacements1
+
+(c) D (d) D (a) D
+
+20
+
+(b) D Dcorr2
+
+the technique(c)seems PSfrag replacements1
+
+D (d) D (a) D (c) D (d) D (a) D
+
+20 20
+
+(b) D Dcorr2 (b) D Dcorr2
+
+PSfrag replacements1
+
+(c) D (d) D (a) D
+
+data.
+
+20 2
+
+corr
+
+PSfrag replacementsdue(c)replacements1 (c)pack 1 D
+
+(d) D (a) D 20 (d) D (a) D 20
+
+(c) D (d) D (a) D
+
+20
+
+(b) D Dcorr2 (b) D Dcorr2 (b) D Dcorr2
+
+for D PSfragtoD the
+
+with 256 gray(c)levels. The images were(c)normalized so that the distance between a black We also tested(b)the methods on two sets of image (b) DD Both sets contained 64×64 images and2 a(d)white2 image is2 1.(d) The2 first set2is(d) sequence of2481 snapshots of2 a(d) D p turning a cup fromDthe CMU database2 (Figure 4(a)).D The sequence of imagesD sweepsDa curve in a 4096-dimensional space so its informal intrinsic dimension is one. Figure 5(a) shows that at a small scale, both methods find a local dimension between 1 and 2. At a slightly
+
+(d) D p = 1 D p = 1 (d) D p = 1 D p = 1 (d) D p = 1 D p = 1 2 (d) D p = 1 (d) D p = 1 2 (d) D p = 1 = 1 2
+
+hand a
+
+Dppack p = 5
+
+Dcorr p = 2 = 3
+
+Dppack p = 5
+
+p = 2 corr = 3
+
+Dppack p = 5
+
+p = 2 Dcorr = 3
+
+Dppack p = 5
+
+p = 2 Dcorr = 3
+
+Dppack p = 5
+
+p = 2 Dcorr = 3
+
+Dppack p = 5
+
+p = 2 corr = 3
+
+Dppack p = 5
+
+p = 2 Dcorr = 3
+
+Dppack p = 5
+
+p = 2 Dcorr = 3
+
+Dppack p = 5
+
+p = 2 corr = 3
+
+Dppack p = 5
+
+p = 2 corr = 3
+
+p = 1 p = 1 p = 1 p = 1 p = 1 p = 1 p = 1 p = 1 p = 1 p = 1
+
+pp = 8 = 2 Dcorr, pp==13
+
+higher scale the intrinsic dimension increases=indicating a relatively high curvature of the image sequence curve. To test the distribution dependence of the estimates, we constructed a polygonal curve by connecting consecutive points of the sequence, and resampled 481 points by using the power distribution (1) with p = 2,3.D We alsoD constructed a highlyuniform, lattice-like= data set=by drawing approximately=equidistant consecutive points from
+
+Dpack, p = 1 p = 5 Dcorr, pp==38 DDpack,,pp = 3
+
+Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1 Dcorr, pp==13 Dpack, p = 1
+
+p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38 p = 5 Dcorr, pp==38
+
+= 1
+
+DDpack,,pp = 3 Dpack, p = 1
+
+corr = 1
+
+D
+
+DDpack,,pp = 31 corr
+
+Dpack, p = 1 D
+
+DDpack,,pp = 31 corr
+
+Dpack, p = 1 D
+
+DDpack,,pp = 3 Dpack, p = 1
+
+corr = 1
+
+D
+
+DDpack,,pp = 3 Dpack, p = 1
+
+corr = 1
+
+D
+
+DDpack,,pp = 31 corr
+
+Dpack, p = 1 D
+
+Dpack,,pp = 1 Dpack, p = 1
+
+corr
+
+= 3
+
+D
+
+Dpack,,pp = 1 Dpack, p = 1
+
+corr
+
+= 3
+
+D
+
+DDpack,,pp = 3 Dpack, p = 1
+
+corr = 1
+
+D
+
+pp = 8 = 2 pp = 8 = 2 pp = 8 = 2 pp = 8 = 2 pp = 82 pp = 8 = 2 pp = 8 = 2 pp = 8 = 2 pp = 8 = 2
+
+(c) DDpack1 DDpack1 (c) DDpack1 (c) DDpack1 DDpack1 (c) DDpack1 (c) DDpack1 (c) DDpack1 (c) DDpack1
+
+corr
+
+Dpack, p = 1 Dcorr, p = 3 D
+
+therpolygonal curve.r Our resultsDin,pFigure 5(a)r confirmr again that Dcorr varies extensively with the generating=distribution Don,the manifold while=Dpack remains remarkably= stable.
+
+Dcorr, p = 3 r Dcorr, p = 3 Dcorr, p = 3 r r = 3 r Dcorr, p = 3 r Dcorr, p = 3 r Dcorr, p = 3 corr Dcorr, p = 3 Dcorr, p = 3
+
+Dpack, pd= 3
+
+D
+
+d = 4
+
+r
+
+(a)
+
+dd = 3 = 6 dd = 2 = 5 d = 4
+
+(b)
+
+d = 3 d = 2
+
+= 6 d = 5 Dpack, pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+Dpack, pd= 36 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+Dpack, pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6
+
+pack
+
+pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6
+
+Dpack, pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6
+
+Dpack, pd= 36 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+Dpack, pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+Dpack, pd= 3 = 6 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+Dpack, pd= 36 d = 5
+
+D
+
+d = 4 r
+
+dd = 3 = 6 dd = 2 = 5 d = 4 d = 3 d = 2
+
+PSfrag replacements
+
+(a) D (b) D (c) D (d) D 0 2 1 2
+
+PSfrag replacements
+
+dd = 2 = 5 d = 4 d = 3 d = 2 dd = 2 = 5 d = 4 d = 3 d = 2
+
+(a) D (b) D (c) D (d) D
+
+dd = 2 = 5 d = 4
+
+0 2
+
+d = 3 d = 2
+
+1 2
+
+p = 1
+
+Figure 4: The real datasets. (a) Sequence of snapshots of a hand turning a cup. (b) Faces database from ISOMAP [4]. The final experiment was conducted on the "faces" database from the ISOMAP paper [4]
+
+p = 1
+
+(Figure 4(b)). The data set contained 698 images of faces generated by using three free p = 2
+
+parameters: vertical and horizontal orientation, and light direction. Figure 5(b) indicates p = 3
+
+that both estimates are reasonably close to the informal intrinsic dimension. (a) Turning cup (b) ISOMAP faces
+
+Dpack Dcorr
+
+p = 5 p = 8 Dcorr, p = 1 Dpack, p = 1 Dcorr, p = 3 Dpack, p = 3 p = 5 p = 8 Dcorr, p = 1 Dpack, p = 1 Dcorr, p = 3 Dpack, p = 3
+
+d = 6 d = 5 d = 4 d = 3 d = 2 D
+
+5 4.5 4 3.5 3 2.5 2 1.5 1 0.5
+
+lattice original p = 2 p = 3
+
+0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18
+
+r
+
+d = 6 d = 5 d = 4 d = 3 d = 2 original lattice D
+
+4.5 4 3.5 3 2.5 2 1.5 1 0.5 0 0.15
+
+Dpack Dcorr
+
+0.2 0.25 0.3 0.35 0.4 0.45 0.5
+
+r
+
+Figure 5: The intrinsic dimension of image data sets. We found in all experiments that at a very small scale Dcorr tends to be higher than Dpack,
+
+2 http://vasc.ri.cmu.edu/idb/html/motion/hand/index.html
+
+
+while Dpack tends to be more stable as the scale grows. Hence, if the data contains very little noise and it is generated uniformly on the manifold, Dcorr seems to be closer to the "real" intrinsic dimension. On the other hand, if the data contains noise (in which case at a very small scale we are estimating the dimension of the noise rather than the dimension of the manifold), or the distribution on the manifold is non-uniform, Dpack seems more reliable than Dcorr. 5 Conclusion We have presented a new algorithm to estimate the intrinsic dimension of data sets. The method estimates the packing dimension of the data and requires neither parametric assumptions on the data generating model nor input parameters to set. The method is compared to a widely-used technique based on the correlation dimension. Experiments show that our method is more robust in terms of the data generating distribution and more reliable in the presence of noise. References [1] T. Kohonen, The Self-Organizing Map, Springer-Verlag, 2nd edition, 1997. [2] T. F. Cox and M. A. Cox, Multidimensional Scaling, Chapman & Hill, 1994. [3] S. Roweis and Saul L. K., "Nonlinear dimensionality reduction by locally linear embedding," Science, vol. 290, pp. 2323­2326, 2000. [4] J. B. Tenenbaum, V. de Silva, and Langford J. C., "A global geometric framework for nonlinear dimensionality reduction," Science, vol. 290, pp. 2319­2323, 2000. [5] E. Ch´avez, G. Navarro, R. Baeza-Yates, and J. Marroqu´in, "Searching in metric spaces," ACM Computing Surveys, p. to appear, 2001. [6] J. Bruske and G. Sommer, "Intrinsic dimensionality estimation with optimally topology preserving maps," IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 20, no. 5, pp. 572­575, 1998. [7] S. Roweis, "EM algorithms for PCA and SPCA," in Advances in Neural Information Processing Systems. 1998, vol. 10, pp. 626­632, The MIT Press. [8] C. M. Bishop, M. Svens´en, and C. K. I. Williams, "GTM: The generative topographic mapping," Neural Computation, vol. 10, no. 1, pp. 215­235, 1998. [9] P. Grassberger and I. Procaccia, "Measuring the strangeness of strange attractors," Physica, vol. D9, pp. 189­208, 1983. [10] F. Camastra and A. Vinciarelli, "Estimating intrinsic dimension of data with a fractal-based approach," IEEE Transactions on Pattern Analysis and Machine Intelligence, 2002, to appear. [11] A. Belussi and C. Faloutsos, "Spatial join selectivity estimation using fractal concepts," ACM Transactions on Information Systems, vol. 16, no. 2, pp. 161­201, 1998. Symposium on Foundations of Computer Science FOCS'96, 1996, pp. 627­636. [13] T. Erlebach, K. Jansen, and E. Seidel, "Polynomial-time approximation schemes for geometric graphs," in Proceedings of the 12th ACM-SIAM Symposium on Discrete Algorithms SODA'01, 2001, pp. 671­679.
+
+[12] J. Hastad, "Clicque is hard to approximate within n 1 - ," in Proceedings of the 37th Annual
+
+

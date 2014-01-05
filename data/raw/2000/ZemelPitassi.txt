@@ -1,0 +1,606 @@
+A Gradient­Based Boosting Algorithm for
+Regression Problems
+Richard S. Zemel Toniann Pitassi
+Department of Computer Science
+University of Toronto
+Abstract
+In adaptive boosting, several weak learners trained sequentially
+are combined to boost the overall algorithm performance. Re­
+cently adaptive boosting methods for classification problems have
+been derived as gradient descent algorithms. This formulation jus­
+tifies key elements and parameters in the methods, all chosen to
+optimize a single common objective function. We propose an anal­
+ogous formulation for adaptive boosting of regression problems,
+utilizing a novel objective function that leads to a simple boosting
+algorithm. We prove that this method reduces training error, and
+compare its performance to other regression methods.
+The aim of boosting algorithms is to ``boost'' the small advantage that a hypothesis
+produced by a weak learner can achieve over random guessing, by using the weak
+learning procedure several times on a sequence of carefully constructed distribu­
+tions. Boosting methods, notably AdaBoost (Freund & Schapire, 1997), are sim­
+ple yet powerful algorithms that are easy to implement and yield excellent results
+in practice. Two crucial elements of boosting algorithms are the way in which a
+new distribution is constructed for the learning procedure to produce the next hy­
+pothesis in the sequence, and the way in which hypotheses are combined to pro­
+duce a highly accurate output. Both of these involve a set of parameters, whose
+values appeared to be determined in an ad hoc manner. Recently boosting algo­
+rithms have been derived as gradient descent algorithms (Breiman, 1997; Schapire
+& Singer, 1998; Friedman et al., 1999; Mason et al., 1999). These formulations justify
+the parameter values as all serving to optimize a single common objective function.
+These optimization formulations of boosting originally developed for classification
+problems have recently been applied to regression problems. However, key prop­
+erties of these regression boosting methods deviate significantly from the classifica­
+tion boosting approach. We propose a new boosting algorithm for regression prob­
+lems, also derived from a central objective function, which retains these properties.
+In this paper, we describe the original boosting algorithm and summarize boosting
+methods for regression. We present our method and provide a simple proof that
+elucidates conditions under which convergence on training error can be guaran­
+teed. We propose a probabilistic framework that clarifies the relationship between
+various optimization­based boosting methods. Finally, we summarize empirical
+comparisons between our method and others on some standard problems.
+
+1 A Brief Summary of Boosting Methods
+Adaptive boosting methods are simple modular algorithms that operate as follows.
+Let g : X ! Y be the function to be learned, where the label set Y is finite, typ­
+ically binary­valued. The algorithm uses a learning procedure, which has access
+to n training examples, f(x 1 ; y 1 ); : : : ; (xn ; yn )g, drawn randomly from X \Theta Y ac­
+cording to distribution D; it outputs a hypothesis f : X ! Y , whose error is the
+expected value of a loss function on f(x); g(x), where x is chosen according to D.
+Given ffl; ffi ? 0 and access to random examples, a strong learning procedure outputs
+with probability 1 \Gamma ffi a hypothesis with error at most ffl, with running time polyno­
+mial in 1=ffl, 1=ffi and the number of examples. A weak learning procedure satisfies
+the same conditions, but where ffl need only be better than random guessing.
+Schapire (1990) showed that any weak learning procedure, denoted WeakLearn,
+can be efficiently transformed (``boosted'') into a strong learning procedure. The
+AdaBoost algorithm achieves this by calling WeakLearn multiple times, in a se­
+quence of T stages, each time presenting it with a different distribution over a fixed
+training set and finally combining all of the hypotheses. The algorithm maintains a
+weight w i
+t for each training example i at stage t, and a distribution D t is computed
+by normalizing these weights. The algorithm loops through these steps:
+1. At stage t, the distribution D t is given to WeakLearn, which generates a hy­
+pothesis f t . The error rate ffl t of f t w.r.t. D t is: ffl t =
+P
+i:f t (x i )6=y i w i
+t =
+P n
+i=1 w i
+t
+2. The new training distribution is obtained from the new weights: w i
+t+1 =
+w i
+t \Lambda (ffl t =(1 \Gamma ffl t )) 1\Gammajf t (x i )\Gammay i j
+After T stages, a test example x will be classified by a combined weighted­majority
+hypothesis: “
+y = sgn(
+P T
+t=1 c t f t (x)). Each combination coefficient c t = log((1 \Gamma ffl t )=ffl t )
+takes into account the accuracy of hypothesis f t with respect to its distribution.
+The optimization approach derives these equations as all minimizing a com­
+mon objective function J , the expected error of the combined hypotheses, esti­
+mated from the training set. The new hypothesis is the step in function space
+in the direction of steepest descent of this objective. For example, if J =
+1
+n
+P n
+i=1 exp(\Gamma
+P
+t y i c t f t (x i )), then the cost after T rounds is the cost after T \Gamma 1
+rounds times the cost of hypothesis f T :
+J(T ) =
+1
+n
+n
+X
+i=1
+exp(\Gamma
+T \Gamma1
+X
+t=1
+y i c t f t (x i )) exp(\Gammay i c T f T (x i ))
+=
+X
+i
+w i
+T exp(\Gammay i c T fT (x i ))
+so training f T to minimize J(T ) amounts to minimizing the cost on a weighted
+training distribution. Similarly, the training distribution is formed by normalizing
+updated weights: w i
+t+1 = w i
+t \Lambda exp(\Gammay i c t f t (x i )) = w i
+t \Lambda exp(s i
+t c t )where s i
+t = 1 if
+f t (x i ) 6= y i , else s i
+t = \Gamma1. Note that because the objective function J is multiplica­
+tive in the costs of the hypotheses, a key property follows: The objective for each
+hypothesis is formed simply by re­weighting the training distribution.
+This boosting algorithm applies to binary classification problems, but it does not
+readily generalize to regression problems. Intuitively, regression problems present
+special difficulties because hypotheses may not just be right or wrong, but can be a
+little wrong or very wrong. Recently a spate of clever optimization­basedboosting
+methods have been proposed for regression (Duffy & Helmbold, 2000; Friedman,
+
+1999; Karakoulas & Shawe­Taylor, 1999; R˜atsch et al., 2000). While these methods
+involve diverse objectives and optimization approaches, they are alike in that new
+hypotheses are formed not by simply changing the example weights, but instead
+by modifying the target values. As such they can be viewed as forms of forward
+stage­wise additive models (Hastie & Tibshirani, 1990), which produce hypotheses
+sequentially to reduce residual error. We study a simple example of this approach,
+in which hypothesis T is trained not to produce the target output y i on a given case
+i, but instead to fit the current residual, r i
+T , where r i
+T = y i \Gamma
+P T \Gamma1
+t=1 c t f t (x). Note that
+this approach develops a series of hypotheses all based on optimizing a common
+objective, but it deviates from standard boosting in that the distribution of exam­
+ples is not used to control the generation of hypotheses, and each hypothesis is not
+trained to learn the same function.
+2 An Objective Function for Boosting Regression Problems
+We derive a boosting algorithm for regression from a different objective function.
+This algorithm is similar to the original classification boosting method in that the
+objective is multiplicative in the hypotheses' costs, which means that the target out­
+puts are not altered after each stage, but rather the objective for each hypothesis is
+formed simply by re­weighting the training distribution. The objective function is:
+JT =
+1
+n
+n
+X
+i=1
+T
+Y
+t=1
+c \Gamma 1
+2
+t
+!
+exp
+'' T
+X
+t=1
+c t (f t (x i ) \Gamma y i ) 2
+#
+(1)
+Here, training hypothesisT to minimize J T , the cost after T stages, amounts to min­
+imizing the exponentiated squared error of a weighted training distribution:
+J T =
+1
+n
+n
+X
+i=1
+/
+(
+T \Gamma1
+Y
+t=1
+c \Gamma 1
+2
+t ) exp
+'' T \Gamma1
+X
+t=1
+c t (f t (x i ) \Gamma y i ) 2
+#! i
+c \Gamma 1
+2
+T exp
+\Theta c T (f T (x i ) \Gamma y i ) 2
+\Lambda j
+=
+n
+X
+i=1
+w i
+T
+i
+c \Gamma 1
+2
+T exp
+\Theta c T (f T (x i ) \Gamma y i ) 2
+\Lambda j
+We update each weight by multiplying by its respective error, and form the training
+distribution for the next hypothesis by normalizing these updated weights.
+In the standard AdaBoost algorithm, the combination coefficient c t can be analyti­
+cally determined by solving @J t
+@c t
+= 0 for c t . Unfortunately, one cannot analytically
+determine the combination coefficient c t in our algorithm, but a simple line search
+can be used to find value of c t that minimizes the cost J t . We limit c t to be between0
+and 1. Finally, optimizing J with respect to y produces a simple linear combination
+rule for the estimate: “
+y =
+P
+t c t f t (x)=
+P
+t c t .
+We introduce a constant ø as a threshold used to demarcate correct from incorrect
+responses. This threshold is the single parameter of this algorithm that mustbe cho­
+sen in a problem­dependent manner. It is used to judge when the performance of
+a new hypothesis warrants its inclusion: ffl t =
+P
+i p i
+t exp[(f t (x i ) \Gamma y i ) 2 \Gamma ø ] ! 1. The
+algorithm can be summarized as follows:
+
+New Boosting Algorithm
+1. Input:
+ffl training set examples (x 1 ; y 1 ); ::::(x n ; yn ) with y 2 !;
+ffl WeakLearn: learning procedure produces a hypothesis f t (x)
+whose accuracy on the training set is judged according to J
+2. Choose initial distribution p 1 (x i ) = p i
+1 = w i
+1 = 1
+n
+3. Iterate:
+ffl Call WeakLearn -- minimize J t with distribution p t
+ffl Accept iff ffl t =
+P
+i p i
+t exp[(f t (x i ) \Gamma y i ) 2 \Gamma ø ] ! 1
+ffl Set 0 Ÿ c t Ÿ 1 to minimize J t (using line search)
+ffl Update training distribution
+w i
+t+1 = w i
+t \Lambda c \Gamma 1
+2
+t exp
+\Theta c t (f t (x i ) \Gamma y i ) 2
+\Lambda
+p i
+t+1 = w i
+t+1 =
+n
+X
+j=1
+w j
+t+1
+4. Estimate output y on input x:
+“ y =
+X
+t
+c t f t (x)=
+X
+t
+c t
+3 Proof of Convergence
+Theorem: Assume that for all t Ÿ T , hypothesis t makes error ffl t on its distribution. If
+the combined output “ y is considered to be in error iff (“y \Gamma y) 2 ? ø , then the output of the
+boosting algorithm (after T stages) will have error at most ffl, where
+ffl = P [( “
+y i \Gamma y i ) 2 ? ø ] Ÿ
+T
+Y
+t=1
+ffl t exp[ø (T \Gamma
+T
+X
+t=1
+c t )]
+.
+Proof: We follow the approach used in the AdaBoost proof (Freund & Schapire,
+1997). We show that the sum of the weights at stage T is bounded above by a con­
+stant times the product of the ffl t 's, while at the same time, for each input i that is
+incorrect, its corresponding weight w i
+T at stage T is significant.
+n
+X
+i=1
+w i
+T+1 =
+X
+i
+w i
+T c \Gamma1=2
+T exp[c T (f T (x i ) \Gamma y i ) 2 ] Ÿ c \Gamma1=2
+T ffl T exp(ø )
+X
+i
+w i
+T
+Ÿ
+T
+Y
+t=1
+c \Gamma1=2
+T exp(ø )ffl t
+The inequality holds because 0 Ÿ c t Ÿ 1. We now compute the new weights:
+X
+t
+c t (f t (x i ) \Gamma y i ) 2 = [
+X
+t
+c t ][Var(f i ) + ( “
+y i \Gamma y i ) 2 ] – [
+X
+t
+c t ][( “
+y i \Gamma y i ) 2 ]
+where “
+y i =
+P
+t c t f t (x i )=
+P
+t c t and Var(f i ) =
+P
+t c t (f t (x i ) \Gamma “
+y i ) 2 =
+P
+t c t . Thus,
+w i
+T+1 = (
+T
+Y
+t=1
+c \Gamma1=2
+t ) exp(
+T
+X
+t=1
+c t (f t (x i ) \Gamma y i ) 2 ) – (
+T
+Y
+t=1
+c \Gamma1=2
+t ) exp([
+T
+X
+t=1
+c t ][( “
+y i \Gamma y i ) 2 ])
+
+Now consider an example input k such that the final answer is an error. Then, by
+definition, ( “
+y k \Gamma y k ) 2 ? ø ) w k
+T+1 – (
+Q
+t c \Gamma1=2
+t ) exp(ø
+P
+t c t ). If ffl is the total
+error rate of the combination output, then:
+X
+i
+w i
+T+1 –
+X
+k:k error
+w k
+T+1 – ffl(
+T
+Y
+t=1
+c \Gamma1=2
+t ) exp(ø
+T
+X
+t=1
+c t )
+ffl Ÿ (
+X
+i
+w i
+T+1 )(
+T
+Y
+t=1
+c 1=2
+t ) exp[ø (T \Gamma
+X
+t
+c t )] Ÿ
+T
+Y
+t=1
+ffl t exp[ø (T \Gamma
+X
+t
+c t )]
+Note that as in the binary AdaBoost theorem, there are no assumptions made here
+about ffl t , the error rate of individual hypotheses. If all ffl t = \Delta ! 1, then ffl !
+\Delta T exp[ø (T \Gamma
+P
+t c t )], which is exponentially decreasing as long as c t ! 1.
+4 Comparing the Objectives
+We can compare the objectives by adopting a probabilistic framework. We as­
+sociate a probability distribution with the output of each hypothesis on input x,
+and combine them to form a consensus model M by multiplying the distributions:
+g(yjx; M ) j
+Q
+t p t (yjx; ` t ),where ` t are parameters specific to hypothesis t. If each
+hypothesis t produces a single output f t (x) and has confidence c t assigned to it,
+then p t (yjx; ` t ) can be considered a Gaussian with mean f t (x) and variance 1=c t
+g(yjx; M ) = k
+'' Y
+t
+c 1=2
+t
+#
+exp
+''
+\Gamma
+X
+t
+c t (y \Gamma f t (x)) 2
+#
+Model parameters can be tuned to maximize g(y \Lambda jx; M ), where y \Lambda is the target for
+x; our objective (Eq. 1) is the expected value of the reciprocal of g(y \Lambda jx; M ).
+An alternative objective can be derived by first normalizing g(yjx; M ):
+p(yjx; M ) j g(yjx; M )
+R
+y 0
+g(yjx; M )
+j
+Q
+t p t (yjx; ` t )
+R
+y 0
+Q
+t p t (y 0 jx; ` t )dy 0
+This probability model underlies the product­of­experts model (Hinton, 2000) and
+the logarithmic opinion pool (Bordley, 1982).If we again assume p t (yjx; ` t ) ¸
+N (f t (x); c \Gamma1
+t )), then p(yjx; M ) is a Gaussian, with mean f(x) =
+P
+t
+c t f t (x)
+P
+t
+c t
+and in­
+verse variance c =
+P
+t c t . The objective for this model is:
+J R = \Gamma log p(y \Lambda jx; M ) = c
+h
+y \Lambda \Gamma f(x)
+i 2
+\Gamma 1
+2
+log c (2)
+This objective corresponds to a type of residual­fitting algorithm. If r(x) j
+h
+y \Lambda \Gamma f(x)
+i
+, and fc t g for t ! T are assumed frozen, then training f T to minimize
+J R is achieved by using r(x) as a target.
+These objectives can be further compared w.r.t. a bias­variance decomposition (Ge­
+man et al., 1992; Heskes, 1998). The main term in our objective can be re­expressed:
+X
+t
+c t [y \Lambda \Gamma f t (x)] 2
+=
+X
+t
+c t
+h
+y \Lambda \Gamma f(x)
+i 2
++
+X
+t
+c t
+h
+f t (x) \Gamma f(x)
+i 2
+= bias+variance
+Meanwhile, the main term of J R corresponds to the bias term. Hence a new hy­
+pothesis can minimize J R by having low error (f t (x) = y \Lambda ), or with a deviant (am­
+biguous) response (f t (x) 6= f(x)) (Krogh & Vedelsby, 1995). Thus our objective at­
+tempts to minimize the average error of the models, while the residual­fitting ob­
+jective minimizes the error of the average model.
+
+2 4 6 8 10
+0.035
+0.04
+0.045
+0.05
+0.055
+0.06
+0.065
+OurAlg
+ResidualFit
+MixOfExperts
+2 4 6 8 10
+0.25
+0.3
+0.35
+OurAlg
+ResidualFit
+MixOfExperts
+Figure 1: Generalization results for our gradient­based boosting algorithm, com­
+pared to the residual­fitting and mixture­of­experts algorithms. Left: Test problem
+F1; Right: Boston housing data. Normalized mean­squared error is plotted against
+the number of stages of boosting (or number of experts for the mixture­of­experts).
+5 Empirical Tests of Algorithm
+We report results comparing the performance of our new algorithm with two other
+algorithms. The first is a residual­fitting algorithmbased on the J R objective (Eq. 2),
+but the coefficients are not normalized. The second algorithm is a version of the
+mixture­of­experts algorithm (Jacobs et al., 1991). Here the hypotheses (or experts)
+are trained simultaneously. In the standard mixture­of­experts the combination co­
+efficients depend on the input; to make this model comparable to the others, we
+allowed each expert one input­independent, adaptable coefficient. This algorithm
+provides a good alternative to the greedy stage­wise methods, in that the experts
+are trained simultaneously to collectively fit the data.
+We evaluate these algorithms on twoproblems. The first is the nonlinear prediction
+problem F1 (Friedman, 1991), which has 10 independent input variables uniform in
+[0; 1]: y = 10 sin(ßx 1 x 2 )+20(x 3 \Gamma :5) 2 +10x 4 +5x 5 +n where n is a random variable
+drawn from a mean­zero, unit­variance normal distribution. In this problem, only
+five input variables (x 1 to x 5 ) have predictive value. We rescaled the target values
+y to be in [0; 3]. We used 400 training examples, and 100 validation and test exam­
+ples. The second test problem is the standard Boston Housing problem Here there
+are 506 examples and twelve continuous input variables. We scaled the input vari­
+ables to be in [0; 1], and the outputs to be in [0; 5]. We used 400 of the examples for
+training, 50 for validation, and the remainder to test generalization. We used neu­
+ral networks as the hypotheses and back­propagation as the learning procedure to
+train them. Each network had a layer of tanh() units between the input units and a
+single linear output. For each algorithm, we used early stopping with a validation
+set in order to reduce over­fitting in the hypotheses.
+One finding was that the other algorithms out­performed ours when the hypothe­
+ses were simple: when the weak learners had only one or two hidden nodes, the
+residual­fitting algorithm reduced test error. With more hidden nodes the relative
+performance of our algorithm improved. Figure 1 shows average results for three­
+hidden­unit networksover 20 runs of each algorithm on the twoproblems, with ex­
+amplesrandomly assigned to the three sets on each run. The results were consistent
+for different values of ø in our algorithm; here ø = 0:1. Overall, the residual­fitting
+algorithm exhibited more over­fitting than our method. Over­fitting in these ap­
+proaches may be tempered: a regularization technique known as shrinkage, which
+scales combination coefficients by a fractional parameter, has been found to im­
+
+prove generalization in gradient boosting applications to classification (Friedman,
+1999). Finally, the mixture­of­experts algorithm generally out­performed the se­
+quential training algorithm. A drawback of this method is the need to specify
+the number of hypotheses in advance; however, given that number, simultaneous
+training is likely less prone to local minima than the sequential approaches.
+6 Conclusion
+We have proposed a new boosting algorithm for regression problems. Like several
+recent boosting methods for regression, the parameters and updates can be derived
+from a single common objective. Unlike these methods, our algorithm forms new
+hypotheses by simply modifying the distribution over training examples. Prelim­
+inary empirical comparisons have suggested that our method will not perform as
+well as a residual­fitting approach for simple hypotheses, but it works well for more
+complex ones, and it seems less prone to over­fitting. The lack of over­fitting in our
+method can be traced to the inherent bias­variance tradeoff, as new hypotheses are
+forced to resemble existing ones if they cannot improve the combined estimate.
+We are exploring an extension that brings our method closer to the full mixture­of­
+experts. The combination coefficients can be input­dependent: a learner returns not
+only f t (x i ) but also k t (x i ) 2 [0; 1], a measure of confidence in its prediction. This
+elaboration makes the weak learning task harder, but may extend the applicabil­
+ity of the algorithm: letting each learner focus on a subset of its weighted training
+distribution permits a divide­and­conquer approach to function approximation.
+References
+[1] Bordley, R. (1982). A multiplicative formula for aggregating probability assessments. Managment
+Science, 28, 1137­1148.
+[2] Breiman, L. (1997). Prediction games and arcing classifiers. TR 504. Statistics Dept., UC Berkeley.
+[3] Duffy, N. & Helmbold, D. (2000). Leveraging for regression. In Proceedings of COLT, 13.
+[4] Freund, Y. & Schapire, R. E. (1997). A decision­theoretic generalization of on­line learning and an
+application to boosting. Journal of Comp. and System Sci., 55, 119­139.
+[5] Friedman, J. H. (1999). Greedy function approximation: A gradient boosting machine. TR, Dept.
+of Statistics, Stanford University.
+[6] Friedman, J. H., Hastie, T., & Tibshirani, R. (1999). Additive logistic regression: A statistical view
+of boosting. Annals of Statistics, To appear.
+[7] Geman, S., Bienenstock, E., & Doursat, R. (1992). Neural networks and the bias/variance
+dilemma. Neural Computation, 4, 1­58.
+[8] Hastie, T. & Tibshirani, R. (1990). Generalized Additive Models. Chapman and Hall.
+[9] Heskes, T. (1998). Bias­variance decompositions for likelihood­based estimators. Neural Computa­
+tion, 10, 1425­1433.
+[10] Hinton, G. E. (2000). Training products of experts by minimizing contrastive divergence. GC­
+NUTR 2000­004. Gatsby Computational Neuroscience Unit, University College London.
+[11] Jacobs, R. A., Jordan, M. I., Nowlan, S. J., & Hinton, G. E. (1991). Adaptive mixtures of local ex­
+perts. Neural Computation, 3, 79­87.
+[12] Karakoulas, G., & Shawe­Taylor, J. (1999). Towards a strategy for boosting regressors. In Advances
+in Large Margin Classifiers, Smola, Bartlett, Sch ˜
+olkopf & Schuurmans (Eds.).
+[13] Krogh, A. &Vedelsby, J. (1995). Neural network ensembles, cross­validation, and active learning.
+In NIPS 7.
+[14] Mason, L., Baxter, J., Bartlett, P., & Frean, M. (1999). Boosting algorithms as gradient descent in
+function space. In NIPS 11.
+[15] R˜atsch, G., Mika, S. Onoda, T., Lemm, S. & M ˜
+uller, K.­R. (2000). Barrier boosting. In Proceedings of
+COLT, 13.
+[16] Schapire, R. E. (1990). The strength of weak learnability. Machine Learning, 5, 197­227.
+[17] Schapire, R. E. & Singer, Y. (1998). Improved boosting algorithms using confidence­rated
+precitions. In Proceedings of COLT, 11.
+

@@ -1,0 +1,569 @@
+On Reversing Jensen's Inequality
+Tony Jebara
+MIT Media Lab
+Cambridge, MA 02139
+jebara@media.mit.edu
+Alex Pentland
+MIT Media Lab
+Cambridge, MA 02139
+sandy@media.mit.edu
+Abstract
+Jensen's inequality is a powerful mathematical tool and one of the
+workhorses in statistical learning. Its applications therein include the EM
+algorithm, Bayesian estimation and Bayesian inference. Jensen com­
+putes simple lower bounds on otherwise intractable quantities such as
+products of sums and latent log­likelihoods. This simplification then per­
+mits operations like integration and maximization. Quite often (i.e. in
+discriminative learning) upper bounds are needed as well. We derive and
+prove an efficient analytic inequality that provides such variational upper
+bounds. This inequality holds for latent variable mixtures of exponential
+family distributions and thus spans a wide range of contemporary statis­
+tical models. We also discuss applications of the upper bounds including
+maximum conditional likelihood, large margin discriminative models and
+conditional Bayesian inference. Convergence, efficiency and prediction
+results are shown. 1
+1 Introduction
+Statistical model estimation and inference often require the maximization, evaluation, and
+integration of complicated mathematical expressions. One approach for simplifying the
+computations is to find and manipulate variational upper and lower bounds instead of the
+expressions themselves. A prominent tool for computing such bounds is Jensen's inequality
+which subsumes many information­theoretic bounds (cf. Cover and Thomas 1996). In
+maximum likelihood (ML) estimation under incomplete data, Jensen is used to derive an
+iterative EM algorithm [2]. For graphical models, intractable inference and estimation is
+performed via variational bounds [7]. Bayesian integration also uses Jensen and EM­like
+bounds to compute integrals that are otherwise intractable [9].
+Recently, however, the learning community has seen the proliferation of conditional or
+discriminative criteria. These include support vector machines, maximum entropy discrim­
+ination distributions [4], and discriminative HMMs [3]. These criteria allocate resources
+with the given task (classification or regression) in mind, yielding improved performance.
+In contrast, under canonical ML each density is trained separately to describe observations
+rather than optimize classification or regression. Therefore performance is compromised.
+1 This is the short version of the paper. Please download the long version with tighter
+bounds, detailed proofs, more results, important extensions and sample matlab code from:
+http:==www.media.mit.edu= ¸jebara=bounds
+
+Computationally, what differentiates these criteria from ML is that they not only require
+Jensen­type lower bounds but may also utilize the corresponding upper bounds. The Jensen
+bounds only partially simplify their expressions and some intractabilities remain. For in­
+stance, latent distributions need to be bounded above and below in a discriminative setting
+[4] [3]. Metaphorically, discriminative learning requires lower bounds to cluster positive
+examples and upper bounds to repel away from negative ones. We derive these comple­
+mentary upper bounds 2 which are useful for discriminative classification and regression.
+These bounds are structurally similar to Jensen bounds, allowing easy migration of ML
+techniques to discriminative settings.
+This paper is organized as follows: We introduce the probabilistic models we will use:
+mixtures of the exponential family. We then describe some estimation criteria on these
+models which are intractable. One simplification is to lower bound via Jensen's inequality
+or EM. The reverse upper bound is then derived. We show implementation and results of
+the bounds in applications (i.e. conditional maximum likelihood (CML)). Finally, a strict
+algebraic proof is given to validate the reverse­bound.
+2 The Exponential Family
+We restrict the reverse­Jensen bounds to mixtures of the exponential family (e­family). In
+practice this class of densities covers a very large portionof contemporary statistical models.
+Mixtures of the e­family include Gaussians Mixture Models,Multinomials, Poisson, Hidden
+Markov Models, Sigmoidal Belief Networks, Discrete Bayesian Networks, etc. [1] The
+e­family has the following form: P (XjQ) = exp(A(X) + X T Q \Gamma K(Q)).
+E­Distribution A(X) K(Q)
+Gaussian \Gamma 1
+2 X T X \Gamma D
+2 log(2ß) 1
+2 Q T Q
+Multinomial 0 j log(1+
+P
+d exp(Qd ))
+Here, K(Q) is convex in Q, a multi­dimensional parameter vector. Typically the data vector
+X is constrained to live in the gradient space of K, i.e. X 2 @
+@Q K(Q). The e­family has
+special properties (i.e. conjugates, convexity, linearity, etc.) [1]. The reverse­Jensen bound
+also exploits these intrinsic properties. The table above lists example A and K functions
+for Gaussian and multinomial distributions. More generally, though, we will deal with
+mixtures of the e­family (where m represents the incomplete data) 3 , i.e.:
+p(XjQ) =
+X
+m
+p(m)p(X; Qjm) =
+X
+m
+ff m exp(Am (Xm ) + X T
+m Qm \Gamma Km (Qm ))
+These latent probability distributions need to get maximized, integrated, marginalized,
+conditioned, etc. to solve various inference, prediction, and parameter estimation tasks.
+However, such manipulations can be difficult or intractable.
+3 Conditional and Discriminative Criteria
+The combination of ML with EM and Jensen have indeed produced straightforward and
+monotonically convergent estimation procedures for mixtures of the e­family [2] [1] [7].
+However, ML criteria are non­discriminative modeling techniques for estimating generative
+models. Consequently, they suffer when model assumptions are inaccurate.
+2 A weaker bound for Gaussian mixture regression appears in [6]. Other reverse­bounds are in [8].
+3 Note we use Q to denote an aggregate model encompassing all individual Qm 8m.
+
+-5 0 5 10 15 20 25
+-2
+0
+2
+4
+6
+8
+10
+12
+-5 0 5 10 15 20 25
+-2
+0
+2
+4
+6
+8
+10
+12
+ML Classifier: l = \Gamma8:0; l c = \Gamma1:7 CML Classifier: l = \Gamma54:7; l c = 0:4
+Figure 1: ML vs. CML (Thick Gaussians represent circles, thin ones represent x's).
+For visualization, observe the binary classification 4 problem above. Here, our model
+incorrectly has 2 Gaussians (identity covariances) per class but the true data is generated
+from 8 Gaussians. Two solutions are shown, ML and CML. Note the values of joint log­
+likelihood l and conditional log­likelihood l c . The ML solution performs as well as random
+chance guessing while CML classifies the data very well. Thus, CML, in estimating a
+conditional density, propagates the classification task into the estimation criterion.
+In such examples, we are given training examples X i and corresponding binary labels c i to
+classify with a latent variable e­family model (mixture of Gaussians). We use m to represent
+the latent missing variables. The corresponding objective functions log­likelihood l and
+conditional log­likelihood l c are:
+l =
+P
+i log
+P
+m p(m;c i ;X i jQ)
+l c =
+P
+i log
+P
+m p(m;c i jX i ;Q) =
+P
+i log
+P
+m p(m;c i ;X i jQ)\Gammalog
+P
+m
+P
+c p(m;c;X i jQ)
+The classification and regression task can be even more powerfully exploited in the case of
+discriminative (or large­margin) estimation [4] [5]. Here, hard constraints are posed on a
+discriminant function L(XjQ), the ratio of each class' latent likelihood. Prediction of class
+labels is done via the sign of the function, “
+c = signL(XjQ).
+L(XjQ) = log p(XjQ + )
+p(XjQ \Gamma ) = log
+P
+m p(m;XjQ+ )\Gammalog
+P
+m p(m;XjQ \Gamma ) (1)
+In the above log­likelihoods and discriminant functions we note logarithms of sums (latent
+likelihood is basically a product of sums) which cause intractabilities. For instance, it is
+difficult to maximize or integrate the above log­sum quantities. Thus, we need to invoke
+simplifying bounds.
+4 Jensen and EM Bounds
+Recall the definition of Jensen's inequality: f(EfXg) – Eff(X )g for concave f . The
+log­summations in l, l c , and L(XjQ) all involve a concave f = log around an expectation,
+i.e. a log­sum or probabilistic mixture over latent variables. We apply Jensen as follows:
+log
+P
+m p(m;XjQ) –
+P
+m
+Ÿ
+p(m;Xj Q)
+P
+n p(n;Xj ”
+Q)
+–
+log p(m;XjQ)
+p(m;Xj ”
+Q) +log
+P
+m p(m;Xj ”
+Q)
+log
+P
+m ff m exp(Am (Xm)+X T
+m Qm \GammaK m (Qm )) –
+P
+m [hm ] (X T
+m Qm \GammaK m (Qm )) +C
+Above, we have also expanded the bound in the e­family notation. This forms a variational
+lower bound on the log­sum which makes tangential contact with it at ”
+Q and is much easier
+4 These derivations extend to multi­class classification and regression as well.
+
+to manipulate. Basically, the log­sum becomes a sum of log­exponential family members.
+There is an additive constant term C and the positive scalar hm terms (the responsibilities)
+are given by the terms in the square brackets (here, brackets are for grouping terms and are
+not operators). These quantities are relatively straightforward to compute. We only require
+local evaluations of log­sum values at the current ”
+Q to compute a global lower bound.
+If we bound all log­sums in the log­likelihood, we have a lower bound on the objective l
+which we can maximize easily. Iterating maximization and lower bound computation at the
+new Q produces a local maximum of log­likelihood as in EM. However, applying Jensen
+on log­sums in l c and L(XjQ) is not as straightforward. Some terms in these expressions
+involve negative log­sums and so Jensen is actually solving for an upper bound on those
+terms. If we want overall lower and upper bounds on l c and L(XjQ), we need to compute
+reverse­Jensen bounds.
+5 Reverse­Jensen Bounds
+It seems strange we can reverse Jensen (i.e. f(EfXg) Ÿ Eff(X )g) but it is possible.
+We need to exploit the convexity of the K functions in the e­family instead of exploiting
+the concavity of f = log. However, not only does the reverse­bound have to upper­bound
+the log­sum, it should also have the same form as the Jensen­bound above, i.e. a sum
+of log­exponential family terms. That way, upper and lower bounds can be combined
+homogeneously and ML tools can be quickly adapted to the new bounds. We thus need:
+log
+P
+m ff m exp(Am (Xm)+X T
+m Qm \GammaK m (Qm )) Ÿ
+P
+m \Gamma[w m ] (Y T
+m Qm \GammaK m (Qm )) +k (2)
+Here, we give the parameters of the bound directly, refer to the proof at the end of the paper
+for their algebraic derivation. This bound again makes tangential contact at ”
+Q yet is an
+upper bound on the log­sum 5 .
+k = log p(Xj ”
+Q)+
+P
+m wm (Y T
+m ”
+Qm \GammaK m ( ”
+Qm ))
+Ym = hm
+wm
+i
+@K(Qm )
+@Qm
+fi fi ”
+Qm \GammaX m
+j
++ @K(Qm )
+@Qm
+fi fi
+Qm
+w 0
+m = minw 0
+m such that hm
+w 0
+m
+i
+@K(Qm )
+@Qm
+fi fi ”
+Qm
+\GammaX m
+j
++ @K(Qm )
+@Qm
+fi fi ”
+Qm
+2 @K(Qm )
+@Qm
+wm = [Xm \GammaK 0 ( ”
+Qm )] T K 00 ( ”
+Qm ) \Gamma1 [Xm \GammaK 0 ( ”
+Qm )] + w 0
+m
+This bound effectively reweights (wm ) and translates (Y m ) incomplete data to obtain com­
+plete data. Tighter bounds are possible (i.e. smaller wm ) which also depend on the hm
+terms (see web page). The first condition requires that the w 0
+m generate a valid Ym that
+lives in the gradient space of the K functions (a typical e­family constraint). Thus, from
+local computations of the log­sum's values, gradients and Hessians at the current ”
+Q, we can
+compute global upper bounds.
+6 Applications and Results
+In Fig. 2 we plot the bounds for a two­component unidimensional Gaussian mixture model
+case and a two component binomial (unidimensional multinomial) mixture model. The
+Jensen­type bounds as well as the reverse­Jensen boundsare shown at various configurations
+of ”
+Q and X. Jensen bounds are usually tighter but this is inevitable due to the intrinsic
+shape of the log­sum. In addition to viewing many such 2D visualizations, we computed
+higher dimensional bounds and sampled them extensively, empirically verifying that the
+reverse­Jensen bound remained above the log­sum. Below we describe practical uses of
+this new reverse­bound.
+5 We can also find multinomial bounds on ff­priors jointly with the Q parameters.
+
+-10
+-5
+0
+5
+10 -10
+-5
+0
+5
+10
+-80
+-60
+-40
+-20
+0
+Q 2
+Q 1
+-10
+-5
+0
+5
+10 -10
+-5
+0
+5
+10
+-6
+-4
+-2
+0
+2
+Q 2
+Q 1
+-10
+-5
+0
+5
+10
+-10
+-5
+0
+5
+10
+-150
+-100
+-50
+0
+Q 1
+Q 2
+-10
+-5
+0
+5
+10 -10 -5 0 5 10
+-6
+-4
+-2
+0
+2
+Q 2
+Q 1
+(a) Gaussian Case (b) Multinomial Case
+Figure 2: Jensen (black) and reverse­Jensen (white) bounds on the log­sum (gray).
+6.1 Conditional Maximum Likelihood
+(A) 0 5 10 15
+-3
+-2
+-1
+0
+1
+(B) 0 10 20 30
+200
+220
+240
+260
+The inequalities above were use to fully lower bound l c and max­
+imizing the bound iteratively. This is like the CEM algorithm [6]
+except the new bounds handle the whole e­family (i.e. generalized
+CEM). The synthetic Gaussian mixture model problem problem por­
+trayed in Fig. 1 was implemented. Both ML and CML estimators
+(with reverse­bounds) were initialized in the same random configu­
+ration and maximized. The Gaussians converged as in Fig. 1. CML
+classification accuracy was 93% while ML obtained 59%. Figure
+(A) depicts the convergence of l c per iteration under CML (top line)
+and ML (bottom­line). Similarly, we computed multinomial models
+for 3­class data as 60 base­pair protein chains in Figure (B).
+Computationally, utilizing both Jensen and reverse­Jensen bounds
+for optimizing CML needs double the processing as ML using EM. For example, we
+estimated 2 classes of mixtures of multinomials (5­way mixture) from 40 10­dimensional
+data points. In non­optimized Matlab code, ML took 0.57 seconds per epoch while CML
+took 1.27 seconds due to extra bound computations. Thus, efficiency is close to EM
+for practical problems. Complexity per epoch roughly scales linearly with sample size,
+dimensions and number of latent variables.
+6.2 Conditional Variational Bayesian Inference
+In [9], Bayesian integration methods were demonstrated on latent­variable models by
+invoking Jensen type lower bounds on the integrals of interest. A similar technique can
+be used to approximate conditional Bayesian integration. Traditionally, we compute the
+joint Bayesian integral from (X ; Y) data as p(X; Y ) =
+R p(X; Y jQ)p(QjX ; Y)dQ and
+condition it to obtain p(Y jX) j (the superscript indicates we initially estimated a joint
+density) . Alternatively, we can compute the conditional Bayesian integral directly. The
+
+corresponding dependency graphs (Fig. 3(b) and (c)) depict the differences between joint and
+conditional estimation. The conditional Bayesian integral exploits the graph's factorization,
+to solve p(Y jX) c .
+p(Y jX) c =
+R
+p(Y jX;Q c )[p(Q c jX ;Y)]dQ c =
+R
+p(Y jX;Q c )
+\Theta p(YjX;Q c )p(Q c )
+p(YjX)
+\Lambda
+dQ c
+Jensen and reverse­Jensen bound the terms to permit analytic integration. Iterating this
+process efficiently converges to an approximation of the true integral. We also exhaustively
+solved both Bayesian integrals exactly for a 2 Gaussian mixture model on 4 data points.
+Fig. 3 shows the data and densities. In Fig. 3(d) joint and conditional estimates are
+inconsistent under Bayesian integration (i.e. P (Y jX) c 6= P (Y jX) j ).
+q
+X
+Z
+Y
+q X
+Y {X,Y} {Y|X}
+p(y|x)
+p(x,y)
+Condition
+Integrate Integrate
+p(y|x) c
+= /
+(a) Data (b) Conditioned Joint (c) Direct Conditional (d) Inconsistency
+Figure 3: Conditioned Joint and Conditional Bayesian Estimates
+6.3 Maximum Entropy Discrimination
+Recently, Maximum Entropy Discrimination (MED)was proposed as an alternative criterion
+for estimating discriminative exponential densities [4] [5] and was shown to subsume SVMs.
+The technique integrates over discriminant functions like Eq. 1 but this is intractable under
+latent variable situations. However, if Jensen and reverse­Jensen bounds are used, the
+required computations can be done. This permits iterative MED solutions to obtain large
+margin mixture models and mixtures of SVMs (see web page).
+7 Discussion
+We derived and proved an upper bound on the log­sum of e­family distributions that acts
+as the reverse of the Jensen lower bound. This tool has applications in conditional and
+discriminative learning for latent variable models. For further results, extensions, etc. see:
+http:==www.media.mit.edu= ¸jebara=bounds.
+8 Proof
+Starting from Eq. 2, we directly compute k and Ym by ensuring the variational bound
+makes tangential contact with the log­sum at ”
+Q (i.e. making their value and gradients
+equal). Substituting k and Ym into Eq. 2, we get constraints on wm via Bregman distances:
+P
+m wm(K(Qm )\GammaK( ”
+Qm )\Gamma(Q m \Gamma ”
+Qm ) T K 0 ( ”
+Qm )) – log p(XjQ)
+p(Xj Q) +
+P
+m hm (Qm \Gamma ”
+Qm ) T (K 0 ( ”
+Qm )\GammaX m)
+Define Fm (Qm)=K(Qm )\GammaK( ”
+Qm )\Gamma(Q m \Gamma ”
+Qm ) T K 0 ( ”
+Qm ). The F functions are convex and have a
+minimum (which is zero) at ”
+Qm . Replace the K functions with F:
+P
+m wmF(Qm ) – log
+P
+m exp fDm+Q T m Zm \GammaF (Q m ) g
+P
+m expfDm + Q T m Zm \GammaF ( Qm )g
+\Gamma
+P
+m hm (Qm \Gamma ”
+Qm ) T Zm
+
+Here, Dm are constants and Zm :=Xm \GammaK 0 ( ”
+Qm ). Next, define a mapping from these bowl­
+shaped functions to quadratics:
+Fm (Qm ) = Gm (Fm ) = 1
+2 (Fm \Gamma ”
+Qm ) T (Fm \Gamma ”
+Qm )
+This permits us to rewrite Eq. 2 in terms of F:
+P
+m wmG(Fm ) – log
+P
+m exp fDm+Qm (Fm ) T Zm \GammaG(F m ) g
+P
+m expfDm + ”
+Q T m Zm \GammaG( Qm )g
+\Gamma
+P
+m hm (Qm (Fm )\Gamma ”
+Qm ) T Zm (3)
+Let us find properties of the mapping F=G. Take 2nd derivatives over Fm :
+K 00 (Qm ) @Qm
+@Fm
+@Qm
+@Fm
+T
++(K 0 (Qm )\GammaK 0 ( ”
+Qm )) @ 2 Qm
+@F 2 m
+= I
+Setting Qm= ”
+Qm above, we get the following for a family of such mappings: @Qm
+@Fm j ”
+Qm =
+[K 00 ( ”
+Qm )] \Gamma1=2 . In an e­family, we can always find a Q \Lambda
+m such that Xm=K 0 (Q \Lambda
+m ). By convexity
+of F we create a linear lower bound at Q \Lambda
+m :
+F(Q \Lambda
+m )+(Qm \GammaQ \Lambda
+m ) @F(Qm )
+@Qm
+fi fi Q \Lambda m
+Ÿ F(Qm ) = G(Fm )
+Take 2nd derivatives over Fm : F 0 (Q \Lambda
+m ) @ 2 Qm
+@F 2 m
+Ÿ I which is rewritten as: Zm @ 2 Qm
+@F 2 m
+Ÿ I
+In Eq. 3, Dm+Qm (Fm ) T Zm \GammaG (Fm ) is always concave since its Hessian is: Zm @ 2 Qm
+@F 2 m
+\GammaI which
+is negative. So, we upper bound these terms by a variational linear bound at ”
+Qm :
+P
+m wmG(Fm ) – log
+P
+m exp fD 0 m +F T m [K 00 ( ”
+Qm )] \Gamma1=2 Zmg
+P
+m expfDm + ”
+Q T m Zm \GammaG( Qm )g
+\Gamma
+P
+m hm (Qm (Fm )\Gamma ”
+Qm ) T Zm
+Take 2nd derivatives of both sides with respect to each Fm to obtain (after simplifications):
+wmI – ZmK 00 ( ”
+Qm ) \Gamma1 Z T
+m \Gamma hmZm @ 2 Qm
+@F 2 m
+If we invoke the constraint on w 0
+m , we can replace \Gammah mZm @ 2 Qm
+@F 2 m
+Ÿ w 0
+m I. Manipulating, we
+get the constraint on wm (as a Loewner ordering here), guaranteeing a global upper bound:
+wmI – [Xm \GammaK 0 ( ”
+Qm )]K 00 ( ”
+Qm ) \Gamma1 [Xm \GammaK 0 ( ”
+Qm )] T + w 0
+m I 2
+9 Acknowledgments
+The authors thank T. Minka, T. Jaakkola and K. Popat for valuable discussions.
+References
+[1] Buntine, W. (1994). Operations for learning with graphical models. JAIR 2, 1994.
+[2] Dempster, A.P. and Laird, N.M. and Rubin, D.B. (1977). Maximum likelihood from incomplete
+data via the EM algorithm. Journal of the Royal Statistical Society, B39.
+[3] Gopalakrishnan, P.S. and Kanevsky, D. and Nadas, A. and Nahamoo, D. (1991). An inequality
+for rational functions with applications to some statistical estimation problems, IEEE Trans.
+Information Theory, pp. 107­113, Jan. 1991.
+[4] Jaakkola, T. and Meila, M. and Jebara, T. (1999). Maximum entropy discrimination. NIPS 12.
+[5] Jebara, T. and Jaakkola, T. (2000). Feature selection and dualities in maximum entropy discrim­
+ination. UAI 2000.
+[6] Jebara, T. and Pentland, A. (1998). Maximum conditional likelihood via bound maximization
+and the CEM algorithm. NIPS 11.
+[7] Jordan, M. Gharamani, Z. Jaakkola, T. and Saul, L. (1997). An introduction to variational
+methods for graphical models. Learning in Graphical Models, Kluwer Academic.
+[8] Pecaric, J.E. and Proschan, F. and Tong, Y.L. (1992). Convex Functions, Partial Orderings, and
+Statistical Applications. Academic Press.
+[9] Gharamani, Z. and Beal, M. (1999). Variational Inference for Bayesian Mixture of Factor
+Analysers, NIPS 12.
+

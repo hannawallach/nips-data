@@ -1,0 +1,282 @@
+Iterative scaled trust-region learning in Krylov subspaces via Pearlmutter's implicit sparse Hessian-vector multiply
+
+Eiji Mizutani Department of Computer Science Tsing Hua University Hsinchu, 300 TAIWAN R.O.C. eiji@wayne.cs.nthu.edu.tw James W. Demmel Mathematics and Computer Science University of California at Berkeley, Berkeley, CA 94720 USA demmel@cs.berkeley.edu
+
+Abstract The online incremental gradient (or backpropagation) algorithm is widely considered to be the fastest method for solving large-scale neural-network (NN) learning problems. In contrast, we show that an appropriately implemented iterative batch-mode (or block-mode) learning method can be much faster. For example, it is three times faster in the UCI letter classification problem (26 outputs, 16,000 data items, 6,066 parameters with a two-hidden-layer multilayer perceptron) and 353 times faster in a nonlinear regression problem arising in color recipe prediction (10 outputs, 1,000 data items, 2,210 parameters with a neuro-fuzzy modular network). The three principal innovative ingredients in our algorithm are the following: First, we use scaled trust-region regularization with inner-outer iteration to solve the associated "overdetermined" nonlinear least squares problem, where the inner iteration performs a truncated (or inexact) Newton method. Second, we employ Pearlmutter's implicit sparse Hessian matrix-vector multiply algorithm to construct the Krylov subspaces used to solve for the truncated Newton update. Third, we exploit sparsity (for preconditioning) in the matrices resulting from the NNs having many outputs. 1 Introduction Our objective function to be minimized for optimizing the n-dimensional parameter vector ,, of an F -output NN model is the sum over all the d data of squared dimensional residual vector composed of all m residual elements: ri (i = 1, . . . , m); and rk the d-dimensional residual vector evaluated at terminal node k. The gradient vector and the Hessian matrix of E(,,) are given by g  JT r and H  JT J + S, respectively, where J, the m×n (residual) Jacobian matrix of r, is readily obtainable from backpropagation (BP) process, and S is the matrix of second-derivative
+
+residuals: E(,,) = 1 2 r(,,) 2 2 = 1 2 m i=1 ri = 2 1 2 F k=1 rk 2 2 . Here, mF d; r(,,) is the m-
+
+
+terms of r; i.e., S 
+
+m i=1
+
+ri2ri. Most nonlinear least squares algorithms take ad-
+
+vantage of information of J or its cross product called the Gauss-Newton (GN) Hessian JT J (or the Fisher information matrix for E(.) in Amari's natural-gradient learning [1]), which is the important portion of H because influence of S becomes weaker and weaker as residuals become smaller while learning progresses. With multiple F-output nonlinear models (except fully-connected NNs), J is known to have the m × n block angular matrix form (see [7, 6] and references therein). For instance, consider a single-hidden layer S-H-F MLP (with S-input H-hidden F -output nodes); there are nA=F (H + 1) terminal parameters ,,A (including threshold parameters) on direct connections to F terminal nodes, each of which has CA(=H + 1) direct connections, and the rest of nB=H(S + 1) parameters are not directly connected to any terminal node; hence, nB hidden parameters ,,B. In other words, model's parameters ,, (n=FCA + nB in total) can separate as: ,,T = [,,AT |,,BT ] =[,,AT , ··· , ,,AT , ··· , ,,AT |,,BT ], where ,,A is a vector of the kth subset of
+
+1 k F k
+
+CA terminal parameters directly linked to terminal node k (k = 1, ··· ,F ). The associated residual Jacobian matrix J can be given in the block-angular form below left, and thus the (full) Hessian matrix H has the n × n sparse block arrow form below right (× denotes some non-zero block) as well as the GN-Hessian JT J:
+
+A1 ×
+
+A2
+
+B1 B2 ... AF BF
+
+×
+
+J m×n
+
+   =  
+
+...
+
+   , 
+
+H n×n =
+
+     
+
+×
+
+×
+
+× × × ×
+
+  .  
+
+(1)
+
+Here in J, Ak and Bk are d × CA and d × nB Jacobian matrices, respectively, of the d-dimensional residual vector rk evaluated at terminal node k. Notice that there are F diagonal Ak blocks [because (F - 1)CA terminal parameters excluding ,,A have no effect on rk], and F vertical Bk blocks corresponding to the nB hidden
+
+k
+
+parameters ,,B that contribute to minimizing all the residuals rk(k=1, ··· , F) evaluated at all F terminal nodes. Therefore, the posed problem is overdetermined when have linear identity functions, terminal parameters ,,A are linear, and thus all Ak blocks become identical A1 = A2 = ··· = AF , with H + 1 hidden-node outputs (including one constant bias-node output) in each row. For small- and medium-scale problems, direct batch-mode learning is recommendable with a suitable "direct" matrix factorization, but attention must be paid to exploiting obvious sparsity in either block-angular J or block-arrow H so as to render the algorithms efficient in both memory and operation counts [7, 6]. Notice that H-1 is dense even if H has a nice block-arrow sparsity structure. For large-scale problems, Krylov subspace methods, which circumvent the need to perform time-consuming and memory-intensive direct matrix factorizations, can be employed to realize what we call iterative batch-mode learning. If any rows (or columns) of those matrices Ak and Bk are not needed explicitly, then Pearlmutter's method [11] can automatically exploit such sparsity to perform sparse Hessian-vector product in constructing a Krylov subspace for parameter optimization, which we describe in what follows with our numerical evidence. 2 Inner-Outer Iterative Scaled Trust-Region Methods Practical Newton methods enjoy both the global convergence property of the Cauchy (or steepest descent) method and the fast local convergence of the Newton method.
+
+"m > n" (namely, "d > CA + 1 F nB") holds. In addition, when the terminal nodes
+
+× × × × ×
+
+
+2.1 Outer iteration process in trust-region methods One might consider a convex combination of the Cauchy step ,,Cauchy and the Newton step ,,Newton such as (using a scalar parameter h):
+
+,,Dogleg = (1 - h),,Cauchy + h,,Newton, def (2)
+
+which is known as the dogleg step [4, 9]. This step yields a good approximate solution to the so-called "scaled 2-norm" or "M-norm" trust-region subproblem (e.g., see Chap. 7 in [2]) with Lagrange multiplier µ below:
+
+min q(,,) subject to ,, ,, M  R, or min ,,
+
+q(,,) +
+
+
+
+µ 2
+
+(,,T M,, - R2) , (3)
+
+where the distances are measured in the M-norm: x M = xTMx with a symmet-
+
+ric positive definite matrix M, and R (called the trust-region radius) signifies the Radius R is controlled according to how well q(.) predicts the behavior of E(.) by checking the error reduction ratio below:
+
+trust-region size of the local quadratic model q(,,) = E(,,) + gT ,, + def 1 2 ,,T H,,.
+
+ = Actual error reduction Predicted error reduction = E(,,now) - E(,,next) . E(,,now) - q(,,) (4)
+
+For more details, refer to [9, 2]. The posed constrained quadratic minimization can be solved with Lagrange multiplier µ: If ,, is a solution to the posed problem, then H + µM positive semidefinite. In nonlinear least squares context, the nonnegative scalar parameter µ is known as the Levenberg-Marquardt parameter. When step ,,Newton = -H-1g, and, as µ increases (i.e., as R decreases), ,, gets closer to
+
+,, satisfies the formula: (H + µM),, = -g, with µ( ,, M - R) = 0, µ  0, and
+
+µ = 0 (namely, R  ,,Newton M ), the trust-region step ,, becomes the Newton
+
+def
+
+the (full) Cauchy step ,,Cauchy: ,,Cauchy = - gT M-1g/gT M-1HM-1g M-1g.
+
+When R < ,,Cauchy M , the trust-region step ,, reduces to the restricted Cauchy
+
+step ,,RC = -(R/ ,,Cauchy def M ),,Cauchy. If ,,Cauchy M
+
+< R <
+
+,,Newton M ,
+
+def
+
+,, is the "dogleg step," intermediate between ,,Cauchy and ,,Newton, as shown in
+
+Eq. (2), where scalar h (0 < h < 1)is the positive root of s + hp
+
+h =
+
+-sTMp+
+
+(sT Mp)2+pT Mp(R2-sT Ms) pTMp
+
+,
+
+M = R:
+
+(5)
+
+with s = ,,Cauchy and p = ,,Newton - ,,Cauchy (when pT g < 0). In this way, the trial step ,, is subject to trust-region regularization. In large-scale problems, the linear-equation solution sequence {,,k} is generated iteratively while seeking a trial step ,, in the inner iteration process, and the parameter sequence {,,i}, whose two consecutive elements are denoted by ,,now and ,,next, is produced by the outer iteration (i.e., epoch in batch mode). The outer iterative process updates parameters by ,,next = ,,now + ,, without taking any uphill movement: That is, if the step is not satisfactory, then R is decreased so as to realize an important Levenberg-Marquardt concept: the failed step is shortened and deflected towards the Cauchy-step direction simultaneously. For this purpose, the trust-region methods compute the gradient vector in batch mode or with (sufficiently large) data block (i.e., block mode; see our demonstration in Section 3). 2.2 Inner iteration process with truncated preconditioned linear CG We employ a preconditioned conjugate gradient (PCG) (among many Krylov subspace methods; see Section 6.6 in [3] and Chapter 5 in [2]) with our symmetric def def
+
+
+positive definite preconditioner M for solving the M-norm trust-region subproblem (3). This is the truncated PCG (also known as Steihaug-Toint CG) applicable even to nonconvex problems for solving inexactly the Newton formula by the inner iterative process below (see pp. 628-629 in [10]; pp. 202­218 in [2]) based on the standard PCG algorithm (e.g., see page 317 in [3]): Algorithm 1: The inner iteration process via preconditioned CG. 1. Initialization (k=0): Set ,,0 = 0 and <0 = -g (=-g - H,,0); Solve Mz = <0 for pseudoresiduals: z = M-1<0; Compute 0 = T0 z; Set k = 1 and d1 = z, and then proceed to Step 2.
+
+2. Matrix-vector product: z = Hdk = JT (Jdk) + Sdk 3. Curvature check: k = dTk z = dTk Hdk.
+
+(see also Algorithm 2).
+
+If k > 0, then continue with Step 4. Otherwise, compute h (> 0) such that
+
+,,k -1 + hdk M = R, and terminate with ,, = ,,k -1 + hdk.
+
+4. Step size: k =
+
+k
+
+-1
+
+.
+
+k
+
+5. Approximate solution: ,,k = ,,k
+
+If ,,k
+
+M < R,
+
+-1 + kdk.
+
+go onto Step 6; else terminate with ,, = 
+
+R ,,k
+
+,,k. (6)
+
+M
+
+6. Linear-system residuals: k = k
+
+If k
+
+2
+
+-1
+
+is small enough; i.e., k
+
+2
+
+- kz [= -g - H,,k = -q (,,k)].   g , then terminate with ,, = ,,k.
+
+2
+
+7. Pseudoresiduals: z = M-1<k, and then compute k = Tk z.
+
+8. Conjugation factor: k
+
+9. Search direction: dk +1
+
++1 =
+
+k
+
+k
+
+-1
+
+.
+
+= k + k +1 k d .
+
+10. If k < klimit, set k = k + 1 and return to Step 2. Otherwise, terminate with ,, = ,,k. 2 At Step 3, h is obtainable with Eq. (5) with s = ,,k
+
+-1 and p = dk plugged in.
+
+Likewise, in place of Eq. (6) at Step 5, we may use Eq. (5) for ,, = ,,k
+
+hdk such that R  ,,Cauchy
+
+,,k
+
+M
+
+-1 + hdk M
+
+-1 +
+
+= R, but both computations become identical if
+
+; otherwise, Eq. (6) is less expensive and tends to give more bias
+
+towards the Newton direction. The inner-iterative process terminates (i.e., stops at inner iteration k) when one of the next four conditions holds: Condition (D) at Step 10 is least likely to be met since there would be no prior knowledge about preset limits klimit to inner iterations (usually, klimit=n). As long as dTk Hdk > 0 holds, PCG works properly until the CG-trajectory hits the trustregion boundary [Condition (B) at Step 5], or till the 2-norm linear-system residuals become small [Condition (C) at Step 6], where  can be fixed (e.g., =0.01). Condition (A) dTk Hdk  0 (at Step 3) may hold when the local model is not strictly convex (or H is not positive definite). That is, dk is a direction of zero or negative curvature; a typical exploitation of non-positive curvature is to set ,, equal to the "step to the trust-region boundary along that curvature segment (in Step 3)" as a model minimizer in the trust region. In this way, the terminated kth CG step yields an approximate solution to the trust-region subproblem (3), and it belongs to the Krylov subfrom our application of CG (without multiplying by M-12 ) to the symmetric Newton formula (M-12 HM-12 )(M2 ,,) = -M-12 g, because M-1H (in the sys-
+
+(A) dTk Hdk  0, (B) ,,k M  R, (C) H,,k + g   g , (D) k=klimit. 2 2 (7)
+
+space span{-M-12 g, -(M-12 HM-12 )M-12 g, ..., -(M-12 HM-12 )k -1 M-12g}, resulting
+
+1
+
+tem M-1H,, = -M-1g) is unlikely symmetric (see page 317 in [3]) even if M is a diagonal matrix (unless M = I).
+
+
+The overall memory requirement of Algorithm 1 is O(n) because at most five nvectors are enough to implement. Since the matrix-vector product Hdk at Step 2 is dominant in operation cost of the entire inner-outer process, we can employ Pearlmutter's method with no H explicitly required. To better understand the method, we first describe a straightforward implicit sparse matrix-vector multiply when H = JT J; it evaluates JT Jdi (without forming JT J) in two-step implicit matrix-vector product as z=JT (Jdi), exploiting block-angular J in Eq. (1); i.e., working on each block, Ak and Bk, in a row-wise manner below: Algorithm 2: Implicit (i.e., matrix-free) sparse matrix-vector multiplication step with an F-output NN model at inner iteration i starting with z = 0: for p = 1 to d (i.e., one sweep of d training data): (a) do forward pass to compute F final outputs yp(,,) on datum p; for k = 1 to F (at each terminal node k): · (b) do backward pass to obtain the pth row of Ak as the CA-vector aTp,k, and the pth row of Bk as the nB-vector bTp,k; · (c) compute kap and kbp,k, where scalar k = aTp,kdai,k + bTp,kdbi, and then add them to their corresponding elements of z; end for k. end for p. 2 Here, Step (a) costs at least 2dn (see details in [8]); Step (b) costs at least 2mlu, where m=Fd and lu=CA+nB < n=FCA+nB; and Step (c) costs 4mlu; overall, Algorithm 2 costs O(mlu), linear in F. Note that if sparsity is ignored, the cost becomes O(mn), quadratic in F since mn = F d(F CA+nB). Algorithm 2 can extract explicitly F pairs of row vectors (aT and bT ) of J (with F lu storage) on each datum, making it easier to apply other numerical linear algebra approaches such as preconditioning to reduce the number of inner iterations. Yet, if the row vectors are not needed explicitly, then Pearlmutter's method is more efficient, calculating k [see Step (c)] in its forward pass (i.e., R{yk}=k; see Eq. (4.3) on page 151 in [11]). When H = JT J, it is easy to simplify its backward pass (see Eq. (4.4) on page 152 in [11]), just by eliminating the terms involving residuals r and second-derivatives of node functions f (.), so as to multiply vectors ak and bk through by scalar k implicitly. This simplified method of Pearlmutter runs in time O(dn), whereas Algorithm 2 does in O(mlu). Since mlu - dn = dF (CA + nB) - d(F CA + nB) = d(F - 1)nB, Pearlmutter's method can be up to F times faster than Algorithm 2. Furthermore, Pearlmutter's original method efficiently multiplies an n-vector by the "full" Hessian matrix still is the ith row vector of J; notably, the method automatically exploits block-arrow sparsity of H [see Eq. (1), right] in the essentially same way as the standard BP deals with block-angular sparsity of J [see Eq. (1), left] to perform the matrix-vector product g = JT r in O(dn). 3 Experiments and Discussion In simulation, we compared the following five algorithms: Algorithm A: Online-BP (i.e., H = I) with a fixed momentum (0.8); Algorithm B: Algorithm 2 alone for Algorithm 1 with H = JTJ (see [6]); Algorithm C: Pearlmutter's method alone for Algorithm 1 with H = JTJ; Algorithm D: Algorithm 2 to obtain preconditioner M = diag(JTJ) only, and Pearlmutter's method for Algorithm 1 with H = JT J; Algorithm E: Same as Algorithm D except with "full" Hessian H = JTJ + S. 2
+
+in O(dn) for z = Hdi = JT (Jdi) + Sdi = m j=1 (uTj di)uj + m j=1 [2rj]rjdi, where uTi
+
+
+Algorithm A is tested for our speed comparison purpose, because if it works, it's probably fastest. In Algorithms D and E, Algorithm 2 was only employed for obtaining a diagonal preconditioner M = diag(JT J) (or Jacobi preconditioner) for Algorithm 1, whereas in Algorithms B and C, no preconditioning (M = I) was applied. The performance comparisons were made with a nonlinear regression task and a classification benchmark, the letter recognition problem, from the UCI machine learning repository. All the experiments were conducted on a 1.6-GHz Pentium-IV PC with FreeBSD 4.5 and gcc-2.95.3 compiler (with -O2 optimization flag). The first regression task was a real-world application color recipe prediction, a problem of determining mixing proportions of available colorants to reproduce a given target color, requiring mappings from 16 inputs (16 spectral reflectance signals of the target color) to ten outputs (F =10) (ten colorant proportions) using 1,000 training data (d=1,000; m=10,000) with 302 test data. The table below shows the results averaged over 20 trials with a single 16-82-10 MLP [n=2,224 ing RMSE  0.002 (application requirement)" satisfied, when we say that "convergence" (relatively early stop) occurs. Clearly, the posed regression task is nontrivial because Algorithm A, online-BP, took roughly six days (averaged over only ten trials), nearly 280 (=8748.4/31.2) times slower than (fastest) Algorithm D. In generalization performance, all the posed algorithms were more or less equivalent.
+
+(CA=83;nB=1,394;lu=1,477); hence, mlu dn =6.6], which was optimized until "train-
+
+Model Algorithm Total time (min) Stopped epoch Time/epoch (sec) Inner itr./epoch Flops ratio/itr. Test RMSE
+
+Single 16-82-10 MLP
+
+B 336.4 272.5 73.8 218.3 3.9 0.015 C 107.2 261.5 24.6 216.0 0.015
+
+Five-MLP mixed
+
+B 162.3 147.3 65.2 193.8 4.1 0.016 C 57.6 160.0 21.6 174.1 0.016 A 8748.4 2,916,495.2 0.2 N/A N/A 0.020
+
+1.0
+
+D 31.2 132.7 14.1 142.7 0.015 E 64.5 300.3 12.9 110.9 1.3 0.015
+
+1.2
+
+D 20.9 179.1 7.0 66.0 0.017
+
+We also observed that use of full Hessian matrix (Algorithm E) helped reduce inner iterations per epoch, although the total convergence time turned out to be greater than that obtained with the GN-Hessian (Algorithm D), presumably because our Jacobi-preconditioner must be more suitable for the GN-Hessian than for the full Hessian, and perhaps because the inner iterative process of Algorithm E can terminate due to detection of non-positive curvature in Eq. (7)(A); this extra chance of termination may increase the total epochs, but help reduce the time per epoch. Remarkably, the time per inner iteration of Algorithm E did not differ much from Algorithms C and D owing to Pearlmutter's method; in fact, given preconiteration than Algorithms C and D did, although Algorithm B needed nearly 3.9 times more. The measured megaflop rates for all these codes lie roughly in the range from 200-270 Mflop/sec; typically, below 10 % of peak machine speed. For improving single-MLP performance, one might employ two layers of hidden nodes (rather than one large hidden layer; see the letter problem below), which increases nB while reducing nA, rendering Algorithm 2 less efficient (i.e., slower). Alternatively, one might introduce direct connections between the input and terminal output layers, which increases CA, the column size of Ak, retaining nice parameter separability. Yet another approach (if applicable) is to use a "comple-
+
+ditioner M, Algorithm E merely needed about 1.3 times more flops  per inner
+
+ The floating-point operation counts were measured by using PAPI (Performance Ap-
+
+plication Programming Interface); see http://icl.cs.utk.edu/projects/papi/.
+
+
+mentary mixtures of Z MLP-experts" model (or a neuro-fuzzy modular network) that combines Z smaller-size MLPs complementarily; the associated residual vector the ith output of the integrating unit, is the ith (normalized) mixing proportion assigned to the outputs (F-vector oi) of expert-MLP i. Note that each expert learns "residuals" rather than "desired outputs" (unlike in the committee method below) in the sense that only the final combined outputs y must come close to the desired ones t. That is, there are strong coupling effects (see page 80 in [5]) among all experts; hence, it is crucial to consider the global Hessian across all experts to optimize them simultaneously [7]. The corresponding J has the same block-angular form as that in Eq. (1)(left) with Ak  [A1kA2k ··· AZ], and Bk  [B1kB2k ··· BZ] (k = 1, ··· , F).
+
+to be minimized becomes: r(,,) = y(,,) - t = Z i=1 wioi - t, where scalar wi,
+
+k k
+
+Here, the residual Jacobian portion for the parameters of the integrating unit was omitted because they were merely fine-tuned with a steepest-descent type method owing to our knowledge-based design for input-partition to avoid (too many) local experts. Specifically, the spectral reflectance signals (16 inputs) were converted to the hue angle as input to the integrating unit that consists of five bell-shaped basis functions, partitioning that hue-subspace alone in a fuzzy fashion into only five color regions (red, yellow, green, blue, and violet) for five 16-16-10 MLP-experts, each of which receives all the 16 spectral signals as input [hence, Z=5; n=2,210 (CA=85; model was better in learning; see faster learning in table above. In particular, our model with Algorithm D worked 353 ( 123.1 × 60.0/20.9) times faster than with Algorithm A that took 123.1 hours (see [6]) and 419 ( 8748.4/20.9) times faster than the single MLP with Algorithm A. For our complementary mixtures model, R{.}-operator of Pearlmutter's method is readily applicable; for instance, at termieach R{oi,k} yields k [see Algorithm 2(c)] for each expert-MLP i (i = 1, ··· ,Z). The second letter classification benchmark problem involves 16 inputs (features) and 26 outputs (alphabets) with 16,000 training data (F =26; d=16,000; m=416,000) plus 4,000 test data. We used the 16-70-50-26 MLP (see [12]) (n=6,066) with 10 sets of different initial parameters randomly generated uniformly in the range [-0.2, 0.2]. We implemented block-mode learning (as well as batch mode) just by splitting the training data set into two or four equally-sized data blocks, and each data block alone is employed for Algorithms 1 and 2 except for computing  in Eq. (4), where evaluation of E(.) involves all the d training data. Notice that two-block mode learning scheme updates model's parameters ,, twice per epoch, whereas onlineBP updates them on each datum (i.e., d times per epoch). We observed that possible redundancy in the data set appeared to help reduce the number of inner iterations, speeding up our iterative batch-mode learning; therefore, we did not use preconditioning. The next table shows the average performance (over ten trials) when the best test-set performance was obtained by epoch 1,000 with online-BP (i.e., Algorithm A) and by epoch 50 with Algorithm C in three learning modes:
+
+nB=1,360); mlu dn =6.5]. Due to localized parameter-tunings, our five-MLP mixtures
+
+nal node k (k=1, ··· ,F): R{rk} = R{yk} = Z i R{oi,k}wi + Z i R{wi}oi,k, where
+
+Average results Total time (min) Stopped epoch Time/epoch (sec) Avg. inner itr. Error (train/test) Committee error Online-BP 63.2 597.8 6.3 N/A 2.3% / 6.4% 0.2% / 3.0% Four-block mode 22.4 36.6 36.8 4.5/block 2.7% / 5.1% 1.2% / 2.8% Two-block mode 41.0 22.1 111.7 26.3/block 1.2% / 4.6% 0.3% / 2.2% Batch mode 61.1 27.1 135.2 31.0/batch 1.2% / 4.9% 0.1% / 2.3%
+
+On average, Algorithm C in four-block mode worked about three ( 63.2/22.4)
+
+
+times faster than online-BP, and thus can work faster than batch-mode nonlinearCG algorithms, since, reported in [12], online-BP worked faster than nonlinear-CG. Here, we also tested the committee methods (see Chap. 8 in [13]) that merely combined all (equally-weighted) outputs of the ten MLPs, which were optimized independently in this experiment. The committee error was better than the average error, as expected. Intriguingly, our block-mode learning schemes introduced small (harmless) bias, improving the test-data performance; specifically, the two-block mode yielded the best test error rate 2.2% even with this simple committee method. 4 Conclusion and Future Directions Pearlmutter's method can construct Krylov subspaces efficiently for implementing iterative batch- or block-mode learning. In our simulation examples, the simpler version of Pearlmutter's method (see Algorithms C and D) worked excellently. But it would be of interest to investigate other real-life large-scale problems to find out the strengths of the full-Hessian based methods (see Algorithm E) perhaps with a more elaborate preconditioner, which would be much more time-consuming per epoch but may reduce the total time dramatically; hence, need to deal with a delicate balancing act. Beside the simple committee method, it would be worth examining our algorithms for implementing other statistical learning methods (e.g., boosting) in conjunction with appropriate numerical linear algebra techniques. These are part of our overlay ambitious goal for attacking practical large-scale problems. References [1] Shun-ichi Amari. Natural gradient works efficiently in learning. In Neural Computation, 10, pp. 251­276, 1998. [2] A. R. Conn, N. I. M. Gould, and P. L. Toint. Trust-Region Methods. SIAM, 2000. [3] James W. Demmel. Applied Numerical Linear Algebra. SIAM, 1997. [4] J. E. Dennis, D. M. Gay, and R. E. Welsch. "An Adaptive Nonlinear Least-Squares Algorithm." In ACM Trans. on Mathematical Software, 7(3), pp. 348­368, 1981. [5] R. A. Jacobs, M. I. Jordan, S. J. Nowlan and G. E. Hinton. "Adaptive Mixtures of Local Experts." In Neural Computation, pp. 79­87, Vol. 3, No. 1, 1991. [6] Eiji Mizutani and James W. Demmel. "On structure-exploiting trust-region regularized nonlinear least squares algorithms for neural-network learning." In International Journal of Neural Networks. Elsevier Science, Vol. 16, pp. 745-753, 2003. [7] Eiji Mizutani and James W. Demmel. "On separable nonlinear least squares algorithms for neuro-fuzzy modular network learning." In Proceedings of the IEEE Int'l Joint Conf. on Neural Networks, Vol.3, pp. 2399­2404, Honolulu USA, May, 2002. (Available at http://www.cs.berkeley.edu/~eiji/ijcnn02.pdf.) [8] Eiji Mizutani and Stuart E. Dreyfus. "On complexity analysis of supervised MLPlearning for algorithmic comparisons." In Proceedings of the INNS-IEEE Int'l Joint Conf. on Neural Networks, Vol. 1, pp. 347­352, Washington D.C., July, 2001. [9] Jorge J. Mor´e and Danny C. Sorensen. "Computing A Trust Region Step." In SIAM J. Sci. Stat. Comp. 4(3), pp. 553­572, 1983. [10] Trond Steihaug "The Conjugate Gradient Method and Trust Regions in Large Scale Optimization." In SIAM J. Numer. Anal. pp. 626­637, vol. 20, no. 3. 1983. [11] Barak A. Pearlmutter. "Fast exact multiplication by the Hessian." In Neural Computation, pp. 147­160, Vol. 6, No. 1, 1994. [12] Holger Schwenk and Yoshua Bengio. "Boosting neural networks." In Neural Computation, pp. 1869­1887, Vol. 12, No. 8, 2000. [13] Trevor Hastie, Robert Tibshirani, and Jerome Friedman. The Elements of Statistical Learning. Springer-Verlag, 2001 (Corrected printing 2002).
+
+

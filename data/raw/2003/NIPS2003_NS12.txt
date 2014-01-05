@@ -1,0 +1,194 @@
+Estimating Internal Variables and Parameters of a Learning Agent by a Particle Filter
+
+Kazuyuki Samejima Kenji Doya
+
+Department of Computational Neurobiology ATR Computational Neuroscience laboratories; "Creating the Brain", CREST, JST. "Keihan-na Science City", Kyoto, 619-0288, Japan {samejima, doya}@atr.jp Yasumasa Ueda Minoru Kimura Department of Physiology, Kyoto Prefecture University of Medicine, Kyoto, 602-8566, Japan {yasu, mkimura}@basic.kpu-m.ac.jp
+
+Abstract When we model a higher order functions, such as learning and memory, we face a difficulty of comparing neural activities with hidden variables that depend on the history of sensory and motor signals and the dynamics of the network. Here, we propose novel method for estimating hidden variables of a learning agent, such as connection weights from sequences of observable variables. Bayesian estimation is a method to estimate the posterior probability of hidden variables from observable data sequence using a dynamic model of hidden and observable variables. In this paper, we apply particle filter for estimating internal parameters and metaparameters of a reinforcement learning model. We verified the effectiveness of the method using both artificial data and real animal behavioral data.
+
+1 Introduction In neurophysiology, the traditional approach to discover unknown information processing mechanisms is to compare neuronal activities with external variables, such as sensory stimuli or motor output. Recent advances in computational neuroscience allow us to make predictions on neural mechanisms based on computational models. However, when we model higher order functions, such as attention, memory and learning, the model must inevitably include hidden variables which are difficult to infer directly from externally observable variables. Although the assessment of the plausibility of such models depends on the right estimate of the hidden variables, tracking their values in an experimental setting is a difficult problem. For example, in learning agents, hidden variables such as connection weights change in time. In addition, the course of learning is modulated by hidden meta-parameters such as
+
+
+the learning rate. The goal of this study is two-fold: First to establish a method to estimate hidden variables, including meta-parameters from observable experimental data. Second to provide a method for objectively selecting the most plausible computational model out of multiple candidates. We introduce a numerical Bayesian estimation method, known as particle filtering, to estimate hidden variables. We validate this method with a reinforcement learning task. 2 Reinforcement learning model as an animal and a human decision processes Reinforcement learning can be a model of animal or human behaviors based on reward delivery. Notably, the response of monkey midbrain dopamine neurons are successfully explained by the temporal differnce (TD) error of reinforcement learning models [2]. The goal of reinforcement learning is to improve the policy so that the agent maximizes rewards in the long run. The basic strategy of reinforcement learning is to estimate cumulative future reward under the current policy as the value function and then to improve the policy based on the value function. A standard algorithm of reinforcement learning is to learn the action-value function,
+
+
+
+Q(st, at) = E (- r |st, at
+
+ =t
+
+which estimates the cumulative future reward when action a is taken at a state . The discount factor 0 <  < 1 is a meta-parameter that controls the time scale of prediction. The policy of the learner is then given by comparing action-values, e.g. according to Boltzman P (a|st) = , (2) where the inverse temperature  > 0 is another meta-parameter that controls randomness of action selection. From an experience of state st, action at, reward rt, and next state
+
+distribution exp Q(st, a)
+
+exp Q(st, a) ~ aA ~
+
+st +1 , the action-value function is updated by Q-learning algorithm [1] as
+
+T D (t) = rt +  max Q(st +1 aA , a) - Q(st, at)
+
+t) , (1)
+
+Q(st, at)  Q(st, at) + TD(t) (3)
+
+where  > 0 is the meta-parameter that controls learning rate. Thus this simple reinforcement learning modol has three meta-paramters, , and  Such a reinforcement learning model does not only predict subject's actions, but also predicts internal process of the brain, which may be recorded as neural firing or brain imaging data. However, a big problem is that the predictions are depended on the setting of meta-parameters, such as learning rate , action randomness  and discount factor . 3 Bayesian estimation of hidden variables of reinforcement learning agent Let us consider a problem of estimating the time course of action-values {Qt(s, a); s  S, s  A, 0  t  T } and meta-parameters ,  , and  of reinforcement learner by only observing the sequence of states st, actions at and rewards rt. We use a Bayesian method of estimating a dynamic hidden variable {xt; t  N} from sequence of observable variable {yt; t  N}. We assume that the hidden variable follows a Markov process
+
+
+t t+1
+
+ t  t+1
+
+metaparameters
+
+t t+1
+
+Update
+
+Qt Qt +1
+
+Hidden parameters
+
+Decision a a t+1 t
+
+Observable variables
+
+s s t t+1
+
+State transition
+
+r r t t+1
+
+Get reward
+
+Figure 1: A Bayesian network representation of a Q-learning agent: dynamics of observable and unobservable variable is depended on decision, reward probability, state transition, and update rule for value function. Circles: hidden variable. Double box: observable variable. Arrow: probabilistic dependency
+
+of initial distribution p(x0) and the transition probability p(xt +1 |xt). The observations
+
+{yt;t  N} are assumed to be conditionally independent given the process {xt;t  N} and has the marginal distribution p(yt|xt). The problem is to estimate recursively in time the posterior distribution of hidden variable p(x0:t|y1:t), where x0:t = {x0, . . . , xt} and y1:t = {y1, . . . , yt}. The marginal distribution is given by recursive procedure of the following prediction and updating,
+
+P redicdion Updating : : p(xt|y1:t- ) = p(xt|y1:t) = 1
+
+p(xt|xt- )p(xt- |y1:t- )dxt- , 1 1 1 1
+
+p(yt|xt)p(xt|y1:t- ) 1
+
+p(yt|xt)p(xt|y1:t- )dxt 1
+
+.
+
+We use a numerical method called particle filter [3] to approximate this process. In the particle filter, the distributions of sequence of hidden variables p(x0:t|y1:t) are represented by a set of random samples, called "particles". Figure 1 is the dynamical Bayesian network representation of a Q-learning agent. The hidden variable xt consists of the action-values Q(s, a) for each state-action pair, learning rate , inverse temperature , and discount factor . The observable variable yt consists of the state st, action at, and reward rt. The marginal distribution p(yt|xt) of observation process is given by the softmax action selection probability (2) combined with the state transition rule and the reward condition hidden variable is given by the Q-learning rule (3) and an assumption about the meta-
+
+p(rt +1 |st,at) given by the environment. The transition probability p(st +1 |st,at) of the
+
+
+(t) (t+1)
+
+(t) (t+1)
+
+Q(t) Q(t+1))
+
+a(t) a(t+1)
+
+r(t) r(t+1)
+
+Figure 2: Simplified Bayesian network for the two-armed bandit problem.
+
+parameter dynamics. Here we assume that meta-parameters are constant with small drifts. Because ,  and  should all be positive, we assume random-walk dynamics in logarithmic space
+
+log(xt +1 ) = log(xt) + x, x  N(0, x) (4)
+
+where x is a meta-meta-parameter that defines variability of the meta-parameter x  {,,}.
+
+4 Simulations 4.1 Two armed bandit problem with block wise reward change In order to test the validity of the proposed method, we use a simple Q-leaning agent that learns a two armed bandit problem [1]. The task has only one state, two actions, and stochastic binary reward. The reward probability for each action is fixed in a block of selected randomly from three settings; {Pr , Pr } = {0.1, 0.9}, {0.50.5}, {0.9, 0.1} at the
+
+100 trials. The reward probabilities Pr 1 for action a = 1 and Pr 2 for action a = 2 are
+
+1 2
+
+beginning of each block. The Q-learning agent tries to learn reward expectation of each action and maximize reward acquired in each block. Because the task has only one state, the agent does not need to take into account next state's value, and thus, we set the discount factor as  = 0. The Bayesian network for this example is simplified as Figure 2. Simulated actions are selected according to Boltzman distribution (2) using action-values Q(a = 1) and Q(a = 2), and the inverse temperature . The action values are updated by equation (3) with the action at, reward rt, and learning rate .
+
+
+4.2 Result We used 1000 particles for approximating the distribution of hidden variable x = (Q(a = 1), Q(a = 2), log(), log()). We set the initial distribution of particles as Gaussian distribution with the mean {0, 0, 0, 0} and the variance {1, 1, 3, 1} for {Q(a = 1), Q(a = 2), log(), log()}, respectively. We set the meta-meta-parameters for learning rate as  = 0.05 , and inverse temperature as  = 0.005 . The reward is r = 5 when delivered, and otherwise r = 0. Figure 3(a) shows the simulated actions and rewards of 1000 trials by Q-learning agent with  = 0.05 and  = 1. From this observable sequence of yt = (st, at, rt), the particle filter estimated the time course of action-values, Qt(a = 1) and Qt(a = 2), learning rate t and inverse temperature t. The expected values of the marginal distribution of these hidden variables (Figure 3(b)-(e) solid line) are in good agreement with the true value (Figure 3(b)-(e) dotted line) recorded in simulation. Although the initial estimates were inevitable inaccurate, the particle filter are good estimation of each variable after about 200 observations. To test robustness of the particle filter approach, we generated behavioral sequences of Qlearners with different combinations of  = {0.01, 0.15, 0.1, 0.5} and  = {0.5, 1, 2, 4}, and estimated meta-parameters  and . Even if we set a broad initial distribution of  and , the expectation value of the estimated values are in good agreement with the true value. When the agent had the smallest learning rate  = 0.01, the particle filter tended to underestimated  and overestimated . 5 Application to monkey behavioral data We applied the particle filter approach to monkey behavioral data of the two-armed bandit problem [4]. In this task, the monkey faces a lever that can be turned to either left or right. After adjusting a lever at center position and holding it for one second, the monkey turned the lever to left or right based on the reward probabilities assigned on each direction of lever turn. Probabilities [PL, PR] of reward delivery on the left and right turns, respectively were varied across three trial blocks as: [PL, PR]=[0.5, 0.5]; [0.1, 0.9]; [0.9, 0.1]. In each block, the monkeys shifted selection to the direction with higher reward probability. We used 1000 particles and Gaussian initial distribution with the mean (2,2,3,0) and the variance (2,2,1,1) for x = (Q(R), Q(L), log(), log()). We set the meta-metaparameters for learning rate as  = 0.05 , and for inverse temperature as  = 0.001 . The reward was r = 5 when delivered, and otherwise r = 0. Figure 5(a) shows the sequence of selected actions and rewards in a day. Figure 5(b) shows the estimated action-values Q(a = L) and Q(a = R) for the left and right lever turns. The estimated action value Q(L) for left action increased in the blocks of [PL, PR] = [0.9, 0.1], decreased in the blocks of [0.1, 0.9], and fluctuated in the blocks of [0.5, 0.5]. We tested whether the estimated action-value and meta-parameters could reproduce the action sequences. We quantified the prediction performance of action sequences by the likelihood of the action data given the estimated model,
+
+N
+
+Lt = 1 N - T + 1 log p^(a = at|{a1, r1, ··· , at- , rt- }, M, t),
+
+1 1 (5)
+
+t=T
+
+where p^(a) is estimated probability of action at t by model M and estimated parameters t from the sequence of past experience {a1, r1, ··· , at- , rt- }.
+
+1 1
+
+Figure 6(b) shows the distribution of the likelihood computed for the action data of 74 sessions. We compared the predictability of the proposed method, Q-learning model with
+
+
+[0.1,0.9] [0.9,0.1] [0.1,0.9] [0.1,0.9] [0.9,0.1]
+
+Trials Trials
+
+Figure 3: Estimation of hidden variables by simulated actions and rewards of Q-learning agent. (a) Sequence of simulated actions and rewards by Q-learning agent: Circles are rewarded trials. Dots are non-rewarded trials; (b)-(e) Time course of the hidden variables of the model (dotted line) and of the expectation value (solid line) of estimation by particle filter; (b)(c) Q-values for each action, (d) learning rate , and (e) action randomness . Shaded areas indicate the blocks of [0.9, 0.1] or [0.1, 0.9]. White areas indicate [0.5, 0.5].
+
+-2 10 -1 10 0 10
+
+Figure 4: Expected values of estimated meta-parameter from the 1000 trials generated with different settings. The side boxes show initial distribution of particles.
+
+
+(a)
+
+Block Right Left 4
+
+Q
+
+2 0 100 -2
+
+[0.9 0.1] [0.1 0.9] [0.1 0.9] [0.9 0.1] [0.1 0.9]
+
+0
+
+(b)
+
+(c)
+
+0
+
+100 Q(right) Q(left) 100
+
+200 300 400 500 600 700
+
+200 300 400 500 600 700
+
+ 10
+
+(d)
+
+
+
+-4 10 2 1 0.2
+
+0 100 200 300 400 500 600 700
+
+0 100 200 300
+
+400 Trials 500 600 700
+
+Figure 5: Expected values of estimated hidden variables by animal behavioral data: (a) action and reward sequences; Circles are rewarded trials; Dots indicate no rewarded trials. (b)-(d) Estimated value of (b) action value function , (c) learning rate, and (d) action randomness. Shaded areas indicate the blocks of [0.9, 0.1] or [0.1, 0.9]. White areas indicate [0.5, 0.5].
+
+(a) (b)
+
+Maximum likelihood point (Optimal meta-parameter)
+
+-0.662
+
+-0.664 -0.666 -0.668
+
+-0.67 -0.672 -0.674 -0.676
+
+Figure 6: Comparing models: (a) An example of contour plot of log likelihood for predicted action by a fixed meta-parameter Q-learning model. Fixed meta-parameter method needs to find the optimal learning rate  and the inverse temperature . (b) Distributions of log likelihood of action prediction by proposed particle filter method and by fixed metaparameter Q-learning model with the optimal meta-parameter: The top and bottom limits of each box show the lower quartile and the upper quartile, and the center of the notch is the median. Crosses indicate outliers. Boxplot notches show the 95% confidence interval for the median. The median of log likelihood of action prediction by proposed method is significantly larger than one by the fixed meta-parameter method ( Wilcoxon signed rank test; p < 0.0001).
+
+
+estimating meta-parameters by particle filtering, to the fixed meta-parameter Q-learning model, which used the fixed optimal learning rate  and inverse temperature  in the meaning of maximizing likelihood of action prediction in a session (Figure 6(a)). The particle filter could predict actions better than fixed meta-parameter Q-learning model with the optimal meta-parameter (Wilcoxon signed rank test; p < 0.0001). This result indicated that the particle filtering method successfully track the change of the metaparameters, the learning rate  and the inverse temperature , through the sessions. 6 Discussion An advantage of the proposed particle filter method is that we do not have to hand-tune meta-parameter, such as learning rate. Although we still have to set the meta-meta- parameters, which defines dynamics of meta-parameters, the behavior of the estimates are less sensitive to their settings, compared to the setting of the meta-parameters. Dependency on the initial distribution of the hidden variables decreases with increasing number of data. An extension of this study would be to model selection objectively using a hierarchical Bayesian approach. For example, the several possible reinforcement learning models, e.g. Q-learning, Sarsa algorithm or policy gradient algorithm, could be compared in term of measure of the posterior probability of models. Recently, computational models with heuristic meta-parameters have been successfully used to generate regressors for neuroimaging data [5]. Bayesian method enables generating such regressors in a more objective, data-driven manner. We are going to apply the current method for characterizing neural recording data from the monkey. 7 Conclusion We proposed a particle filter method to estimate internal parameters and meta-parameters of a reinforcement learning agent from observable variables. Our method is a powerful tool for interpreting neurophysiological and neuroimaging data in light of computational models, and to build better models in light of experimental data. Acknowledgments This research was conducted as part of `Research on Human Communication'; with funding from the Telecommunications Advancement Organization of Japan References [1] Sutton RS & Barto AG (1998) Reinforcement Learning: An Introduction, MIT Press, Cambridge, MA. [2] Schultz W, Dayan P, Montague PR (1997) A neural substrate of prediction and reward. Science. 14;275(5306):1593-1599 [3] Doucet A, de Freitas N and Gordon. N, (2001) An introduction to sequential Monte Carlo methods, In Sequential Monte Carlo Methods in Practice, Doucet A, de Freitas N & Gordon N eds, Springer-Verlag, pp.3-14. [4] Ueda Y, Samejima K, Doya K, & Kimura M (2002) Reward value dependent striate neuron activity of monkey performing trial-and-error behavioral decision task, Abst. of Soc Neurosci, 765.13. [5] O'Doherty, Dayan P, Friston K , Critchley H and Dolan R (2003) Temporal difference models and reward-related learning in human brain, Neuron 28, 329-337.
+
+

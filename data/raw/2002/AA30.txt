@@ -1,0 +1,448 @@
+Parametric Mixture Models for Multi-Labeled Text
+
+Naonori Ueda Kazumi Saito
+
+NTT Communication Science Laboratories 2-4 Hikaridai, Seikacho, Kyoto 619-0237 Japan {ueda,saito}@cslab.kecl.ntt.co.jp
+
+Abstract We propose probabilistic generative models, called parametric mixture models (PMMs), for multiclass, multi-labeled text categorization problem. Conventionally, the binary classification approach has been employed, in which whether or not text belongs to a category is judged by the binary classifier for every category. In contrast, our approach can simultaneously detect multiple categories of text using PMMs. We derive efficient learning and prediction algorithms for PMMs. We also empirically show that our method could significantly outperform the conventional binary methods when applied to multi-labeled text categorization using real World Wide Web pages. Introduction
+
+1
+
+Recently, as the number of online documents has been rapidly increasing, automatic text categorization is becoming a more important and fundamental task in information retrieval and text mining. Since a document often belongs to multiple categories, the task of text categorization is generally defined as assigning one or more category labels to new text. This problem is more difficult than the traditional pattern classification problems, in the sense that each sample is not assumed to be classified into one of a number of predefined exclusive categories. When there are L categories, the number of possible multi-labeled classes becomes 2L. Hence, this type of categorization problem has become a challenging research theme in the field of machine learning. Conventionally, a binary classification approach has been used, in which the multicategory detection problem is decomposed into independent binary classification problems. This approach usually employs the state-of-the-art methods such as support vector machines (SVMs) [9][4] and naive Bayes (NB) classifiers [5][7]. However, since the binary approach does not consider a generative model of multi-labeled text, we think that it has an important limitation when applied to the multi-labeled text categorization. In this paper, using independent word-based representation, known as Bag-of-Words (BOW) representation [3], we present two types of probabilistic generative models for multi-labeled text called parametric mixture models (PMM1, PMM2), where PMM2 is a more flexible version of PMM1. The basic assumption under PMMs is
+
+
+that multi-labeled text has a mixture of characteristic words appearing in singlelabeled text that belong to each category of the multi-categories. This assumption leads us to construct quite simple generative models with a good feature: the objective function of PMM1 is convex (i.e., the global optimum solution can be easily found). We present efficient learning and prediction algorithms for PMMs. We also show the actual benefits of PMMs through an application of WWW page categorization, focusing on those from the "yahoo.com" domain.
+
+2 2.1 Parametric Mixture Models Multi-labeled Text
+
+According to the BOW representation, which ignores the order of word occurrence in a document, the nth document, dn, can be represented by a word-frequency vector, xn = (xn1 , . . . , xnV ), where xni denotes the frequency of word wi occurrence in dn among the vocabulary V =< w1, . . . , wV >. Here, V is the total number of words in the vocabulary. Next, let yn = (y1 , . . . , yL) be a category vector for category. L is the total number of categories. Note that L categories are pre-defined and that a document always belongs to at least one category (i.e., yl > 0). In the case of multi-class and single-labeled text, it is natural that x in the lth cat-
+
+n n
+
+takes a value of 1(0) when dn belongs (does not belong) to the lth dn, where yl n
+
+l
+
+egory should be generated from a multinomial distribution: P (x|l) 
+
+Here, l,i  0 and
+
+V i=1
+
+V i=1 (l,i)xi
+
+l,i = 1. l,i is a probability that the ith word wi appears
+
+in a ducument belonging to the lth class. We generalize this to multi-class and multi-labeled text as: P (x|y)  i(y) = 1. (1)
+
+V V
+
+(i(y))xi , where i(y)  0 and
+
+i=1 i=1
+
+Here, i(y) is a class-dependent probability that the ith word appears in a document belonging to class y. Clearly, it is impractical to independently set a multinomial parameter vector to each distinct y, since there are 2L - 1 possible classes. Thus, we try to efficiently parameterize them. 2.2 PMM1 In general, words in a document belonging to a multi-category class can be regarded as a mixture of characteristic words related to each of the categories. For example, a document that belongs to both "sports" and "music" would consist of a mixture of characteristic words mainly related to both categories. Let l = (l, , . . . , l,V ). The
+
+1
+
+above assumption indicates that (y)(= (1(y), . . . , V (y))) can be represented by the following parametric mixture: (y) = hl(y)l, where hl(y) = 0 for l such that yl = 0. (2)
+
+L
+
+l=1
+
+Here, hl(y)(> 0) is a mixing proportion (
+
+L l=1
+
+hl(y) = 1). Intuitively, hl(y) can
+
+also be interpreted as the degree to which x has the lth category. Actually, by experimental verification using about 3,000 real Web pages, we confirmed that the above assumption was reasonable. Based on the parametric mixture assumption, we can construct a simple parametric For example, in the case of L = 3, ((1, 1, 0)) = (1 + 2)/2 and ((1, 1, 1)) = (1 + 2 + 3)/3.
+
+mixture model, PMM1, in which the degree is uniform: hl(y) = yl/ L l =1 yl .
+
+
+Substituting Eq. (2) into Eq. (1), PMM1 can be defined by
+
+V xi
+
+yll,i
+
+P (x|y, )  L l=1 L . (3)
+
+i=1 l =1
+
+yl
+
+A set of unknown model paramters in PMM1 is  = {l}L l=1 .
+
+Of course, multi-category text may sometimes be weighted more toward one category than to the rest of the categories among multiple categories. However, being averaged over all biases, they could be canceled and therefore PMM1 would be reasonable. This motivates us to construct PMM1. PMMs are different from usual distributional mixture models in the sense that the mixing is performed in a parameter space, while the latter several distributional components are mixed. Since the latter models assume that a sample is generated from one component, they cannot represent "multiplicity." On the other hand, PMM1 can represent 2L - 1 multi-category classes with only L parameter vectors. 2.3 PMM2 In PMM1, shown in Eq. (2), (y) is approximated by {l}, which can be regarded as the "first-order" approximation. We consider the second order model, PMM2, as a more flexible model, in which parameter vectors of duplicate-category, l,m, are also used to approximate (y). (y) = hl(y)hm(y)l,m, where l,m = l,ml + m,lm. (4)
+
+L L
+
+l=1 m=1
+
+Here, l,m is a non-negative bias parameter satisfying l,m + m,l = 1, l, m. Clearly, l,l = 0.5. For example, in the case of L = 3, ((1, 1, 0)) = {(1+21, )1 +
+
+2
+
+(1+22, )2}/4, ((1, 1, 1)) = {(1+2(1, +1, ))1 +(1+2(2, +2, ))2 +(1+ 1 2 3 1 3
+
++ 3, ))3}/9. In PMM2, unlike in PMM1, the category biases themselves 2
+
+can be estimated from given training data. Based on Eq. (4), PMM2 can be defined by
+
+V
+
+P (x|y; ) 
+
+2(3, 1
+
+xi
+
+i=1
+
+L l=1 L l=1
+
+L m=1
+
+yl
+
+ylyml,m,i
+
+L m=1 ym
+
+(5)
+
+A set of unknown parameters in PMM2 becomes  = {l, l,m}L,L 2.4 Related Model l=1,m=1 .
+
+Very recently, as a more general probabilistic model for multi-latent-topics text, called Latent Dirichlet Allocation (LDA), has been proposed [1]. However, LDA is formulated in an "unsupervised" manner. Blei et al. also perform single-labeled text categorization using LDA in which individual LDA is fitted to each class. Namely, they do not explain how to model the observed class labels y in LDA. In contrast, our PMMs can efficiently model class y, depending on other classes through the common basis vectors. Moreover, based on the PMM assumtion, models much simpler than LDA can be constructed as mentioned above. Moreover, unlike in LDA, it is feasible to compute the objective functions for PMMs exactly as shown below.
+
+3 3.1 Learning & Prediction Algorithms Objective functions
+
+Let D = {(xn, yn)}N
+
+n=1
+
+denote the given training data (N labeled documents). The
+
+unknown parameter  is estimated by maximizing posterior p(|D). Assuming
+
+
+that P (y) is independent of , map = arg max{log P (xn|yn, ) + log p()}. ^ Here, p() is prior over the parameters. We used the following conjugate priors
+
+(Dirichlet distributions) over l and l,m as: p() 
+
+and p()  ( L l=1 V i=1 l,i -1 )( L l=1 L m=1
+
+L l=1 V i=1 l,i -1 for PMM1
+
+l,m ) for PMM2. -1 Here,  and  are
+
+hyperparameters and in this paper we set  = 2 and  = 2, each of which is equivalent to Laplace smoothing for l,i and l,m, respectively. Consequently, the objective function to find map is given by ^ J(; D) = L(; D) + ( - 1) log l,m. (6)
+
+L V L L
+
+log l,i + ( - 1)
+
+l=1 i=1 l=1 m=1
+
+Of course, the third term on the RHS of Eq. (6) is just ignored for PMM1. The likelihood term, L, is given by PMM1 : L(;D) = hnl l,i, (7)
+
+N V L
+
+xn,i log
+
+n=1 i=1 N V l=1 L
+
+L
+
+PMM2 : L(;D) = xn,i log hnl hnml,m,i. (8)
+
+n=1 i=1
+
+Note that l,m,i = l,ml,i + m,lm,i. 3.2 Update formulae The optimization problem given by Eq. (6) cannot be solved analytically; therefore some iterative method needs to be applied. Although the steepest ascend algorithms involving Newton's method are available, here we derive an efficient algorithm in a similar manner to the EM algorithm [2]. First, we derive parameter update formulae for PMM2 because they are more general than those for PMM1. We then explain those for PMM1 as a special case.
+
+Suppose that (t
+
+)
+
+is obtained at step t. We then attmpt to derive (t +1) by using
+
+(t . For convenience, we define gl,m,i and l,m,i as follows. n
+
+L L
+
+gl,m,i() = hnl hnml,m,i n hnl hml,m,i, n
+
+)
+
+l=1 m=1
+
+l=1 m=1
+
+l,m,i(l,m) = l,ml,i/l,m,i, m,l,i(l,m) = m,lm,i/l,m,i.
+
+Noting that L(;D) = = xn,i
+
+n,i l,m
+
+L l=1
+
+xn,i{
+
+L m=1 gl,m,i() = 1, L for PMM2 can be rewritten as n
+
+(9) (10)
+
+gl,m,i((t )} log{( hnln n ) hnml,m,i ) hnl hnm l
+
+,m ,i }
+
+n,i l,m
+
+hl hnml,m,i l ,m
+
+gl,m,i((t ) log gl,m,i().(11) n n gl,m,i((t ) log hnl hnml,m,i - n n ) xn,i )
+
+n,i l,m
+
+Moreover, noting that l,m,i(l,m) + m,l,i(l,m) = 1, we rewrite the first term on the RHS of Eq. (11) as xn,i gl,m,i((t ) l,m,i((l,m) log{( l,ml,i )hnl hnml,m,i}
+
+n ) t)
+
+n,i l,m
+
+l,ml,i +m,l,i((l,m) log{( m,lm,i )hnl hnml,m,i} . m,lm,i
+
+t) (12)
+
+
+From Eqs.(11) and (12), we obtain the following important equation: L(;D) = U(|(t ) - T (|(t ). Here, U and T are defined by
+
+) )
+
+U(|(t ) = ) xn,i gl,m,i((t ) l,m,i((l,m) log hnl hnml,ml,i n )
+
++m,l,i((l,m) log hnl hnmm,lm,i t) ,
+
+t)
+
+(13)
+
+n,i,l,m
+
+(14)
+
+T (|(t ) = ) xn,i gl,m,i((t ) log gl,m,i() + l,m,i((l,m) log l,m,i(l,m) n ) n
+
++m,l,i((l,m) log m,l,i(l,m) . t) (15)
+
+t)
+
+n,i,l,m
+
+From Jensen's inequality, T (|(t )  T ((t |(t ) holds. Thus we just maximize U(|(t )+logP() w.r.t.  to derive the parameter update formula. Noting that
+
+)
+
+l,m,i  m,l,i and ql,m,i  qm,l,i, we can derive the following formulae:
+
+2
+
+V i=1 N n=1
+
+) ) (t+1)
+
+l,i
+
+xni ql,m,i((t )l,m,i((t ) +  - 1
+
+n n
+
+=
+
+N n=1 N L m=1 L
+
+n n
+
+) ) )
+
+(t+1)
+
+l,m
+
+2 xni
+
+, l,i,(16)
+
+ql,m,i((t )l,m,i((t ) + V ( - 1) ) )
+
+n=1 V
+
+i=1 V
+
+m=1
+
+xni ql,m,i((t )l,m,i((t ) + ( - 1)/2 ,
+
+n N n=1
+
+n )
+
+) )
+
+=
+
+i=1
+
+l,m = l. (17)
+
+xni ql,m,i((t ) +  - 1
+
+These parameter updates always converge to a local optimum of J given by Eq. (6). In PMM1, since unknown parameter is just {l}, by modifying Eq. (9) as
+
+n gl,i() =
+
+hnl l,i
+
+L l=1 hnl l,i
+
+, (18)
+
+and rewriting Eq. (7) in a similar manner, we obtain
+
+L(;D) = xn,i gl,i((t ) log hnl l,i - n
+
+n,i l
+
+In this case, U becomes a simpler form as
+
+N V
+
+U(|(t ) = ) xn,i
+
+) xn,i gl,i((t ) log gl,i(). n n ) (19)
+
+n,i l
+
+L
+
+gl,i((t ) log hnl l,i.
+
+n l=1 L l=1
+
+V i=1
+
+log l,i w.r.t.
+
+)
+
+n=1 i=1 )
+
+Therefore, maximizing U(|(t )+( - 1)
+
+constraint
+
+(20)  under the
+
+i l,i = 1, l, we can obtain the following update formula for PMM1:
+
+xn,igl,i((t ) +  - 1 )
+
+li (t+1) = , l,i. (21) V i=1
+
+N n=1 N
+
+xn,igl,i((t ) + V ( - 1)
+
+n n
+
+)
+
+n=1
+
+Remark: The parameter update given by Eq. (21) of PMM1 always converges to
+
+the global optimum solution. Proof: The Hessian matrix, H, of the objective function, J, of PMM1 becomes
+
+H = T 2J(; D) T  = d2J( + ; D) d2
+
+- xni
+
+n,i
+
+l l
+
+=0
+
+hni li hni li 2 = - ( - 1) li li 2 . (22)
+
+l,i
+
+
+Here,  is an arbitrary vector in the  space. Noting that xni  0,  > 1 and  = 0, H is negative definite; therefore J is a strictly convex function of . Moreover, since the feasible region defined by J and constraints l, = 1, l is a convex set, the maximization problem here becomes a convex programming problem and has a unique global solution. Since Eq. (21) always increases J at each iteration, the learning algorithm given above always converges to the global optimum solution, irrespective of any initial parameter value. 3.3 Prediction timum category vector y for x of a new document is defined as: y = mization problem belongs to the zero-one integer problem (i.e., NP-hard problem), an exhaustive search is prohibitive for a large L. Therefore, we solve this problem approximately with the help of the following greedy-search algorithm. That is, first, only one yl1 value is set to 1 so that P (y|x; ) is maximized. Then, for the re^ maining elements, only one yl2 value, which mostly increases P (y|x; ), is set to 1 ^ under a fixed yl1 value. This procedure is repeated until P (y|x; ) cannot increase ^ any further. This algorithm successively determines an element in y to increase the posterior probability until its value does not improve. This is very efficient because it requires the calculation of the posterior probability at most L(L + 1)/2 times, while the exhaustive search needs 2L - 1 times.
+
+i 1
+
+Let  denote the estimated parameter. ^ Then, applying Bayes' rule, the op-
+
+arg maxy P (y|x; ) under a uniform class prior assumption. ^ Since this maxi-
+
+4 4.1 Experiments Automatic Web Page Categorization
+
+We tried to categorize real Web pages linked from the "yahoo.com" domain1. More specifically, Yahoo consists of 14 top-level categories (i.e., "Arts & Humanities," "Business & Economy," "Computers & Internet," and so on), and each category is classified into a number of second-level subcategories. By focusing on the secondlevel categories, we can make 14 independent text categorization problems. We used 11 of these 14 problems2. In those 11 problems, mininum (maximum) values of L and V were 21 (40) and 21924 (52350), respectively. About 3045% of the pages are multi-labeled over the 11 problems. To collect a set of related Web pages for each problem, we used a software robot called "GNU Wget (version 1.5.3). A text multi-label can be obtained by following its hyperlinks in reverse toward the page of origin. We compared our PMMs with the convetional methods: naive Bayes (NB), SVM, k-nearest neighbor (kNN), and three-layer neural networks (NN). We used linear SVMlight (version 4.0), tuning the C (penalty cost) and J (cost-factor for negative and positive samples) parameters for each binary classification to improve the SVM results [6]3. In addition, it is worth mentioning that when performing the SVM, in the V -1-dimensional simplex than in the original V dimensional space. In other words, classification is generally not determined by the number of words on the page; actually, normalization could also significantly improve the performance. are registered by site recommendation and therefore category labels would be reliable. network security. However, we believe that 11 independent problems are sufficient for evaluating our method. was quite small in our web pages, SVM without the J option provided poor results.
+
+each xn was normalized to be V i=1 xni = 1 because discrimination is much easier
+
+1 This domain is a famous portal site and most related pages linked from the domain
+
+2 We could not collect enough pages for three categories due to our communication
+
+3 Since the ratio of the number of positive samples to negative samples per category
+
+
+Table 1: Performance for 3000 test data using 2000 training data.
+
+NB 41.6 (1.9) 75.0 (0.6) 56.5 (1.3) 39.3 (1.0) 54.5 (0.8) 66.4 (0.8) 51.8 (0.8) 52.6 (1.1) 42.4 (0.9) 41.7 (10.7) 47.2 (0.9) SVM 47.1 (0.3) 74.5 (0.8) 56.2 (1.1) 47.8 (0.8) 56.9 (0.5) 67.1 (0.3) 52.1 (0.8) 55.4 (0.6) 49.2 (0.7) 65.0 (1.1) 51.4 (0.6) kNN 40.0 (1.1) 78.4 (0.4) 51.1 (0.8) 42.9 (0.9) 47.6 (1.0) 60.4 (0.5) 44.4 (1.1) 53.3 (0.5) 43.9 (0.6) 59.5 (0.9) 46.4 (1.2) NN 43.3 (0.2) 77.4 (0.5) 53.8 (1.3) 44.1 (1.0) 54.9 (0.5) 66.0 (0.4) 49.6 (1.3) 55.0 (1.1) 45.8 (1.3) 62.2 (2.3) 50.5 (0.4) PMM1 50.6 (1.0) 75.5 (0.9) 61.0 (0.4) 51.3 (2.8) 59.7 (0.4) 66.2 (0.5) 55.2 (0.5) 61.1 (1.4) 51.4 (0.7) 62.0 (5.1) 54.2 (0.2) PMM2 48.6 (1.0) 72.1 (1.2) 59.9 (0.6) 48.3 (0.5) 58.4 (0.6) 65.1 (0.3) 52.4 (0.6) 60.1 (1.2) 49.9 (0.8) 56.4 (6.3) 52.5 (0.7) No. 1 2 3 4 5 6 7 8 9 10 11
+
+We employed the cosine similarity for kNN method (see [8] for more details). As for NNs, an NN consists of V input units and L output units for estimating a category vector from each frequency vector. We used 50 hidden units. An NN was trained to maximize the sum of cross-entropy functions for target and estimated category vectors of training samples, together with a regularization term consisting of a sum of squared NN weights. Note that we did not perform any feature transformations such as TFIDF (for an example, see e.g., [8]) because we wanted to evaluate the basic performance of each detection method purely. We used the F-measure as the performance measure which is defined as the weighted harmonic average of two well-known statistics: precision, P , and recall, R. Let
+
+yn = (y1 , . . . , yL) and y tors for xn, respectively.
+
+Pn =
+
+L l=1 yl y^l /
+
+n n
+
+n n ^n = (^n
+
+y1 , . . . , y^L) be actual and predicted category vecSubsequently, the Fn = 2PnRn/(Pn + Rn), where
+
+n
+
+formance by F¯ =
+
+L l=1 1 3000
+
+y^l and Rn =
+
+3000 n=1
+
+n
+
+L l=1 yl y^l / n n L l=1 yl . We evaluated the pern
+
+Fn using 3000 test data independent of the training
+
+data. Although micro- and macro-averages can be used, we think that the samplebased F -measure is the most suitable for evaluating the generalization performance, since it is natural to consider the i.i.d. assumption for documents. 4.2 Results For each of the 11 problems, we used five pairs of training and test data sets. In Table 1 (Table 2) we compared the mean of the F¯ values over five trials by using 2000 (500) training documents. Each number in parenthesis in the Tables denotes the standard deviation of the five trials. PMMs took about five minutes for training (2000 data) and only about one minute for the test (3000 data) on 2.0-Ghz Pentium PC, averaged over the 11 problmes. The PMMs were much faster than the k-NN and NN. In the binary approach, SVMs with optimally tuned parameters produced rather better results than the NB method. The performance by SVMs, however, was inferior to those by PMMs in almost all problems. These experimental results support the importance of considering generative models of multi-category text. When the training sample size was 2000, kNN provided comparable results to the NB method. On the other hand, when the training sample size was 500, the kNN method obtained results similar to or slightly better than those of SVM. However, in both cases, PMMs significantly outperformed kNN. We think that the memorybased approach is limited in its generalization ability for multi-labeled text categorization. The results of well-regularized NN were fair, although it took an intolerable amount of training time, indicating that flexible discrimination would not be necessary for
+
+
+Table 2: Performance for 3000 test data using 500 training data.
+
+NB 21.2 (1.0) 73.9 (0.7) 46.1 (2.9) 15.2 (0.9) 34.1 (1.6) 50.2 (0.3) 22.1 (0.8) 32.7 (4.4) 17.6 (1.6) 40.6 (12.3) 34.2 (2.2) SVM 32.5 (0.5) 73.8 (1.2) 44.9 (1.9) 33.6 (0.5) 42.7 (1.3) 56.0 (1.0) 32.1 (0.5) 38.8 (0.6) 32.5 (1.0) 55.0 (1.1) 38.3 (4.7) kNN 34.7 (0.4) 75.6 (0.6) 44.1 (1.2) 37.1 (1.0) 43.9 (1.0) 54.4 (0.9) 37.4 (1.1) 48.1 (1.3) 35.3 (0.4) 53.7 (0.6) 40.2 (0.7) NN 33.8 (0.4) 74.8 (0.9) 45.1 (1.0) 33.8 (1.1) 45.3 (0.9) 57.2 (0.7) 33.9 (0.8) 43.1 (1.0) 31.6 (1.7) 55.8 (4.0) 40.9 (1.2) PMM1 43.9 (1.0) 75.2 (0.4) 56.4 (0.3) 41.8 (1.2) 53.0 (0.3) 58.9 (0.9) 46.5 (1.3) 54.1 (1.5) 40.3 (0.7) 57.8 (6.5) 49.7 (0.9) PMM2 43.2 (0.8) 69.7 (8.9) 55.4 (0.5) 41.9 (0.7) 53.1 (0.6) 59.4 (1.0) 45.5 (0.9) 53.5 (1.5) 41.0 (0.5) 57.9 (5.9) 49.0 (0.5) No. 1 2 3 4 5 6 7 8 9 10 11
+
+discriminating high-dimensional, sparse-text data. The results obtained by PMM1 were better than those by PMM2, which indicates that a model with a fixed l,m = 0.5 seems sufficient, at least for the WWW pages used in the experiments. 5 Concluding Remarks We have proposed new types of mixture models (PMMs) for multi-labeled text categorization, and also efficient algorithms for both learning and prediction. We have taken some important steps along the path, and we are encouraged by our current results using real World Wide Web pages. Moreover, we have confirmed that studying the generative model for multi-labeled text is beneficial in improving the performance. References [1] D. M. Blei, A. Y. Ng, and M. I. Jordan. Latent Dirichlet allocation. to appear Advances in Neural Information Processing Systems 14. MIT Press. [2] A. P. Dempster, N. M. Laird, and D. B. Rubin. Maximum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society B, 39:1-38. 1977. [3] S. T. Dumais, J. Platt, D. Heckerman, & M. Sahami. Inductive learning algorithms and representations for text categorization. In Proc. of ACM-CIKM'98, 1998. [4] T. Joachims. Text categorization with support vector machines: Learning with many relevant features. In Proc. of the European Conference on Machine Learning, 137-142, Berlin, 1998. [5] D. Lewis & M. Ringuette. A comparison of two learning algorithms for text categorization. In Third Anual Symposium on Document Analysis and Information Retrieval, 81-93. 1994. [6] K. Morik, P. Brockhausen, and T. Joachims. Combining statistical learning with knowledge-based approach. A case study in intensive care monitoring. In Proc. of International Conference on Machine Learning (ICML'99), 1999. [7] K. Nigam, A. K. McCallum, S. Thrun, & T. Mitchell. Text classification from labeled and unlabeled documents using EM. Machine Learning, 39:103-134, 2000. [8] Y. Yang & J. Pederson. A comparative study on feature selection in text categorization. In Proc of International Conference on Machine Learning, 412-420, 1997. [9] V. N. Vapnik. Statistical learning theory. John Wiley & Sons, Inc., New York. 1998.
+
+

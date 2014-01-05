@@ -1,0 +1,582 @@
+On Kernel-Target Alignment
+Nello Cristianini
+BIOwulf Technologies
+nello@support-vector.net
+John Shawe-Taylor
+Royal Holloway, University of London
+john@cs.rhul.ac.uk
+Andre Elissee
+BIOwulf Technologies
+andre@barnhilltechnologies.com
+Jaz Kandola
+Royal Holloway, University of London
+jaz@cs.rhul.ac.uk
+Abstract
+We introduce the notion of kernel-alignment, a measure of similar-
+ity between two kernel functions or between a kernel and a target
+function. This quantity captures the degree of agreement between
+a kernel and a given learning task, and has very natural interpre-
+tations in machine learning, leading also to simple algorithms for
+model selection and learning. We analyse its theoretical properties,
+proving that it is sharply concentrated around its expected value,
+and we discuss its relation with other standard measures of per-
+formance. Finally we describe some of the algorithms that can be
+obtained within this framework, giving experimental results show-
+ing that adapting the kernel to improve alignment on the labelled
+data signicantly increases the alignment on the test set, giving
+improved classication accuracy. Hence, the approach provides a
+principled method of performing transduction.
+Keywords: Kernels, alignment, eigenvectors, eigenvalues, transduction
+1 Introduction
+Kernel based learning algorithms [1] are modular systems formed by a general-
+purpose learning element and by a problem specic kernel function. It is crucial for
+the performance of the system that the kernel function somehow ts the learning
+target, that is that in the feature space the data distribution is somehow correlated
+to the label distribution. Several results exist showing that generalization takes
+place only when such correlation exists (nofreelunch; luckiness), and many classic
+estimators of performance (eg the margin) can be understood as estimating this
+relation. In other words, selecting a kernel in this class of systems amounts to the
+classic feature and model selection problems in machine learning.
+Measuring the similarity between two kernels, or the degree of agreement between
+a kernel and a given target function, is hence an important problem both for con-
+ceptual and for practical reasons. As an example, it is well known that one can
+obtain complex kernels by combining or manipulating simpler ones, but how can
+one predict whether the resulting kernel is better or worse than its components?
+
+What a kernel does is to virtually map data into a feature space so that their relative
+positions in that space are what matters. The degree of clustering achieved in that
+space, and the relation between the clusters and the labeling to be learned, should
+be captured by such an estimator.
+Alternatively, one could regard kernels as `oracles' or `experts' giving their opinion
+on whether two given points belong to the same class or not. In this case, the
+correlation between experts (seen as random variables) should provide an indication
+of their similarity.
+We will argue that - if one were in possess of this information - the ideal kernel for
+a classication target y(x) would be K(x; z) = y(x)y(z). One way of estimating
+the extent to which the kernel achieves the right clustering is to compare the sum
+of the within class distances with the sum of the between class distances. This will
+correspond to the alignment between the kernel and the ideal kernel y(x)y(z). By
+measuring the similarity of this kernel with the kernel at hand - on the training
+set - one can assess the degree of tness of such kernel. The measure of similarity
+that we propose, 'kernel alignment' would give in this way a reliable estimate of its
+expected value, since it is sharply concentrated around its mean.
+In this paper we will motivate and introduce the notion of Alignment (Section 2);
+prove its concentration (Section 3); discuss its implications for the generalisation
+of a simple classier (Section 4) and deduce some simple algorithms (Section 5) to
+optimize it and nally report on some experiments (Section 6).
+2 Alignment
+Given an (unlabelled) sample S = fx 1 ; : : : ; xm g, we use the following inner product
+between Gram matrices, hK 1 ; K 2 i F =
+P m
+i;j=1 K 1 (x i ; x j )K 2 (x i ; x j )
+Denition 1 Alignment The (empirical) alignment of a kernel k 1 with a kernel
+k 2 with respect to the sample S is the quantity
+^
+A(S; k 1 ; k 2 ) = hK 1 ; K 2 i F
+p
+hK 1 ; K 1 i F hK 2 ; K 2 i F
+;
+where K i is the kernel matrix for the sample S using kernel k i .
+This can also be viewed as the cosine of the angle between two bi-dimensional
+vectors K 1 and K 2 , representing the Gram matrices. If we consider K 2 = yy 0 ,
+where y is the vector of f1;+1g labels for the sample, then
+^
+A(S; K; yy 0 ) = hK; yy 0 i F
+p
+hK; KiF hyy 0 ; yy 0 i F
+= hK; yy 0 i F
+m
+p
+hK; KiF
+; since hyy 0 ; yy 0 i F = m 2
+We will occasionally omit the arguments K or y when these are understood from
+the context or when y forms part of the sample. In the next section we will see how
+this denition provides with a method for selecting kernel parameters and also for
+combining kernels.
+3 Concentration
+The following theorem shows that the alignment is not too dependent on the training
+set S. This result is expressed in terms of `concentration'. Concentration means that
+the probability of an empirical estimate deviating from its mean can be bounded
+as an exponentially decaying function of that deviation.
+This will have a number of implications for the application and optimisation of the
+alignment. For example if we optimise the alignment on a random sample we can
+
+expect it to remain high on a second sample. Furthermore we will show in the next
+section that if the expected value of the alignment is high, then there exist functions
+that generalise well. Hence, the result suggests that we can optimise the alignment
+on a training set and expect to keep high alignment and hence good performance
+on a test set. Our experiments will demonstrate that this is indeed the case.
+The theorem makes use of the following result due to McDiarmid. Note that E S is
+the expectation operator under the selection of the sample.
+Theorem 2 (McDiarmid [4]) Let X 1 ; : : : ; Xn be independent random variables tak-
+ing values in a set A, and assume that f : A n ! R satises for 1  i  n
+sup
+x1 ;:::;x n ;^x i
+jf(x 1 ; : : : ; xn ) f(x 1 ; : : : ; x i 1 ; ^
+x i ; x i+1 ; : : : ; xn )j  c i ;
+then for all  > 0, P fjf(X 1 ; : : : ; Xn ) Ef(X 1 ; : : : ; Xn )j  g  2 exp
+ 2 2
+P n
+i=1 c 2
+i
+
+Theorem 3 The sample based estimate of the alignment is concentrated around its
+expected value. For a kernel with feature vectors of norm 1, we have that
+P m fS : j ^
+A(S) A(y)j  ^ g  Æ where ^  = C(S)
+p
+8ln(2=Æ)=m; (1)
+for a non-trivial function C(S) and value A(y).
+Proof : Let
+^
+A 1 (S) = 1
+m 2
+m
+X
+i;j=1
+y i y j k(x i ; x j ); ^
+A 2 (S) = 1
+m 2
+m
+X
+i;j=1
+k(x i ; x j ) 2 ; and A(y) = E S [ ^
+A 1 (S)]
+q
+E S [ ^
+A 2 (S)]
+:
+First note that ^
+A(S) = ^
+A 1 (S)=
+q
+^
+A 2 (S). Dene A 1 = E S [ ^
+A 1 (S)] and A 2 =
+E S [ ^
+A 2 (S)]. First we make use of McDiarmid's theorem to show that ^
+A i (S) are
+concentrated for i = 1; 2. Consider the training set S 0 = S n f(x i ; y i )g [ f(x 0
+i ; y 0
+i )g.
+We must bound the dierence
+j ^
+A j (S) ^
+A j (S 0 )j  1
+m 2 (2(m 1)2) < 4
+m ;
+for j = 1; 2. Hence, we have c i = 4=m for all i and we obtain from an application
+of McDiarmid's Theorem for j = 1 and 2,
+P m fS : j ^
+A j (S) A j j  g  2 exp
+  2 m
+8
+
+Setting  =
+p
+8ln(2=Æ)=m; the right hand sides are less than or equal to Æ=2. Hence,
+with probability at least 1 Æ, we have for j = 1; 2 j ^
+A j (S) A j j < . But whenever
+these two inequalities hold, we have
+   ^
+A(S) A(y)
+   =
+     
+^
+A 1 (S)
+q
+^
+A 2 (S)
+A 1
+p
+A 2
+      
+   ^
+A 1 (S) A 1
+  
+q
+^
+A 2 (S)
++A 1
+     
+1
+q
+^
+A 2 (S)
+1
+p
+A 2
+     
+ 
+q
+^
+A 2 (S)
++ A 1 (y)
+q
+^
+A 2 (S)A 2
+ p
+A 2 +
+q
+^
+A 2 (S)
+ jA 2
+^
+A 2 (S)j
+ 
+2( ^
+A 2 (S) )
+q
+^
+A 2 (S)
+
+2 ^
+A 2 (S) + ^
+A 1 (S) + 
+
+= C(S):
+
+Remark. We could also dene the true Alignment, based on the input dis-
+tribution P , as follows: given functions f; g : X 2 ! R, we dene hf; gi P =
+R
+X 2
+f(x; z)g(x; z)dP (x)dP (z), Then the alignment of a kernel k 1 with a kernel k 2
+is the quantity A(k 1 ; k 2 ) = hk1 ;k2 iP
+p
+hk1 ;k1 iP hk2 ;k2 iP
+.
+Then it is possible to prove that asymptotically as m tends to innity the empirical
+alignment as dened above converges to the true alignment. However if one wants
+to obtain unbiased convergence it is necessary to slightly modify its denition by
+removing the diagonal, since for nite samples it biases the expectation by receiving
+too large a weight. With this modication A(y) in the statement of the theorem be-
+comes the true alignment. We prefer not to pursue this avenue further for simplicity
+in this short article, we just note that the change is not signicant.
+4 Generalization
+In this section we consider the implications of high alignment for the generalisation
+of a classier. By generalisation we mean the test error err(h) = P (h(x) 6= y).
+Our next observation relates the generalisation of a simple classication function
+to the value of the alignment. The function we consider is the expected Parzen
+window estimator h(x) = sign(f(x)) = sign E (x 0 ;y 0 ) [y 0 k(x 0 ; x)]
+
+. This corresponds
+to thresholding a linear function f in the feature space. We will show that if
+there is high alignment then this function will have good generalisation. Hence, by
+optimising the alignment we may expect Parzen window estimators to perform well.
+We will demonstrate that this prediction does indeed hold good in experiments.
+Theorem 4 Given any Æ > 0. With probability 1 Æ over a randomly drawn
+training set S, the generalisation accuracy of the expected Parzen window estimator
+h(x) = sign E (x 0 ;y 0 ) [y 0 k(x 0 ; x)]
+
+is bounded from above by
+err(h(x))  1 ^
+A(S) + ^ +
+
+m
+q
+^
+A 2 (S)
+ 1
+; where ^  = C(S)
+r
+8
+m
+ln 4
+Æ
+:
+Proof : (sketch) We assume throughout that the kernel has been normalised so that
+k(x; x) = 1 for all x. First observe that by Theorem 3 with probability greater than
+1 Æ=2, jA(y) ^
+A(S)j  ^. The result will follow if we show that with probability
+greater than 1 Æ=2 the generalisation error of h Sn(x1 ;y1 ) can be upper bounded by
+1 A(y) + 1
+m
+p
+A2 (S)
+. Consider the quantity A(y) from Theorem 3.
+A(y) =
+E S
+h 1
+m 2
+P m
+ij=1 y i y j k(x i ; x j )
+i
+r
+E S
+h
+1
+m 2
+P m
+ij=1 k(x i ; x j ) 2
+i =
+E S
+h 1
+m 2
+P m
+i6=j y i y j k(x i ; x j )
+i
++ 1
+m
+C
+where C =
+r
+m 1
+m E (x;y);(x 0 ;y 0 ) [k(x 0 ; x) 2 ] + 1
+m
+: Observe that
+E S
+2
+4 1
+Cm 2
+m
+X
+i6=j
+y i y j k(x i ; x j )
+3
+5 = E S
+"
+y 1
+Cm
+m
+X
+i=2
+y i k(x i ; x 1 )
+#
+= E (x;y)
+
+y m 1
+Cm f(x)
+
+:
+But
+    m 1
+Cm
+f(x)
+    
+q
+E (x;y) [y 2 ]
+r
+(m 1) 2
+C 2 m 2 E (x 0 ;y 0 ) [k(x; x 0 ) 2 ] < 1
+Hence, if  = P (f(x) 6= y) and  = P (f(x) = y), we have
+E S
+h
+1
+Cm 2
+P m
+i6=j y i y j k(x i ; x j )
+i
+ 1 + 0   =  and  = 1   1 A(y) + 1
+Cm .
+
+An empirical estimate of the function f would be the Parzen window function.
+The expected margin of the empirical function is concentrated around the expected
+margin of the expected Parzen window. Hence, with high probability we can bound
+the error of ^
+f in terms of the empirically estimated alignment ^
+A(S). This is omitted
+due to lack of space. The concentration of ^
+f is considered in [3].
+5 Algorithms
+The concentration of the alignment can be directly used for tuning a kernel family
+to the particular task, or for selecting a kernel from a set, with no need for training.
+The probability that the level of alignment observed on the training set will be out
+by more than ^  from its expectation for one of the kernels is bounded by Æ, where
+^
+ is given by equation (1) for  =
+q
+8
+m lnjN j + ln 2
+Æ
+ , where jN j is the size of the
+set from which the kernel has been chosen. In fact we will select from an innite
+family of kernels. Providing a uniform bound for such a class would require covering
+numbers and is beyond the scope of this paper. One of the main consequences of
+the denition of kernel alignment is in providing a practical criterion for combining
+kernels. We will justify the intuitively appealing idea that two kernels with a certain
+alignment with a target that are not aligned to each other, will give rise to a more
+aligned kernel combination. In particular we have that
+^
+A k1+k2 (y) = ^
+A k1 (y) kK 1 kF
+kK 1 +K 2 kF + ^
+A k2 (y) kK 2 kF
+kK 1 +K 2 kF
+This shows that if two kernels with equal alignment to a given target y are also
+completely aligned to each other, then kK 1 + K 2 kF = kK 1 kF + kK 2 kF and the
+alignment of the combined kernel remains the same. If on the other hand the
+kernels are not completely aligned, then the alignment of the combined kernel is
+correspondingly increased.
+To illustrate the approach we will take to optimising the kernel, consider a kernel
+that can be written in the form k(x; x 0 ) =
+P
+k  k (y k (x)y k (x 0 )), where all the y k
+are orthogonal with respect to the inner product dened on the training set S,
+hy; y 0 i S =
+P m
+i=1 y i y j . Assume further that one of them y t is the true label vector.
+We can now evaluate the alignment as ^
+A(y)   t =
+pP
+k  2
+k . In terms of the
+Gram matrix this is written as K ij =
+P
+k  k y k
+i y k
+j where y k
+i is the i-th label of the
+k-th classication. This special case is approximated by the decomposition into
+eigenvectors of the kernel matrix K =
+P  i v i v 0
+i , where v 0 denotes the transpose of
+v and v i is the i-th eigenvector with eigenvalue  i . In other words, the more peaked
+the spectrum the more aligned (specic) the kernel can be.
+If by chance the eigenvector of the largest eigenvalue  1 corresponds to the target
+labeling, then we will give to that labeling a fraction  1 =
+pP
+i  2
+i of the weight that
+we can allocate to dierent possible labelings. The larger the emphasis of the kernel
+on a given target, the higher its alignment.
+In the previous subsection we observed that combining non-aligned kernels that are
+aligned with the target yields a kernel that is more aligned to the target. Consider
+the base kernels K i = v i v 0
+i where v i are the eigenvectors of K, the kernel matrix
+for both labeled and unlabeled data. Instead of choosing only the most aligned
+ones, one could use a linear combination, with the weights proportional to their
+alignment (to the available labels): ^
+K =
+P
+i f( i )v i v 0
+i where  i is the alignment of
+the kernel K i , and f() is a monotonically increasing function (eg. the identity or
+an exponential). Note that a recombination of these rank 1 kernels was made in
+so-called latent semantic kernels [2]. The overall alignment of the new kernel with
+
+the labeled data should be increased, and the new kernel matrix is expected also
+to be more aligned to the unseen test labels (because of the concentration, and the
+assumption that the split was random).
+Moreover, in general one can set up an optimization problem, aimed at nding the
+optimal , that is the parameters that maximize the alignment of the combined
+kernel with the available labels. Given K =
+P
+i  i v i v 0
+i , using the orthonormality
+of the v i and that hvv 0 ; uu 0 i F = hv; ui 2
+F , the alignment can be written as
+^
+A(y) = hK; yy 0 i F
+m
+q P
+ij  i  j hv i v 0
+i ; v j v 0
+j i F
+=
+P
+i  i hv i ; yi 2
+F
+p
+hyy 0 ; yy 0 i F
+pP
+i  2
+i
+:
+Hence we have the following optimization problem:
+maximise W () =
+X
+i
+ i hv i ; yi 2
+F (
+X
+i
+ 2
+i 1): (2)
+Setting derivatives to zero we obtain @W
+@ i
+= hv i ; yi 2
+F 2 i = 0 and hence  i /
+hv i ; yi 2
+F , giving the overall alignment ^
+A(y) =
+pP
+i hv i ;yi 4
+F
+m .
+This analysis suggests the following transduction algorithm. Given a partially la-
+belled set of examples optimise its alignment by adapting the full kernel matrix by
+recombining its rank one eigenmatrices v i v 0
+i using the coeÆcients  i determined by
+measuring the alignment between v i and y on the labelled examples. Our results
+suggest that we should see a corresponding increase in the alignment on the un-
+labelled part of the set, and hence a reduction in test error when using a Parzen
+window estimator. Results of experiments testing these predictions are given in the
+next section.
+6 Experiments
+We applied the transduction algorithm designed to take advantage of our results
+by optimizing alignment with the labeled part of the dataset using the spectral
+method described above. All of the results are averaged over 20 random splits with
+the standard deviation given in brackets. Table 1 shows the alignments of the
+Train Align Test Align Train Align Test Align
+K 80 0.076 (0.007) 0.092 (0.029) 0.207 (0.020) 0.240 (0.083)
+G 80 0.228 (0.012) 0.219 (0.041) 0.240 (0.016) 0.257 (0.059)
+K 50 0.075 (0.016) 0.084 (0.017) 0.210 (0.031) 0.216 (0.033)
+G 50 0.242 (0.023) 0.181 (0.043) 0.257 (0.023) 0.202 (0.015)
+K 20 0.072 (0.022) 0.081 (0.006) 0.227 (0.057) 0.210 (0.015)
+G 20 0.273 (0.037) 0.034 (0.046) 0.326 (0.023) 0.118 (0.017)
+Table 1: Mean and associated standard deviation alignment values using a linear
+kernel on the Breast (left two columns) and Ionosphere (right two columns).
+Gram matrices to the label matrix for dierent sizes of training set. The index
+indicates the percentage of training points. The K matrices are before adaptation,
+while the G matrices are after optimisation of the alignment using equation (2).
+The results on the left are for Breast Cancer data using a linear kernel, while the
+results on the right are for Ionosphere data.
+The left two columns of Table 2 shows the alignment values for Breast Cancer data
+using a Gaussian kernel together with the performance of an SVM classier trained
+
+Train Align Test Align SVM Error Breast Ionosphere
+K 80 0.263 (0.011) 0.242 (0.041) 0.160 (0.023) 0.639 (0.03) 0.293 (0.06)
+G 80 0.448 (0.012) 0.433 (0.047) 0.158 (0.027) 0.196 (0.03) 0.261 (0.07)
+K 50 0.269 (0.029) 0.249 (0.026) 0.151 (0.013) 0.644 (0.02) 0.307 (0.03)
+G 50 0.453 (0.026) 0.437 (0.026) 0.146 (0.015) 0.195 (0.02) 0.261 (0.03)
+K 20 0.251 (0.048) 0.260 (0.012) 0.143 (0.007) 0.648 (0.01) 0.312 (0.01)
+G 20 0.448 (0.055) 0.441 (0.014) 0.144 (0.017) 0.256 (0.04) 0.322 (0.04)
+Table 2: Breast alignment (cols 1,2) and SVM error for a Gaussian kernel (sigma
+= 6) (col 3), Parzen window error for Breast (col 4) and Ionosphere (col 5)
+with the given gram matrix in the third column. The right two columns show the
+performance of the Parzen window classier on the test set for Breast linear kernel
+(left column) and Ionosphere (right column).
+The results clearly show that optimising the alignment on the training set does
+indeed increase its value in all but one case by more than the sum of the standard
+deviations. Furthermore, as predicted by the concentration this improvement is
+maintained in the alignment measured on the test set with both linear and Gaussian
+kernels in all but one case (20% train with the linear kernel). The results for
+Ionosphere are less conclusive. Again as predicted by the theory the larger the
+alignment the better the performance that is obtained using the Parzen window
+estimator. The results of applying an SVM to the Breast Cancer data using a
+Gaussian kernel show a very slight improvement in the test error for both 80% and
+50% training sets.
+7 Conclusions
+We have introduced a measure of performance of a kernel machine that is much
+easier to analyse than standard measures (eg the margin) and that provides much
+simpler algorithms. We have discussed its statistical and geometrical properties,
+demonstrating that it is a well motivated and formally useful quantity.
+By identifying that the ideal kernel matrix has a structure of the type yy 0 , we have
+been able to transform a measure of similarity between kernels into a measure of
+tness of a given kernel. The ease and reliability with which this quantity can be
+estimated using only training set information prior to training makes it an ideal
+tool for practical model selection. We have given preliminary experimental results
+that largely conrm the theoretical analysis and augur well for the use of this tool
+in more sophisticated model (kernel) selection applications.
+References
+[1] N. Cristianini and J. Shawe-Taylor. An Introduction to Support Vector Ma-
+chines. Cambridge University Press, 2000. See also the web site www.support-
+vector.net.
+[2] Nello Cristianini, Huma Lodhi, and John Shawe-Taylor. Latent semantic kernels
+for feature selection. Technical Report NC-TR-00-080, NeuroCOLT Working
+Group, http://www.neurocolt.org, 2000.
+[3] L. Devroye, L. Gyor, and G. Lugosi. A Probabilistic Theory of Pattern Recog-
+nition. Number 31 in Applications of mathematics. Springer, 1996.
+[4] C. McDiarmid. On the method of bounded dierences. In Surveys in Combina-
+torics 1989, pages 148{188. Cambridge University Press, 1989.
+

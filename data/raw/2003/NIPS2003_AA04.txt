@@ -1,0 +1,322 @@
+Max-Margin Markov Networks
+
+Ben Taskar Carlos Guestrin Daphne Koller
+
+{btaskar,guestrin,koller}@cs.stanford.edu Stanford University
+
+Abstract
+
+In typical classification tasks, we seek a function which assigns a label to a single object. Kernel-based approaches, such as support vector machines (SVMs), which maximize the margin of confidence of the classifier, are the method of choice for many such tasks. Their popularity stems both from the ability to use high-dimensional feature spaces, and from their strong theoretical guarantees. However, many real-world tasks involve sequential, spatial, or structured data, where multiple labels must be assigned. Existing kernel-based methods ignore structure in the problem, assigning labels independently to each object, losing much useful information. Conversely, probabilistic graphical models, such as Markov networks, can represent correlations between labels, by exploiting problem structure, but cannot handle high-dimensional feature spaces, and lack strong theoretical generalization guarantees. In this paper, we present a new framework that combines the advantages of both approaches: Maximum margin Markov (M3) networks incorporate both kernels, which efficiently deal with high-dimensional features, and the ability to capture correlations in structured data. We present an efficient algorithm for learning M3 networks based on a compact quadratic program formulation. We provide a new theoretical bound for generalization in structured domains. Experiments on the task of handwritten character recognition and collective hypertext classification demonstrate very significant gains over previous approaches.
+
+1 Introduction In supervised classification, our goal is to classify instances into some set of discrete categories. Recently, support vector machines (SVMs) have demonstrated impressive successes on a broad range of tasks, including document categorization, character recognition, image classification, and many more. SVMs owe a great part of their success to their ability to use kernels, allowing the classifier to exploit a very high-dimensional (possibly even infinite-dimensional) feature space. In addition to their empirical success, SVMs are also appealing due to the existence of strong generalization guarantees, derived from the margin-maximizing properties of the learning algorithm. However, many supervised learning tasks exhibit much richer structure than a simple categorization of instances into one of a small number of classes. In some cases, we might need to label a set of inter-related instances. For example: optical character recognition (OCR) or part-of-speech tagging both involve labeling an entire sequence of elements into some number of classes; image segmentation involves labeling all of the pixels in an image; and collective webpage classification involves labeling an entire set of interlinked webpages. In other cases, we might want to label an instance (e.g., a news article) with multiple non-exclusive labels. In both of these cases, we need to assign multiple labels simultaneously, leading to a classification problem that has an exponentially large set of joint
+
+
+labels. A common solution is to treat such problems as a set of independent classification tasks, dealing with each instance in isolation. However, it is well-known that this approach fails to exploit significant amounts of correlation information [7]. An alternative approach is offered by the probabilistic framework, and specifically by probabilistic graphical models. In this case, we can define and learn a joint probabilistic model over the set of label variables. For example, we can learn a hidden Markov model, or a conditional random field (CRF) [7] over the labels and features of a sequence, and then use a probabilistic inference algorithm (such as the Viterbi algorithm) to classify these instances collectively, finding the most likely joint assignment to all of the labels simultaneously. This approach has the advantage of exploiting the correlations between the different labels, often resulting in significant improvements in accuracy over approaches that classify instances independently [7, 10]. The use of graphical models also allows problem structure to be exploited very effectively. Unfortunately, even probabilistic graphical models that are trained discriminatively do not usually achieve the same level of generalization accuracy as SVMs, especially when kernel features are used. Moreover, they are not (yet) associated with generalization bounds comparable to those of margin-based classifiers. Clearly, the frameworks of kernel-based and probabilistic classifiers offer complementary strengths and weaknesses. In this paper, we present maximum margin Markov (M3) networks, which unify the two frameworks, and combine the advantages of both. Our approach defines a log-linear Markov network over a set of label variables (e.g., the labels of the letters in an OCR problem); this network allows us to represent the correlations between these label variables. We then define a margin-based optimization problem for the parameters of this model. For Markov networks that can be triangulated tractably, the resulting quadratic program (QP) has an equivalent polynomial-size formulation (e.g., linear for sequences) that allows a very effective solution. By contrast, previous margin-based formulations for sequence labeling [3, 1] require an exponential number of constraints. For non-triangulated networks, we provide an approximate reformulation based on the relaxation used by belief propagation algorithms [8, 12]. Importantly, the resulting QP supports the same kernel trick as do SVMs, allowing probabilistic graphical models to inherit the important benefits of kernels. We also show a generalization bound for such margin-based classifiers. Unlike previous results [3], our bound grows logarithmically rather than linearly with the number of label variables. Our experimental results on character recognition and on hypertext classification, demonstrate dramatic improvements in accuracy over both kernel-based instance-by-instance classification and probabilistic models. 2 Structure in classification problems In supervised classification, the task is to learn a function h : X  Y from a set of m i.i.d. classification function h is typically selected from some parametric family H. A common choice is the linear family: Given n real-valued basis functions fj : X × Y  IR, a hypothesis hw  H is defined by a set of n coefficients wj such that: hw(x) = arg max wjfj(x, y) = arg max w f(x, y) , (1) where the f(x,y) are features or basis functions. The most common classification setting -- single-label classification -- takes Y = {y1,...,yk}. In this paper, we consider the much more general setting of multi-label classification, where Y = Y1 × ... × Yl with Yi = {y1,... ,yk}. In an OCR task, for example, each Yi is a character, while Y is a full word. In a webpage collective classification task [10], each Yi is a webpage label, whereas Y is a joint label for an entire website. In these cases, the number of possible assignments to Y is exponential in the number of labels l. Thus, both representing the basis functions fj(x,y) in (1) and computing the maximization arg maxy are infeasible.
+
+instances S = {(x(i ,y(i ) ) = t(x(i ))}i m =1 ) , drawn from a fixed distribution DX×Y. The
+
+n
+
+y y i=1
+
+
+An alternative approach is based on the framework of probabilistic graphical models. In this case, the model defines (directly or indirectly) a conditional distribution P(Y | X). We can then select the label arg maxy P(y | x). The advantage of the probabilistic framework is that it can exploit sparseness in the correlations between labels Yi. For example, in the OCR task, we might use a Markov model, where Yi is conditionally independent of the rest We can encode this structure using a Markov network. In this paper, purely for simplicity of presentation, we focus on the case of pairwise interactions between labels. We emphasize that our results extend easily to the general case. A pairwise Markov network is defined as a graph G = (Y,E), where each edge (i,j) is associated with a potential function ij(x,yi,yj). The network encodes a joint conditional probability distribution as parameterize a classifier very compactly. In many cases (e.g., tree-structured networks), we can use effective dynamic programming algorithms (such as the Viterbi algorithm) to find the highest probability label y; in others, we can use approximate inference algorithms that also exploit the structure [12]. The Markov network distribution is simply a log-linear model, with the pairwise potential ij(x, yi, yj) representing (in log-space) a sum of basis functions over x, yi, yj. We can therefore parameterize such a model using a set of pairwise basis functions f(x,yi,yj) for (i, j)  E. We assume for simplicity of notation that all edges in the graph denote the same type of interaction, so that we can define a set of features
+
+of the labels given Yi -1 , Yi +1 .
+
+P (y | x)  (i,j)E ij(x, yi, yj). These networks exploit the interaction structure to
+
+fk(x, y) = fk(x, yi, yj).
+
+(i,j)E
+
+The network potentials are then ij(x,yi,yj) exp w f (x, yi, yj) . = exp [ n k=1 wkfk(x, yi, yj)]
+
+(2) =
+
+The parameters w in a log-linear model can be trained to fit the data, typically by maximizing the likelihood or conditional likelihood (e.g., [7, 10]). This paper presents an algorithm for selecting w that maximize the margin, gaining all of the advantages of SVMs. 3 Margin-based structured classification For a single-label binary classification problem, support vector machines (SVMs) [11] provide an effective method of learning a maximum-margin decision boundary. For singlelabel multi-class classification, Crammer and Singer [5] provide a natural extension of this framework by maximizing the margin  subject to constraints: maximize  s.t. ||w||  1; w fx(y)  ,  x  S, y = t(x); (3) where fx(y) = f(x,t(x)) - f(x,y). The constraints in this formulation ensure that arg maxy w f (x, y) = t(x). Maximizing  magnifies the difference between the value of the true label and the best runner-up, increasing the "confidence" of the classification. In structured problems, where we are predicting multiple labels, the loss function is usually not simple 0-1 loss I(arg maxy w fx(y) = t(x)), but per-label loss, such as the proportion of incorrect labels predicted. In order to extend the margin-based framework to the multi-label setting, we must generalize the notion of margin to take into account the number of labels in y that are misclassified. In particular, we would like the margin between t(x) and y to scale linearly with the number of wrong labels in y, tx(y):
+
+maximize where tx(y) = 
+
+s.t. ||w||  1; w fx(y)   tx(y), x  S,  y; (4)
+
+l i=1
+
+tx(yi) and tx(yi)  I(yi = (t(x))i). Now, using a standard
+
+transformation to eliminate , we get a quadratic program (QP):
+
+minimize
+
+1 ||w 2
+
+||2 s.t. w fx(y)  tx(y), x  S,  y. (5)
+
+Unfortunately, the data is often not separable by a hyperplane defined over the space of the given set of features. In such cases, we need to introduce slack variables x to allow
+
+
+some constraints to be violated. We can now present the complete form of our optimization problem, as well as the equivalent dual problem [2]: Primal formulation (6) Dual formulation (7)
+
+min 1 ||w 2 ||2 + C
+
+X x
+
+x
+
+;
+
+s.t. w fx(y)  tx(y) - x, x, y.
+
+max s.t.
+
+X x(y X x(y
+
+x,y
+
+y
+
+(Note: for each x, we add an extra dual variable x(t(x)), with no effect on the solution.) 4 Exploiting structure in M3 networks Unfortunately, both the number of constraints in the primal QP in (6), and the number of variables in the dual QP in (7) are exponential in the number of labels l. In this section, we present an equivalent, polynomially-sized, formulation. Our main insight is that the variables x(y) in the dual formulation (7) can be interpreted as a density function over y conditional on x, as x(y) = C and x(y)  0. The dual objective is a function of expectations of tx(y) and fx(y) with respect to x(y). Since both tx(y) = tx(yi) and fx(y) = fx(yi, yj) are sums of functions over nodes and edges, we only need node and edge marginals of the measure x(y) to compute their expectations. We define the marginal dual variables as follows:
+
+y
+
+i (i,j)
+
+µx(yi, yj) µx(yi) = =
+
+y[yi,yj]
+
+y[yi]
+
+x(y),
+
+(8)
+
+x(y),
+
+ (i,j)  E,yi,yj,  x;  i, yi,  x;
+
+ )tx(y) -  1 X x(y 2  x
+
+,y
+
+) = C, x; x(y)  0 , x, y.
+
+)fx(y)2;
+
+where y  [yi,yj] denotes a full assignment y consistent with partial assignment yi,yj. Now we can reformulate our entire QP (7) in terms of these dual variables. Consider, for example, the first term in the objective function:
+
+X x(y
+
+y
+
+)tx(y) =
+
+X X x(y
+
+y i
+
+)tx(yi) =
+
+X tx(yi) yX
+
+i,yi [yi]
+
+x(y) =
+
+X µx(yi)tx(yi).
+
+i,yi
+
+The decomposition of the second term in the objective uses edge marginals µx(yi,yj). In order to produce an equivalent QP, however, we must also ensure that the dual variables µx(yi, yj), µx(yi) are the marginals resulting from a legal density (y); that is, that they belong to the marginal polytope [4]. In particular, we must enforce consistency between the pairwise and singleton marginals (and hence between overlapping pairwise marginals): µx(yi, yj) = µx(yj), yj, (i,j)  E, x. (9)
+
+yi
+
+If the Markov network for our basis functions is a forest (singly connected), these constraints are equivalent to the requirement that the µ variables arise from a density. Therefore, the following factored dual QP is equivalent to the original dual QP:
+
+max
+
+X X µx(yi)tx(yi)
+
+x i,yi
+
+X µx(yi, yj )
+
+yi
+
+-
+
+1 2
+
+X yX
+
+x,x (i,j) (r,s) ^
+
+i
+
+,yj yr ,ys
+
+X µx(yi)
+
+yi
+
+X µx(yi, yj)µx^(yr, ys)fx(yi, yj) fx^(yr, ys);
+
+s.t. = µx(yj); = C; µx(yi, yj)  0. (10)
+
+Similarly, the original primal can be factored as follows:
+
+min s.t.
+
+1 ||w 2 ||2 + C
+
+X X x ,i
+
+x i
+
+X (X
+
+x i,j)
+
+(j ,i):j =j
+
+x ,ij  0,x  0. ,i
+
+x X
+
+,ij
+
+w fx(yi, yj) +
+
+X
+
+(i,j)
+
+X mx (yi)  tx(yi) - x ;
+
+(i ,j):i =i
+
+,j
+
++ C mx (yj) +
+
+,i
+
+;
+
+mx ,j (yi)  -x ,ij ;
+
+,i (11)
+
+
+The solution to the factored dual gives us: w = x (i,j) yi,yj µx(yi, yj)fx(yi, yj).
+
+Theorem 4.1 If for each x the edges E form a forest, then a set of weights w will be optimal for the QP in (6) if and only if it is optimal for the factored QP in (11). If the underlying Markov net is not a forest, then the constraints in (9) are not sufficient to enforce the fact that the µ's are in the marginal polytope. We can address this problem by triangulating the graph, and introducing new  LP variables that now span larger subsets of Yi's. For example, if our graph is a 4-cycle Y1--Y2--Y3--Y4--Y1, we might triangulate the graph by adding an arc Y1--Y3, and introducing  variables over joint instantiations of the cliques Y1,Y2,Y3 and Y1,Y3,Y4. These new  variables are used in linear equalities that constrain the original µ variables to be consistent with a density. The  variables appear only in the constraints; they do not add any new basis functions nor change the objective function. The number of constraints introduced is exponential in the number of variables in the new cliques. Nevertheless, in many classification problems, such as sequences and other graphs with low tree-width [4], the extended QP can be solved efficiently. Unfortunately, triangulation is not feasible in highly connected problems. However, we can still solve the QP in (10) defined by an untriangulated graph with loops. Such a procedure, which enforces only local consistency of marginals, optimizes our objective only over a relaxation of the marginal polytope. In this way, our approximation is analogous to the approximate belief propagation (BP) algorithm for inference in graphical models [8]. In fact, BP makes an additional approximation, using not only the relaxed marginal polytope but also an approximate objective (Bethe free-energy) [12]. Although the approximate QP does not offer the theoretical guarantee in Theorem 4.1, the solutions are often very accurate in practice, as we demonstrate below. As with SVMs [11], the factored dual formulation in (10) uses only dot products between basis functions. This allows us to use a kernel to define very large (and even infinite) set of features. In particular, we define our basis functions by fx(yi,yj) = (yi,yj)ij(x), i.e., the product of a selector function (yi,yj) with a possibly infinite feature vector ij(x). For example, in the OCR task, (yi,yj) could be an indicator function over the class of two adjacent characters i and j, and ij(x) could be an RBF kernel on the images of these two characters. The operation fx(yi,yj) fx^(yr,ys) used in the objective function of the factored dual QP is now (yi,yj)(yr,ys)K(x,i,j, x,r,s), where K(x,i,j, x,r,s) = ^ ^ ij(x) · rs(x) is the kernel function for the feature . Even for some very complex functions , the dot-product required to compute K can be executed efficiently [11]. 5 SMO learning of M3 networks Although the number of variables and constraints in the factored dual in (10) is polynomial in the size of the data, the number of coefficients in the quadratic term (kernel matrix) in the objective is quadratic in the number of examples and edges in the network. Unfortunately, this matrix is often too large for standard QP solvers. Instead, we use a coordinate descent method analogous to the sequential minimal optimization (SMO) used for SVMs [9]. Let us begin by considering the original dual problem (7). The SMO approach solves this QP by analytically optimizing two-variable subproblems. Recall that x(y) = C. We can therefore take any two variables x(y1), x(y2) and "move weight" from one to the other, keeping the values of all other variables fixed. More precisely, we optimize for x(y1), x(y2) such that x(y1) + x(y2) = x(y1) + x(y2). Clearly, however, we cannot perform this optimization in terms of the original dual, which is exponentially large. Fortunately, we can perform precisely the same optimization in terms of the marginal dual variables. Let  = x(y1) - x(y1) = x(y2) - x(y2). Consider a dual variable µx(yi,yj). It is easy to see that a change from x(y1),x(y2) to x(y1), x(y2) has the following effect on µx(yi, yj):
+
+y
+
+µx(yi, yj) = µx(yi, yj) + I(yi = yi , yj = yj ) - I(yi = yi , yj = yj ). 1 1 2 2 (12)
+
+
+We can solve the one-variable quadratic subproblem in  analytically and update the appropriate µ variables. We use inference in the network to test for optimality of the current solution (the KKT conditions [2]) and use violations from optimality as a heuristic to select the next pair y1,y2. We omit details for lack of space. 6 Generalization bound In this section, we show a generalization bound for the task of multi-label classification that allows us to relate the error rate on the training set to the generalization error. As we shall see, this bound is significantly stronger than previous bounds for this problem. Our goal in multi-label classification is to maximize the number of correctly classified labels. Thus an appropriate error function is the average per-label loss L(w,x) = fiers, we relate the generalization error to the margin of the classifier. In Sec. 3, we define the notion of per-label margin, which grows with the number of mistakes between the correct assignment and the best runner-up. We can now define a -margin per-label loss:
+
+1 l tx(arg maxy w fx(y)). As in other generalization bounds for margin-based classi-
+
+L(w,x) = supz : |z(y)-w fx(y)|tx(y); y 1 l tx(arg maxy z(y)).
+
+This loss function measures the worst per-label loss on x made by any classifier z which is perturbed from w fx by at most a -margin per-label. We can now prove that the generalization accuracy of any classifier is bounded by its expected -margin per-label loss on the training data, plus a term that grows inversely with the margin.Intuitively, the first term corresponds to the "bias", as margin  decreases the complexity of our hypothesis class by considering a -per-label margin ball around w fx and selecting one (the worst) classifier within this ball. As  shrinks, our hypothesis class becomes more complex, and the first term becomes smaller, but at the cost of increasing the second term, which intuitively corresponds to the "variance". Thus, the result provides a bound to the generalization error that trades off the effective complexity of the hypothesis space with the training error. Redge, then for a family of hyperplanes parameterized by w, and any  > 0, there exists a constant K such that for any  > 0 per-label margin, and m > 1 samples, the per-label
+
+Theorem 6.1 If the edge features have bounded 2-norm, max(i,j ),yi,yj fx(yi, yj)  2
+
+loss is bounded by: ExL(w, x)  ESL(w,x) +
+
+v u u K
+
+2 w 2 2 q2
+
+t m
+
+" Redge 2
+
+[ln m + ln l + ln q + ln k] + ln
+
+1 # 
+
+;
+
+with probability at least 1-, where q = maxi |{(i,j)  E}| is the maximum edge degree in the network, k is the number of classes in a label, and l is the number of labels. Unfortunately, we omit the proof due to lack of space. (See a longer version of the paper at http://cs.stanford.edu/~btaskar/.) The proof uses a covering number argument analogous to previous results in SVMs [13]. However we propose a novel method for covering structured problems by constructing a cover to the loss function from a cover of the individual edge basis function differences fx(yi,yj). This new type of cover is polynomial in the number of edges, yielding significant improvements in the bound. Specifically, our bound has a logarithmic dependence on the number of labels (lnl) and depends only on the 2-norm of the basis functions per-edge (Redge). This is a significant gain over the previous result of Collins [3] which has linear dependence on the number of labels (l), and depends on the joint 2-norm of all of the features (which is  lRedge, unless each sequence is normalized separately, which is often ineffective in practice). Finally, note times the length of a word), then our bound is independent of the number of labels l. Such a result was, until now, an open problem for margin-based sequence classification [3]. 7 Experiments We evaluate our approach on two very different tasks: a sequence model for handwriting recognition and an arbitrary topology Markov network for hypertext classification.
+
+that if l m = O(1) (for example, in OCR, if the number of instances is at least a constant
+
+
+)r
+
+0.35 0.3 0.25 0.2 0.15 0.1 s 0.05 0
+
+0.25 mSVM RMN M^3N
+
+linear quadratic cubic
+
+et
+
+)loohcs 0.2
+
+c
+
+ar
+
+a h
+
+c-r
+
+e
+
+rep 0.15
+
+p
+
+e g
+
+ar
+
+e
+
+segap(
+
+v
+
+rorretseT
+
+0.1
+
+a(
+
+r
+
+orr
+
+e t 0.05
+
+e T
+
+0
+
+Log-Reg CRF mSVM
+
+(b)
+
+M^3N Cor Tex Was
+
+(c)
+
+Wis Ave
+
+(a)
+
+Figure 1: (a) 3 example words from the OCR data set; (b) OCR: Average per-character test error for logistic regression, CRFs, multiclass SVMs, and M3Ns, using linear, quadratic, and cubic kernels; (c) Hypertext: Test error for multiclass SVMs, RMNs and M3Ns, by school and average. Handwriting Recognition. We selected a subset of  6100 handwritten words, with average length of  8 characters, from 150 human subjects, from the data set collected by Kassel [6]. Each word was divided into characters, each character was rasterized into an image of 16 by 8 binary pixels. (See Fig. 1(a).) In our framework, the image for each word corresponds to x, a label of an individual character to Yi, and a labeling for a complete word to Y. Each label Yi takes values from one of 26 classes {a,... ,z}. The data set is divided into 10 folds of  600 training and  5500 testing examples. The accuracy results, summarized in Fig. 1(b), are averages over the 10 folds. We implemented a selection of state-of-the-art classification algorithms: independent label approaches, which do not consider the correlation between neighboring characters -- logistic regression, multi-class SVMs as described in (3), and one-against-all SVMs (whose performance was slightly lower than multi-class SVMs); and sequence approaches -- CRFs, and our proposed M3 networks. Logistic regression and CRFs are both trained by maximizing the conditional likelihood of the labels given the features, using a zero-mean diagonal Gaussian prior over the parameters, with a standard deviation between 0.1 and 1. The other methods are trained by margin maximization. Our features for each label Yi are the corresponding image of ith character. For the sequence approaches (CRFs and M3), we used an methods (SVMs and M3), we were able to use kernels (both quadratic and cubic were evaluated) to increase the dimensionality of the feature space. Using these high-dimensional feature spaces in CRFs is not feasible because of the enormous number of parameters. Fig. 1(b) shows two types of gains in accuracy: First, by using kernels, margin-based methods achieve a very significant gain over the respective likelihood maximizing methods. Second, by using sequences, we obtain another significant gain in accuracy. Interestingly, the error rate of our method using linear features is 16% lower than that of CRFs, and about the same as multi-class SVMs with cubic kernels. Once we use cubic kernels our error rate is 45% lower than CRFs and about 33% lower than the best previous approach. For comparison, the previously published results, although using a different setup (e.g., a larger training set), are about comparable to those of multiclass SVMs. Hypertext. We also tested our approach on collective hypertext classification, using the data set in [10], which contains web pages from four different Computer Science departments. Each page is labeled as one of course, faculty, student, project, other. In all of our experiments, we learn a model from three schools, and test on the remaining school. The text content of the web page and anchor text of incoming links is represented using a set of binary attributes that indicate the presence of different words. The baseline model is a simple linear multi-class SVM that uses only words to predict the category of the page. The second model is a relational Markov network (RMN) of Taskar et al. [10], which in addition to word-label dependence, has an edge with a potential over the labels of two pages that are hyper-linked to each other. This model defines a Markov network over each web site that was trained to maximize the conditional probability of the labels given the words
+
+indicator basis function to represent the correlation between Yi and Yi +1 . For margin-based
+
+
+and the links. The third model is a M3 net with the same features but trained by maximizing the margin using the relaxed dual formulation and loopy BP for inference. Fig. 1(c) shows a gain in accuracy from SVMs to RMNs by using the correlations between labels of linked web pages, and a very significant additional gain by using maximum margin training. The error rate of M3Ns is 40% lower than that of RMNs, and 51% lower than multi-class SVMs. 8 Discussion We present a discriminative framework for labeling and segmentation of structured data such as sequences, images, etc. Our approach seamlessly integrates state-of-the-art kernel methods developed for classification of independent instances with the rich language of graphical models that can exploit the structure of complex data. In our experiments with the OCR task, for example, our sequence model significantly outperforms other approaches by incorporating high-dimensional decision boundaries of polynomial kernels over character images while capturing correlations between consecutive characters. We construct our models by solving a convex quadratic program that maximizes the per-label margin. Although the number of variables and constraints of our QP formulation is polynomial in the example size (e.g., sequence length), we also address its quadratic growth using an effective optimization procedure inspired by SMO. We provide theoretical guarantees on the average per-label generalization error of our models in terms of the training set margin. Our generalization bound significantly tightens previous results of Collins [3] and suggests possibilities for analyzing per-label generalization properties of graphical models. For brevity, we simplified our presentation of graphical models to only pairwise Markov networks. Our formulation and generalization bound easily extend to interaction patterns involving more than two labels (e.g., higher-order Markov models). Overall, we believe that M3 networks will significantly further the applicability of high accuracy margin-based methods to real-world structured data. Acknowledgments. This work was supported by ONR Contract F3060-01-2-0564P00002 under DARPA's EELD program. References [1] Y. Altun, I. Tsochantaridis, and T. Hofmann. Hidden markov support vector machines. In Proc. ICML, 2003. [2] D. Bertsekas. Nonlinear Programming. Athena Scientific, Belmont, MA, 1999. [3] M. Collins. Parameter estimation for statistical parsing models: Theory and practice of distribution-free methods. In IWPT, 2001. [4] R.G. Cowell, A.P. Dawid, S.L. Lauritzen, and D.J. Spiegelhalter. Probabilistic Networks and Expert Systems. Springer, New York, 1999. [5] K. Crammer and Y. Singer. On the algorithmic implementation of multiclass kernelbased vector machines. Journal of Machine Learning Research, 2(5):265­292, 2001. [6] R. Kassel. A Comparison of Approaches to On-line Handwritten Character Recognition. PhD thesis, MIT Spoken Language Systems Group, 1995. [7] J. Lafferty, A. McCallum, and F. Pereira. Conditional random fields: Probabilistic models for segmenting and labeling sequence data. In Proc. ICML01, 2001. [8] J. Pearl. Probabilistic Reasoning in Intelligent Systems. Morgan Kaufmann, 1988. [9] J. Platt. Using sparseness and analytic QP to speed training of support vector machines. In NIPS, 1999. [10] B. Taskar, P. Abbeel, and D. Koller. Discriminative probabilistic models for relational data. In Proc. UAI02, Edmonton, Canada, 2002. [11] V.N. Vapnik. The Nature of Statistical Learning Theory. Springer-Verlag, New York, 1995. [12] J. Yedidia, W. Freeman, and Y. Weiss. Generalized belief propagation. In NIPS, 2000. [13] T. Zhang. Covering number bounds of certain regularized linear function classes. Journal of Machine Learning Research, 2:527­550, 2002.
+
+

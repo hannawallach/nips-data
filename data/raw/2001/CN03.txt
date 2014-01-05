@@ -1,0 +1,473 @@
+Ecient Resources Allocation
+for Markov Decision Processes
+Rémi Munos
+CMAP, Ecole Polytechnique, 91128 Palaiseau, France
+http://www.cmap.polytechnique.fr/munos
+remi.munos@polytechnique.fr
+Abstract
+It is desirable that a complex decision-making problem in an uncer-
+tain world be adequately modeled by a Markov Decision Process
+(MDP) whose structural representation is adaptively designed by a
+parsimonious resources allocation process. Resources include time
+and cost of exploration, amount of memory and computational time
+allowed for the policy or value function representation. Concerned
+about making the best use of the available resources, we address
+the problem of eciently estimating where adding extra resources
+is highly needed in order to improve the expected performance of
+the resulting policy. Possible application in reinforcement learning
+(RL), when real-world exploration is highly costly, concerns the de-
+tection of those areas of the state-space that need primarily to be
+explored in order to improve the policy. Another application con-
+cerns approximation of continuous state-space stochastic control
+problems using adaptive discretization techniques for which highly
+ecient grid points allocation is mandatory to survive high dimen-
+sionality. Maybe surprisingly these two problems can be formu-
+lated under a common framework: for a given resource allocation,
+which denes a belief state over possible MDPs, nd where adding
+new resources (thus decreasing the uncertainty of some parame-
+ters -transition probabilities or rewards) will most likely increase
+the expected performance of the new policy. To do so, we use sam-
+pling techniques for estimating the contribution of each parameter's
+probability distribution function (pdf) to the expected loss of us-
+ing an approximate policy (such as the optimal policy of the most
+probable MDP) instead of the true (but unknown) policy.
+Introduction
+Assume that we model a complex decision-making problem under uncertainty by
+a nite MDP. Because of the limited resources used, the parameters of the MDP
+(transition probabilities and rewards) are uncertain: we assume that we only know
+a belief state over their possible values. If we select the most probable values of
+the parameters, we can build a MDP and solve it to deduce the corresponding
+optimal policy. However, because of the uncertainty over the true parameters, this
+policy may not be the one that maximizes the expected cumulative rewards of the
+
+true (but partially unknown) decision-making problem. We can nevertheless use
+sampling techniques to estimate the expected loss of using this policy. Furthermore,
+if we assume independence of the parameters (considered as random variables), we
+are able to derive the contribution of the uncertainty over each parameter to this
+expected loss. As a consequence, we can predict where adding new resources (thus
+decreasing the uncertainty over some parameters) will decrease mostly this loss,
+thus improving the MDP model of the decision-making problem so as to optimize
+the expected future rewards.
+As possible application, in model-free RL we may wish to minimize the amount of
+real-world exploration (because each experiment is highly costly). Following [1] we
+can maintain a Dirichlet pdf over the transition probabilities of the corresponding
+MDP. Then, our algorithm is able to predict in which parts of the state space we
+should make new experiments, thus decreasing the uncertainty over some param-
+eters (the posterior distribution being less uncertain than the prior) in order to
+optimize the expected payo.
+Another application concerns the approximation of continuous (or large discrete)
+state-space control problems using variable resolution grids, that requires an e-
+cient resource allocation process in order to survive the curse of dimensionality
+in high dimensions. For a given grid, because of the interpolation process, the ap-
+proximate back-up operator introduces a local interpolation error (see [4]) that may
+be considered as a random variable (for example in the random grids of [6]). The
+algorithm introduced in this paper allows to estimate where we should add new
+grid-points, thus decreasing the uncertainty over the local interpolation error, in
+order to increase the expected performance of the new grid representation. The
+main tool developed here is the calculation of the partial derivative of useful global
+measures (the value function or the loss of using a sub-optimal policy) with respect
+to each parameter (probabilities and rewards) of a MDP.
+1 Description of the problem
+We consider a MDP with a nite state-space X and action-space A. A transition
+from a state x, action a to a next state y occurs with probability p(yjx; a) and the
+corresponding (deterministic) reward is r(x; a). We introduce the back-up operator
+T a dened, for any function W : X ! IR, as
+T a W (x) = 
+X
+y
+p(yjx; a)W (y) + r(x; a) (1)
+(with some discount factor 0 <  < 1). It is a contraction mapping, thus the
+dynamic programming (DP) equation V (x) = max a2A T a V (x) has a unique xed
+point V called the value function. Let us dene the Q-values Q(x; a) = T a V (x).
+The optimal policy   is the mapping from any state x to the action   (x) that
+maximizes the Q-values:   (x) = max a2A Q(x; a).
+The parameters of the MDP  the probability and the reward functions  are
+not perfectly known: all we know is a pdf over their possible values. This uncer-
+tainty comes from the limited amount of allocated resources for estimating those
+parameters.
+Let us choose a specic policy b  (for example the optimal policy of the MDP with
+the most probable parameters). We can estimate the expected loss of using b  instead
+of the true (but unknown) optimal policy   . Let us write  = f j g the set of all
+parameters (p and r functions) of a MDP. We assume that we know a probability
+distribution function pdf( j ) over their possible values. For a MDP M  dened
+
+by its parameters , we write p  (yjx; a), r  (x; a), V  , Q  , and   respectively its
+transition probabilities, rewards, value function, Q-values, and optimal policy.
+1.1 Direct gain optimization
+We dene the gain J  (x; ) in the MDP M  as the expected sum of discounted
+rewards obtained starting from state x and using policy :
+J  (x; ) = E[
+X
+k
+ k r  (x k ; (x k ))jx 0 = x; ] (2)
+where the expectation is taken for sequences of states x k ! x k+1 occurring with
+probability p  (x k+1 jx k ;   (x k )). By denition, the optimal gain in M  is V  (x) =
+J  (x;   ) which is obtained for the optimal policy   . Let c
+V  (x) = J  (x; b ) be
+the approximate gain obtained for some approximate policy b  in the same MDP
+M  . We dene the loss to occur L  (x) from x when one uses the approximate
+policy b  instead of the optimal one   in M  :
+L  (x) = V  (x) c
+V  (x) (3)
+An example of approximate policy b
+ would be the optimal policy of the most prob-
+able MDP, dened by the most probable parameters b p(yjx; a) and b
+r(x; a).
+We also consider the problem of maximizing the global gain from a set of initial
+states chosen according to some probability distribution P (x). Accordingly, we
+dene the global gain of a policy : J  () =
+P
+x J  (x; )P (x) and the global
+loss L  of using some approximate policy b
+ instead of the optimal one  
+L  = J  (  ) J  (b) =
+X
+x
+L  (x)P (x) (4)
+Thus, knowing the pdf over all parameters  we can dene the expected global
+loss L = E  [L  ].
+Next, we would like to dene what is the contribution of each parameter uncertainty
+to this loss, so we know where we should add new resources (thus reducing some
+parameters uncertainty) in order to decrease the expected global loss. We would
+like to estimate, for each parameter  j ,
+E[ÆL j Add Æu units of resource for  j ] (5)
+1.2 Partial derivative of the loss
+In order to quantify (5) we need to be more explicit about the pdf over . First, we
+assume the independence of the parameters  j (considered as random variables).
+Suppose that pdf( j ) = N (0;  j ) (normal distribution of mean 0 and standard
+deviation  j ). We would like to estimate the variation ÆL of the expected loss L
+when we make a small change of the uncertainty over  j (consequence of adding new
+resources), for example when changing the standard deviation of Æ j in pdf( j ). At
+the limit of an innitesimal variation we obtain the partial derivative @L
+@ j
+, which
+when computed for all parameters  j , provides the respective contributions of each
+parameter's uncertainty to the global loss.
+Another example is when the pdf( j ) is a uniform distribution of support [ b j ; b j ].
+Then the partial contribution of  j 's uncertainty to the global loss can be expressed
+as @L
+@b j
+. More generally, we can dene a nite number of characteristic scalar mea-
+surements of the pdf uncertainty (for example the entropy or the moments) and
+
+compute the partial derivative of the expected global loss with respect to these co-
+ecients. Finally, knowing the actual resources needed to estimate a parameter  j
+with some uncertainty dened by pdf( j ), we are able to estimate (5).
+1.3 Unbiased estimator
+We sample N sets of parameters f i g i=1::N from the pdf(), which dene N MDPs
+M i . For convenience, we use the superscript i to refer to the i-th MDP sample
+and the subscript j for the j-th parameter of a variable. We solve each MDP using
+standard DP techniques (see [5]). This expensive computation that can be speed-up
+in two ways: rst, by using the value function and policy computed for the rst
+MDP as initial values for the other MDPs; second, since all MDPs have the same
+structure, by computing once for all an ecient ordering (using a topological sort,
+possibly with loops) of the states that will be used for value iteration.
+For each MDP, we compute the global loss L i of using the policy b  and estimate
+the expected global loss: L ' 1
+N
+P N
+i=1 L i . In order to estimate the contribution of
+a parameter's uncertainty to L, we derive the partial derivative of L with respect
+to the characteristic coecients of pdf( j ). In the case of a reward parameter  j
+that follows a normal distribution N (0;  j ), we can write  j =  j  j where  j follows
+N (0; 1). The partial derivative of the expected loss L with respect to  j is
+@L
+@ j
+=
+@
+@ j
+E N (0;) [L  ] =
+@
+@ j
+E N (0;1) [L  ] = E N (0;1) [
+@L 
+@ j
+ j ] (6)
+from which we deduce the unbiased estimator
+@L
+@ j
+' 1
+N
+N
+X
+i=1
+@L i
+@ j
+ i
+j
+ j
+(7)
+where @L i
+@ j
+is the partial derivative of the global loss L i of MDP M i with respect to
+the parameter  j (considered as a variable). For other distributions, we can dene
+similar results to (6) and deduce analogous estimators (for uniform distributions,
+we have the same estimator with b j instead of  j ).
+The remainder of the paper is organized as follow. Section 2 introduces useful tools
+to derive the partial contribution of each parameter transition probability and
+reward to the value function in a Markov Chain, Section 3 establishes the partial
+contribution of each parameter to the global loss, allowing to calculate the estimator
+(7), and Section 4 provides an ecient algorithm. All proofs are given in the full
+length paper [2].
+2 Non-local dependencies
+2.1 Inuence of a markov chain
+In [3] we introduced the notion of inuence of a Markov Chain as a way to measure
+value function/rewards correlations between states. Let us consider a set of values
+V satisfying a Bellman equation
+V (x) = 
+X
+y
+p(yjx)V (y) + r(x) (8)
+We dene the discounted cumulative k-chained transition probabilities p k (yjx):
+p0(yjx) = 11 x=y (= 1 (if x = y) or 0 (if x 6= y))
+p1(yjx) =  p(yjx)
+
+p2(yjx) =
+X
+w
+p1(yjw) p1(wjx)
+:::
+pk (yjx) =
+X
+w
+p1(yjw) pk 1 (wjx)
+The inuence I(yjx) of a state y on another state x is dened as I(yjx) =
+P 1
+k=0 p k (yjx). Intuitively, I(yjx) measures the expected discounted number of vis-
+its of state y starting from x; it is also the partial derivative of the value function
+V (x) with respect to the reward r(y). Indeed V (x) can be expressed as a linear
+combination of the rewards at y weighted by the inuence I(yjx)
+V (x) =
+X
+y
+I(yjx)r(y) (9)
+We can also dene the inuence of a state y on a function f : I(yjf()) =
+P
+x I(yjx)f(x) and the inuence of a function f on another function g :
+I(f()jg()) =
+P
+y I(yjg())f(y). In [3], we showed that the inuence satises
+I(yjx) = 
+X
+w
+p(yjw)I(wjx) + 11 x=y (10)
+which is a xed-point equation of a contractant operator (in 1 norm) thus has
+a unique solution the inuence that can be computed by successive iterations.
+Similarly, the inuence I(yjf()) can be obtained as limit of the iterations
+I(yjf())   
+X
+w
+p(yjw)I(wjf()) + f(y)
+Thus the computation of the inuence I(yjf()) is cheap (equivalent to solving a
+Markov chain).
+2.2 Total derivative of V
+We wish to express the contribution of all parameters  transition probabilities p
+and rewards r  (considered as variables) to the value function V by dening the
+total derivative of V as a function of those parameters. We recall that the total
+derivative of a function f of several variables x 1 ; ::; xn is df = @f
+@x1 dx 1 + ::: + @f
+@xn dxn .
+We already know that the partial derivative of V (x) with respect to the reward r(z)
+is the inuence I(zjx) = @V (x)
+@r(z) . Now, the dependency with respect to the transition
+probabilities has to be expressed more carefully because the probabilities p(wjz) for
+a given z are dependent (they sum to one). A way to express that is provided in
+the theorem that follows whose proof is in [2].
+Theorem 1 For a given state z, let us alter the probabilities p(wjz), for all w,
+with some Æp(wjz) value, such that
+P
+w Æp(wjz) = 0. Then V (x) is altered by
+ÆV (x) = I(zjx)[
+P
+w V (w)Æp(wjz)]. We deduce the total derivative of V :
+dV (x) =
+X
+z
+I(zjx)[
+X
+w
+V (w)dp(wjz) + dr(z)]
+under the constraint
+P
+w dp(wjz) = 0 for all z.
+3 Total derivative of the loss
+For a given MDP M with parameters  (for notation simplication we do not
+write the  superscript in what follows), we want to estimate the loss of using an
+approximate policy b  instead of the optimal one . First, we dene the one-step
+
+loss l(x) at a state x as the dierence between the gain obtained by choosing the
+best action (x) then using the optimal policy  and the gain obtained by choosing
+action b
+(x) then the same optimal policy 
+l(x) = Q(x; (x)) Q(x; b
+(x)) (11)
+Now we consider the loss L(x), dened by (3), for an initial state x when we use
+the approximate policy b . We can prove that L(x) is the expected discounted
+cumulative one-step losses l(x k ) for reachable states x k :
+L(x) = E[
+X
+k
+ k l(x k )jx 0 = x; b ]
+with the expectation taken in the same sense as in (2).
+3.1 Decomposition of the one-step loss
+We use (9) to decompose the Q-values
+Q(x; a) = 
+X
+w
+p(wjx; a)
+X
+y
+I(yjw)r(y; (y)) + r(x; a)
+= r(x; a) +
+X
+y
+q(yjx; a)r(y; (y))
+using the partial contributions q(yjx; a) = 
+P
+w p(wjx; a)I(yjw) where I(yjw) is
+the inuence of y on w in the Markov chain derived from the MDP M by choosing
+policy . Similarly, we decompose the one-step loss
+l(x) = Q(x; (x)) Q(x; b (x))
+= r(x; (x)) r(x; b (x)) +
+X
+y
+[q(yjx; (x)) q(yjx; b (x))] r(y; (y))
+= r(x; (x)) r(x; b
+(x)) +
+X
+y
+l(yjx)r(y; (y))
+as a function of the partial contributions l(yjx) = q(yjx; (x)) q(yjx; b
+(x)) (see
+gure 1).
+x
+y
+^
+x
+q
+y x
+q ^
+Q (x, )
+^
+Q (x, )
+y
+( | , )
+( | , )
+p
+p
+p
+p
+p
+p
+p
+p
+p
+p
+Figure 1: The reward r(y; (y)) at
+state y contributes to the one-step
+loss l(x) = Q(x; (x)) Q(x; b(x))
+with the proportion l(yjx) =
+q(yjx; (x)) q(yjx; b(x)).
+
+3.2 Total derivative of the one-step loss and global loss
+Similarly to section (2.2), we wish to express the contribution of all parameters 
+transition probabilities p and rewards r  (considered as variables) to the one-step
+loss function by dening the total derivative of l as a function of those parameters.
+Theorem 2 Let us introduce the (formal) dierential back-up operator dT a de-
+ned, for any function W : X ! IR, as
+dT a W (x) = 
+X
+y
+W (y)dp(yjx; a) + dr(x; a)
+(similar to the back-up operator (1) but using dp and dr instead of p and r). The
+total derivative of the one-step loss is
+dl(x)=
+X
+z
+l(zjx)dT (z) V (z) + dT (x) V (x) dT b(x) V (x)
+under the constraint
+P
+y dp(yjx; a) = 0 for all x and a.
+Theorem 3 Let us introduce the one-step-loss back-up operator S and its formal
+dierential version dS dened, for any function W : X ! IR, as
+SW (x) = 
+X
+y
+p(yjx; (x))W (y) + l(x)
+dSW (x) = 
+X
+y
+dp(yjx; (x))W (y) + dl(x)
+Then, the loss L(x) at x satises Bellman's equation L = SL. The total derivative
+of the loss L(x) and global loss L are, respectively
+dL(x) =
+X
+z
+I(zjx)dSL(z)
+dL =
+X
+z
+I(zjP ())dSL(z)
+from which (after regrouping the contribution to each parameter) we deduce the
+partial derivatives of the global loss with respect to the rewards and transition
+probabilities
+@L
+@r(x; a) = I(l(xj)jP ())11 a=(x) +I(xjP ())(11 a=(x) 11 a=b(x) )
+@L
+@p(yjx; a) = I(xjP ())L(y)11 a=(x) +V (y)
+@L
+@r(x; a)
+4 A fast algorithm
+We use the sampling technique introduced in section 1.3. In order to compute the
+estimator (7) we calculate the partial derivatives @L i
+@ j
+based on the result of the
+previous section, with the following algorithm.
+Given the pdf over the parameters , select a policy b
+ (for example the optimal
+policy of the most probable MDP). For i = 1::N , solve each MDP M i and deduce
+
+its value function V i , Q-values Q i , and optimal policy  i . Deduce the one-step loss
+l i (x) from (11). Compute the inuence I(xjP ()) (which depends on the transi-
+tion probabilities p i of M i ) and the inuence I(l i (xj)jP ()) from which we deduce
+@L i
+@r i (x;a) . Then calculate L i (x) by solving Bellman's equation L i = SL i and deduce
+@L i
+@p i (yjx;a)
+. These partial derivatives enable to compute the unbiased estimator (7).
+The complexity of solving a discounted MDP with K states, each one connected to
+M next states, is O(KM), as is the complexity of computing the inuences. Thus,
+the overall complexity of this algorithm is O(NKM).
+Conclusion
+Being able to compute the contribution of each parameter transition probabilities
+and rewards to the value function (theorem 1) and to the loss of the expected
+rewards to occur if we use an approximate policy (theorem 3) enables us to use
+sampling techniques to estimate what are the parameters whose uncertainty are the
+most harmful to the expected gain. A relevant resource allocation process would
+consider adding new computational resources to reduce uncertainty over the true
+value of those parameters. In the examples given in the introduction, this would be
+doing new experiments in model-free RL for dening more precisely the transition
+probabilities of some relevant states. In discretization techniques for continuous
+control problems, this would be adding new grid points in order to improve the
+quality of the interpolation at relevant areas of the state space in order to maximize
+the expected gain of the new policy. Initial experiments for variable resolution
+discretization using random grids show improved performance compared to [3].
+Acknowledgments
+I am grateful to Andrew Moore, Drew Bagnell and Auton's Lab members for mo-
+tivating discussions.
+References
+[1] Richard Dearden, Nir Friedman, and David Andre. Model based bayesian ex-
+ploration. Proceeding of Uncertainty in Articial Intelligence, 1999.
+[2] Rémi Munos. Decision-making under uncertainty: Eciently estimating where
+extra ressources are needed. Technical report, Ecole Polytechnique, 2002.
+[3] Rémi Munos and Andrew Moore. Inuence and variance of a markov chain :
+Application to adaptive discretizations in optimal control. Proceedings of the
+38th IEEE Conference on Decision and Control, 1999.
+[4] Rémi Munos and Andrew W. Moore. Rates of convergence for variable resolution
+schemes in optimal control. International Conference on Machine Learning,
+2000.
+[5] Martin L. Puterman. Markov Decision Processes, Discrete Stochastic Dynamic
+Programming. A Wiley-Interscience Publication, 1994.
+[6] John Rust. Using Randomization to Break the Curse of Dimensionality. Com-
+putational Economics. 1997.
+

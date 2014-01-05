@@ -1,0 +1,640 @@
+Mean-Field Approach to a Probabilistic Model in Information Retrieval
+
+Bin Wu, K. Y. Michael Wong Department of Physics Hong Kong University of Science and Technology Clear Water Bay, Hong Kong phwbd@ust.hk phkywong@ust.hk David Bodoff Department of ISMT Hong Kong University of Science and Technology Clear Water Bay, Hong Kong dbodoff@ust.hk
+
+Abstract We study an explicit parametric model of documents, queries, and relevancy assessment for Information Retrieval (IR). Mean-field methods are applied to analyze the model and derive efficient practical algorithms to estimate the parameters in the problem. The hyperparameters are estimated by a fast approximate leave-one-out cross-validation procedure based on the cavity method. The algorithm is further evaluated on several benchmark databases by comparing with standard algorithms in IR. 1 Introduction The area of information retrieval (IR) studies the representation, organization and access of information in an information repository. With the advent and boom of the Internet, especially the World Wide Web (WWW), more and more information is available to be shared online. Search on the Internet becomes increasingly popular. In this respect, probabilistic models have become very useful in empowering information searches [1, 2]. In fact, information searches themselves contain rich information, which can be recorded and fruitfully used to improve the performance of subsequent retrievals. This is an extension of the process of relevance feedback [3], which incorporates the relevance assessments supplied by the user to construct new representations for queries, during the procedure of the users interactive document retrieval. In the process, the feedback information helps to refine the queries continuously, but the effects pertain only to the particular retrieval session. On the other hand, our objective is to refine the representations of documents and queries with the help of relevancy data, so that subsequent retrieval sessions can be benefited. Based on Fuhr and Buckley's meta-structure [4] relating documents, queries and relevancy assessments, one of us recently proposed a probabilistic model [5] in which these objects
+
+
+are described by explicit parametric distribution functions, facilitating the construction of a likelihood function, whose maximum can be used to characterize the documents and queries. Rather than relying on heuristics as in many previous work, the proposed model provides a unified formal framework for the following two tasks: (a) ad hoc information retrieval, in which a query is given and the goal is to return a list of ranked documents according to their similarities with the query; (b) document routing, in which a document is given and the goal is to categorize it using a list of ranked queries according to their similarities with the document. (Here we assume a model in which categories are represented by queries.) In this paper, we report our recent progress in putting this new theoretical approach to empirical tests. Since documents and queries are represented by high dimensional vectors in a vector space model, a mean-field approach will be adopted. mean-field methods were commonly used to study magnetic systems in statistical physics, but thanks to their ability to deal with high dimensional systems, they are increasingly applied to many areas of information processing recently [6]. In the present context, a mean-field treatment implies that when a particular component of a document or query vector is analyzed, all other components of the same and other vectors can be considered as background fields satisfying appropriate average properties, and correlations of statistical fluctuations with the background vectors can be neglected. After introducing the parametric model in Section 2, the mean-field approach will be used in two steps. First, in Section 3, the true representations of documents and queries will be estimated by maximizing the total probability of observation. It results in a set of meanfield equations, which can be solved by a fast iterative algorithm. Respectively, the estimated true documents and queries will then be used for ad hoc information retrieval and document routing. Secondly, the model depends on a few hyperparameters which are conventionally determined by the cross-validation method. Here, as described in Section 4, the mean-field approach can be used again to accelerate the otherwise tedious leave-one-out cross-validation procedure. For a given set of hyperparameter values, it enables us to carry out the systemwide iteration only once (rather than repeating once for each left-out document or query), and the leave-one-out estimations of the document and query representations can be obtained by a version of mean-field theory called the cavity method [7]. In Section 6, we compare the model with the standard tf-idf [8] and latent semantic indexing (LSI) [9] on benchmark test collections. As we shall see, the validity of our model is well supported by its superior performance. The paper is concluded in Section 7.
+
+2 A Unified Probabilistic Model Our work is motivated by Fuhr and Buckley's conceptual model. Assume that a set of
+
+ ¤£
+
+documents and
+
+ ¢¡
+
+queries is available to us. In the vector space model, each document
+
+and query is represented by an
+
+¥
+
+dimensional vector. The vectors are denoted by
+
+¦ §
+
+( ),
+
+which are referred to as the true meaning of the document (query). Our model consists of the following 3 components:
+
+(a) The document
+
+¦
+
+¦¢¨
+
+we really observe is distributed around the true document vector
+
+according to the probability distribution
+
+©¦ ¨¦
+
+, the difference resulting from the
+
+documents containing terms that do not ideally represent the meaning of the document. In
+
+other words, the document
+
+(b) Similarly, the query
+
+query vector
+
+§
+
+§ ¨
+
+¦ ¨
+
+is generated from its true meaning
+
+¦
+
+.
+
+that the user actually submits is also distributed around the true
+
+according to the probability distribution distribution
+
+© !"§ ¨ §#
+
+.
+
+
+(c) There is some relation between the document and query, called relevancy assessment.
+
+We denote this relation with a binary variable
+
+ ¢¡¤£,
+
+for each pair of document and query. If
+
+we say the document is relevant to the query, that is, the document is what the user
+
+ 
+
+wants. Otherwise,
+
+ ¥¡§¦
+
+and the document is irrelevant to the query. Suppose we have
+
+some relevancy relations between documents and queries (through historical records, from experts, etc.). Then we hypothesize that the true documents and queries are distributed queries should satisfy their relevancy relations. We summarize the idea through a probabilistic meta-structure shown in Figure 1.
+
+according to the distribution
+
+©¨© ¦§  ¤, that is, the true representation of documents and
+
+fQ(Q0 |Q) Q Q0
+
+B fB (D,Q |B)
+
+D
+
+unknown parameters Figure 1: Probabilistic meta-structure
+
+fD(D0 |D) D0
+
+data data
+
+In order to complete the model, we need to hypothesize the form of the distribution functions. In this paper, we restrict the documents and queries to a hypersphere, since usually only the cosines of the angles between documents and queries are used to determine the similarity between documents and queries. Hence, we assume the following distribution functions:
+
+(a) The distribution of each observed document
+
+©  "¦ ¨  ¡
+
+¦
+
+¡ ¦  
+
+! #"¦ ¦ ¨ %$ '& ¦ ¨ &)(102£ 
+
+¡
+
+¨
+
+given its true location
+
+3
+
+¦
+
+:
+
+ 
+
+! 6"§ § ¨ 7$ '& § ¨ &(802£  3
+
+4§ (1)
+
+(b) The distribution of each observed query
+
+© !"§ ¨ 5' ¡
+
+§
+
+£
+
+§ ¨ £
+
+given its true location
+
+4
+
+:
+
+(2)
+
+(c) The prior distribution of the documents and queries, given the relevance relation be-
+
+A!PB !GQ 3 ARB,3¦ A " § B3%$ '&3¦areA&)(102£ %$ & § B &)(80S£  ¨
+
+tween them:
+
+© ¨ @9 5A7 CBED  F'G H¡ ¦ §
+
+where
+
+©  $ UT 
+
+and
+
+© ¨
+
+I  
+
+
+
+is the Dirac -function, and
+
+$ ¨¦
+
+(3)
+
+© ,  
+
+and normalization constants of
+
+and
+
+§
+
+. respectively, and are hence independent of
+
+If we further assume that the observation of documents and queries are independent of each other, we can obtain the total probability of observing all documents and queries, given the relevancy relation between them:
+
+V @9 ¦ A¨ § B¨ D  W'X H¡ 3 3 ¨  !7acb3`Y 3  acd $ '& ¦ A¨ &( 02£ %$ & § B¨ &( 02£ e (4)
+
+
+where
+
+3Y
+
+¦¥G ¤¡¤01G¨§A!PBA!PB   AB ¦ A9"CB10¡¥ 7G`D§. ¦ A¨ "5A¦ 0  § § B¨ "§ BE
+
+§
+
+¡ £
+
+£
+
+A
+
+denotes all hyperparameters There is now an appealing correspondence
+
+between the present model and spin models in statistical physics. It is observed that just the familiar partition function and is the energy function.
+
+By maximizing the probability in Eq. (4), we can obtain an estimation of the true documents , which can be used in ad hoc retrieval: we define the similarity function between
+
+two vectors as the cosine of the angle between them, and rank the similarities between
+
+(instead of
+
+¦ ¨
+
+¦©
+
+) with a new query to determine whether the documents should be retrieved
+
+¡  ¢¡
+
+¤£ £
+
+5A¦ CB§ $ '& 5A'&( 02£ 7$ '& CB§ &( 02£  %01G ¦¥  ¦
+
+and
+
+X
+
+)  B
+
+(5)
+
+(6)
+
+3 Y
+
+is
+
+¦©
+
+or not. As a byproduct, we can also obtain the estimation of the true queries
+
+§©
+
+, which in
+
+turn can be used in document routing: new documents should be compared with
+
+§©
+
+to de-
+
+termine whether it belongs to this category or not. So our model gives a unifying procedure for both ad hoc retrieval and routing. 3 Parameter Estimation In this section, we derive a fast iterative algorithm for parameter estimation. First, we
+
+3 Y
+
+  ¡ ¡   ¡
+
+replace the -function by its Fourier transform. Then
+
+" "¦ A§ B  AB¡ %$ A A& ¦ A&)(`0 £  &'$¡",. B B '& §¥ B,&(`0when£(&the¦¥Gintegration
+
+3 Y
+
+¡ i ¦ A § B 70 #"#e £ £
+
+and
+
+ 
+
+i
+
+£ £! A B A B i i
+
+where formula, we have changed the integration to the imaginary axis. Mean-field theory works in the limit of large well approximated by taking the saddle point of
+
+derivatives of
+
+"
+
+with respect to
+
+¦ §
+
+, ,
+
+5A¦© ¡ §© B ¡ ©A ©B
+
+   £ 
+
+. In writing this
+
+This is obtained by equating the partial
+
+G $ B   AB §© B &  ¦ A¨ G $ A  CARB¤©5A¦ )&  § B¨
+
+
+
+©A £
+
+  ¡
+
+and to zero, yielding
+
+
+
+$
+
+can be written as
+
+(7)
+
+can be
+
+(8)
+
+©B 
+
+¡ &eG£ 0§   AB1©§ 2&B  ¦ A¨ &E
+
+¡
+
+¡ £ &eG0§   AB1©5A¦ )&  § B¨ &
+
+A
+
+£
+
+B
+
+4
+
+(9) (10)
+
+(11)
+
+This set of equations is referred to as the mean-field equations, since fluctuations around the mean values of the parameters have been neglected. Due to its simple form, it can be solved by an iterative scheme. Though we have not studied the theoretical convergence of the iterative scheme, its effectiveness can be seen from the following arguments. If we replace and at the saddle point, then the iteration process becomes a linear one. Now, Eqs. (8) and (9) differ from using Eqs. (10) and (11), the problem is equivalent to rescaling the lengths of the iterated
+
+43A B3 ©A
+
+in Eq. (8) and
+
+©B
+
+in Eq. (9) by the respective values of
+
+this linear iteration problem by scale factors of
+
+4365A ©A (5B3 ©B
+
+and respectively. Hence after
+
+
+vectors back to the hypersphere defined by
+
+&FA'&)(¡ £ & CB§ &( ¡ £. ¦
+
+and This alternate
+
+operation of linear iteration and rescaling back to the hypersphere makes it a very stable algorithm. The complexity of the algorithm is linear in the number of documents and queries. Empirically, it converges in just a few tens of steps. Alternatively, one may use
+
+the Augmented Lagrangian method to find the saddle point of guaranteed, but is computationally more complex [10].
+
+4 Hyperparameter Estimation
+
+¡
+
+In our model, the parameters ,
+
+and
+
+© ¨
+
+G  
+
+and
+
+"
+
+, whose convergence is
+
+£ determine the shape of the distributions
+
+©  © 
+
+,
+
+, and influence the parameter estimation described in Section 3. We refer to them as
+
+hyperparameters. They have to be chosen so that the model performs optimally when new queries are raised to retrieve documents, or when new documents are routed. A standard method for hyperparameter estimation in machine learning is leave-one-out cross-validation [11]. Suppose we have examples for training the model. Then each examples. The hyperparameters are chosen as the ones that give the optimal performance averaged over the test examples. The exact leave-one-out cross-validation is very tedious, especially for multiple hyperparameters, because of the need to train the model times for each combination of hyperparameters. For this model, we propose an approximate leave-one-out procedure based on the cavity method [7]. Suppose we have trained the model with all data, and obtain the
+
+ 
+
+ 
+
+time we pick one data as the validation set and train the model with the rest of the
+
+0 £  
+
+ 
+
+estimation
+
+9 5A%© §© B D, ¦
+
+5A¦© ¡
+
+§¡ 
+
+which satisfies the steady state equation
+
+0$G B   AB1©§©2&BA  ¦ A¨
+
+¡
+
+ §© B ¡
+
+G $ A   ARB ¦© A &  § B¨ 
+
+©B
+
+£
+
+If the query were left out from the training set of queries, the cavity estimation should
+
+4 (12)
+
+satisfy the equation
+
+0$G B¤£¥   ARB§©¢ B¢  &  ¦ A¨
+
+ 
+
+¡
+
+
+
+©A
+
+By subtracting (7) by (8), and assuming that
+
+ 
+
+
+
+we can get the difference,
+
+5A¦ 
+
+0$G B¤£¥   AB § B & GQ  A § ¨ 
+
+ 
+
+©A 
+
+¦© A¢ ¡   9 A7 B©D,
+
+ §© B¢  ¡ G $ A   ARB ¦© A¢  &  § B¨ 
+
+9 A¢  B¢ D  
+
+©B
+
+¢   £
+
+§¦©¨¡ 4 (13)
+
+is approximately the same as
+
+ CB§ 
+
+ G $ A   ARB ¦ A 
+
+©B
+
+
+
+For ad hoc retrieval, we eliminate
+
+§ B
+
+to obtain a set of linear equations for
+
+¦©¨¡
+
+
+
+¦ A.
+
+4 (14) The so-
+
+lution can be further simplified by using the mean-field argument that the changes induced
+
+by removing the query
+
+§ 
+
+on documents can be decoupled. Hence we can neglect the
+
+
+
+off-diagonal terms, yielding
+
+ ¦ A ¡  0 G ( $ B¤£¥   ($ GQ  A § ¨ 
+
+by
+
+¦© A¢ ¡ ¦ A 0 ¦ A. 9 A7 B©Dhave © ©
+
+©A
+
+¨"!('&#%$
+
+4 (15)
+
+Note that been known in the systemwide training. Then
+
+The similarities between and
+
+§   ¦© A¢
+
+¦© A¢
+
+ 
+
+   
+
+can be estimated
+
+are then used to predict the
+
+leave-one-out ad hoc retrieval performance of the model. Equations for document routing can be derived analogously.
+
+
+Note that we need to train the model only once, and the leave-one-out estimation of documents and queries can be obtained in one step. So the algorithm is extremely fast. Amazingly, it also gives reasonable estimations of hyperparameters, as shown in the following experiments. We remark that the mean-field technique can be applied to distributions of documents, queries and relevance feedbacks other than those described by Eqs. (1-3). In the present case spectified by Eqs. (1-3), our model is similar to the Gaussian model, if the spherical out cross-validation can be done exactly in the Gaussian model, it involves the inversion of a large matrix. On the other hand, the mean-field estimation greatly simplifies the process by neglecting the off-diagonal elements.
+
+constraint on § 's and ¦ 's are replaced by a spherical Gaussian prior. Though leave-one-
+
+5 Experimental Results We have applied the proposed method to ad hoc retrieval and routing for the test collections of Cranfield and CISI. Because we treat both tasks identically, we use the same evaluation criterion: the recall precision curve and the average retrieval precision. We have run two
+
+versions of our algorithm: (a) in the original dimension, the observed documents
+
+queries
+
+§ ¨
+
+¦ ¨
+
+and
+
+are represented by the original tf-idf weights; (b) in the reduced dimension of
+
+100, in which the original vectors are reduced by singular value decomposition (SVD) in LSI. In Figs. 2 (a-b), we show the recall precision curves at the optimal hyperparameters. The mean-field estimates are compared with the baseline results of LSI. It is clear that our method gives significant gains in retrieval precision. Comparisons using the original dimension or the Cranfield collection, not shown here due to space limitations, yield equally satisfactory results.
+
+0.6 0.6
+
+0.4 0.4
+
+Precision Precision MF
+
+MF 0.2 0.2
+
+LSI
+
+LSI
+
+0 0 0 0.2 0.4 0.6 0.8 1 0 0.2 0.4 0.6 0.8 1
+
+Recall Recall
+
+Figure 2: The recall precision curves of the mean-field estimation (MF) and the baseline (LSI) for (a) ad hoc retrieval (b) document routing for CISI in reduced dimension For hyperparameter estimation, we can compare the mean-field results and those for exact leave-one-out cross-validation in reduced dimension, since the computation of the exact ones is still feasible. In Fig. 3, we have plotted the average precision versus the two hyperparameters, as computed by the two methods. They have very similar contours, although there is a uniform displacement between their values. This demonstrates the usefulness of the mean-field approximation in hyperparameter estimation. In Table 1, we obtain the values of the optimal hyperparameters from the mean-field leave-
+
+
+one-out method, and the average precisions of the exact leave-one-out are then computed using these optimal hyperparameters. These are compared with the results of the exact leave-one-out and listed in Table 1. For the hyperparameter estimation in the original dimension, the exact leave-one-out is not available since it is too tedious. Instead, we compare the hyperparameters with the ones from the -fold cross-validation. Whether we compare the mean-field with the exact leave-one-out or -fold cross-validation, the optimal hperparameters are comparable in most cases, and when there are discrepancies, one can observe that the average precisions are essentially the same.
+
+ 
+
+ 
+
+Figure 3: Average retrieval precision versus hyperparametersfor ad hoc retrieval in reduced
+
+dimension for CISI: (a) mean-field leave-one-out, peaked at
+
+(b) exact leave-one-out. peaked at
+
+4 4
+
+¡
+
+¡ £ 4 4
+
+¡
+
+! 5 G' 5 G ¡ ¦  £ ¦ £. ¡ 5 GH' 5 G C¡ ¦ £ ¦ ; £
+
+Table 1: The average retrieval precision for leave-one-out cross-validation in reduced dimension: mean-field versus exact.
+
+ 5 G  5 G
+
+­ 0.3 0.3 ­ 28.9 23.0 ­ 12.0 10.1 ­ 1.6 2.5
+
+¡ £
+
+CISI Average precision
+
+ 5 G  5 GCranfield
+
+¡ £
+
+­ 1.1 1.5 ­ 1.1 0.7
+
+ad hoc retrieval
+
+0.079 0.142 0.142 ­ 0.4 0.6
+
+LSI Mean-Field Exact LSI Mean-Field Exact
+
+Document Routing
+
+0.104 0.192 0.193 ­ 2.5 0.9
+
+Average precision 0.178 0.248 0.250 0.240 0.351 0.356
+
+6 Conclusion We have considered a probabilistic model of documents, queries and relevancy assessments. Fast algorithms are derived for parameter and hyperparameter estimations. Significant improvement is achieved for both ad hoc retrieval and routing compared with tf-idf and LSI. In another paper [12], we have compared the model with other heuristic methods such as Rocchio heuristics [3] and Bartell's Multidimensional Scaling [13], and the mean-field method still outperforms them. These successes illustrate the potentials of the mean-field approach, which is especially suitable for systems with high dimensions and
+
+
+numerous mutually interacting components, such as those in IR. Hence we anticipate that mean-field methods will have increasing applications in many other probabilistic models in IR. Acknowledgments We thank R. Jin for interesting discussions. This work was supported by the grant HKUST6157/99P of the Research Grant Council of Hong Kong. References [1] Cohn, D. and T. Hofmann (2001). The Missing Link ­ A Probabilistic Model of Document Content and Hypertext Connectivity. Advances in Neural Information Processing Systems 13, T. K. Leen, T. G. Dietterich and V. Tresp, eds., MIT Press, Cambridge, MA, 430-436. [2] Jaakola, T. and H. Siegelmann (2002). Active Information Retrieval. Advances in Neural Information Processing Systems 14, T. G. Dietterich, S. Becker and Z. Ghahramani, eds., MIT Press, Cambridge, MA, 777-784. [3] Rocchio, J. J. (1971). Relevance Feedback in Information Retrieval. SMART Retrieval System­Experiments in Automatic Document Processing, G. Salton ed., PrenticeHall, Englewood Cliffs, NJ, Chapter 14. [4] Fuhr, N. and C. Buckley (1991). A Probabilistic Learning Approach for Document Indexing. ACM Transactions on Information Systems 9(3): 223-248. [5] Bodoff, D., D. Enabe, A. Kanbil, G. Simon and A. Yukhimets (2001). A Unified Maximumn Likelihood Approach to Document Retrieval. Journal of the American Society for Information Science and Technology 52(10): 785-796. [6] Opper, M. and D. Saad, eds. (2001). Advanced Mean Field Methods, MIT Press, Cambridge, MA. [7] Wong, K. Y. M. and F. Li (2002). Fast Parameter Estimation Using Green's Functions. Advances in Neural Information Processing System 14: 535-542, T.G. Dietterich, S. Becker and Z. Ghahramani, eds., MIT Press, Cambridge, MA. [8] Salton, G. and M. J. McGill (1983). Introduction to Modern Information Retrieval, McGraw-Hill, New York, 63-66. [9] Deerwester, S., S. T. Dumais, G. W. Furnas, T. K. Landauer and R. Harshman (1990). Indexing by Latent Semantic Analysis. Journal of the American Society for Information Science 41(16): 391-407. [10] Nocedal, J. and S. J. Wright (1999). Numerical Optimization, Springer, Berlin, Ch. 17. [11] Bishop, C. M. (1995). Neural Networks for Pattern Recognition, Clarendon Press, Oxford, 372-375. [12] Bodoff, D., B. Wu and K. Y. M. Wong (2002). Relevance Feedback meets Maximum Likelihood, preprint. [13] Bartell, B. T., G. W. Cottrell and R. K. Belew (1992). Latent Semantic Indexing Is an Optimal Special Case of Multidimensional Scaling. Proceedings of the 15th International ACM SIGIR Conference on Research and Development in Information Retrieval, 161-167.
+
+

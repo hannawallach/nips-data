@@ -1,0 +1,474 @@
+Sampling Techniques for Kernel Methods
+Dimitris Achlioptas
+Microsoft Research
+optas@microsoft.com
+Frank McSherry
+University of Washington
+mcsherry@cs.washington.edu
+Bernhard Sch˜ olkopf
+Biowulf Technologies NY
+bs@conclu.de
+Abstract
+We propose randomized techniques for speeding up Kernel Principal
+Component Analysis on three levels: sampling and quantization of the
+Gram matrix in training, randomized rounding in evaluating the kernel
+expansions, and random projections in evaluating the kernel itself. In all
+three cases, we give sharp bounds on the accuracy of the obtained ap­
+proximations. Rather intriguingly, all three techniques can be viewed as
+instantiations of the following idea: replace the kernel function k by a
+``randomized kernel'' which behaves like k in expectation.
+1 Introduction
+Given a collection X of training data x 1 ; : : : ; xm , techniques such as linear SVMs [13] and
+PCA extract features from X by computing linear functions of this data. However, it is
+often the case that the structure present in the training data is not simply a linear function
+of the data representation. Worse, many data sets do not readily support linear operations
+such as addition and scalar multiplication (text, for example).
+In a ``kernel method'' X is first mapped into some dot product space H using  : X ! H.
+The dimension of H can be very large, even infinite, and therefore it may not be practical
+(or possible) to work with the mapped data explicitly. Nonetheless, in many cases the dot
+products h(x i ); (x j )i can be evaluated efficiently using a positive definite kernel k for
+, .e. a function k so that k(x i ; x j ) = h(x i ); (x j )i.
+Any algorithm whose operations can be expressed in terms of dot products can be general­
+ized to an algorithm which operates on (X ), simply by presenting the Gram matrix
+K ij := k(x i ; x j )
+as the input covariance matrix. Note that at no point is the function  explicitly computed;
+the kernel k implicitly performs the dot product calculations between mapped points.
+While this ``kernel trick'' has been extremely successful, a problem common to all kernel
+methods is that, in general, K is a dense matrix, making the input size scale as m 2 . For
+example, in Kernel PCA such a matrix has to be diagonalized, while in SVMs a quadratic
+program of size m 2 must be solved. As the size of training sets in practical applications
+increases, the growth of the input size rapidly poses severe computational limitations.
+Various methods have been proposed to deal with this issue, such as decomposition meth­
+ods for SVM training (e.g., [10]), speedup methods for Kernel PCA [12], and other kernel
+methods [2, 14]. Our research is motivated by the need for such speedups that are also
+accompanied by strong, provable performance guarantees.
+
+In this paper we give three such speedups for Kernel PCA. We start by simplifying the Gram
+matrix via a novel matrix sampling/quantization scheme, motivated by spectral properties
+of random matrices. We then move on to speeding up classification, by using randomized
+rounding in evaluating kernel expansions. Finally, we consider the evaluation of kernel
+functions themselves and show how many popular kernels can be approximated efficiently.
+Our first technique relates matrix simplification to the stability of invariant subspaces. The
+other two are, in fact, completely general and apply to all kernel methods. What is more,
+our techniques suggest the notion of randomized kernels, whereby each evaluation of the
+kernel k is replaced by an evaluation of a randomized function b k (on the same input pair).
+The idea is to use a function b k which for every input pair behaves like k in expectation (over
+its internal coin­flips), yet confers significant computational benefits compared to using k.
+In fact, each one of our three techniques can be readily cast as an appropriate randomized
+kernel, with no other intervention.
+2 Kernel PCA
+Given m training points recall that K is an mm matrix with K ij = k(x i ; x j ). For some
+choice of `  m, the Kernel PCA (KPCA) method [11] computes the ` largest eigenvalues,
+ 1 ; : : : ;  ` , and eigenvectors,  1 ; : : : ;  ` of K. Then, given an input point x, the method
+computes the value of ` nonlinear feature extraction functions
+fn (x) =  1=2
+n
+m
+X
+i=1
+ n
+i k(x i ; x) :
+There are several methods for computing the principal components of a symmetric matrix.
+The choice depends on the properties of the matrix and on how many components one is
+seeking. In particular, if relatively few principal components are required, as is the case in
+KPCA, Orthogonal Iteration is a commonly used method. 1
+Orthogonal Iteration(A; `)
+1. Let Q be a random m ` matrix with orthonormal columns.
+2. While not converged, do
+(a) Q AQ
+(b) Q Orthonormalize(Q)
+3. Return Q
+It is worth looking closely at the complexity of performing Orthogonal Iteration on a matrix
+A. Step 1 can be done in O(m`) steps, making step 2 the computational bottleneck. The
+orthonormalization step 2b takes time O(m` 2 ) and is overwhelmed by the cost of comput­
+ing AQ in step 2a which, generally, takes O(m 2 `). The number of iterations of the while
+loop is a somewhat complicated issue, but one can prove that the ``error'' in Q (with respect
+to the true principal components) decreases exponentially with the number of iterations.
+All in all, the running time of Orthogonal Iteration scales linearly with the cost of the ma­
+trix multiplication AQ. If A is sparse, .e., if roughly one out of every s entries of A is
+non­zero, then the matrix multiplication AQ costs O(m 2 `=s).
+As mentioned earlier, the matrix K used in Kernel PCA is almost never sparse. In the next
+section, we will show how to sample and quantize the entries of K, obtaining a matrix b
+K
+which is sparser and whose entries have simpler data representation, yet has essentially the
+same spectral structure, i.e. eigenvalues/eigenvectors, as K.
+1 Our discussion applies equally well to Lanczos Iteration which, while often preferable, is a more
+complicated method. Here we focus on Orthogonal Iteration to simplify exposition.
+
+3 Sampling Gram Matrices
+In this section we describe two general ``matrix simplification'' techniques and discuss their
+implications for Kernel PCA. In particular, under natural assumptions on the spectral struc­
+ture of K, we will prove that applying KPCA to the simplified matrix b
+K yields subspaces
+which are very close to those that KPCA would find in K. As a result, when we project
+vectors onto these spaces (as performed by the feature extractors) the results are provably
+close to the original ones.
+First, our sparsification process works by randomly omitting entries in K. Precisely stated,
+we let the matrix b
+K be described entrywise as
+b
+K ij = b
+K ji =
+( 0 with probability 1 1=s
+sK ij with probability 1=s :
+Second, our quantization process rounds each entry in K to one of fb;+bg, where b =
+max i;j jK ij j, thus reducing the representation of each entry to a single bit.
+b
+K ij = b
+K ji =
+( +b with probability 1=2 +K ij =(2b)
+b with probability 1=2 K ij =(2b) :
+Sparsification greatly accelerates the computation of eigenvectors by accelerating multi­
+plication by b
+K. Moreover, both approaches greatly reduce the space required to store the
+matrix (and they can be readily combined), allowing for much bigger training sets to fit
+in main memory. Finally, we note that i) sampling also speeds up the construction of the
+Gram matrix since we need only compute those values of K that remain in b
+K, while ii)
+quantization allows us to replace exact kernel evaluations by coarse unbiased estimators,
+which can be more efficient to compute.
+While the two processes above are quite different, they share one important commonality:
+in each case, E( b
+K ij ) = K ij . Moreover, the entries of the error matrix, EK = b
+K K,
+are independent random variables, having expectation zero and bounded variance. Large
+deviation extensions [5] of Wigner's famous semi­circle law, imply that with very high
+probability such matrices have small L2 norm (denoted by jj  jj throughout).
+Theorem 1 (Furedi and Komlos [5]) Let EK be an m m symmetric matrix whose en­
+tries are independent random variables with mean 0, variance bounded above by  2 , and
+magnitude bounded by 
+p
+m= log 3 m. With probability 1 2 exp(  2 m=8),
+jjE K jj  4
+p
+m :
+It is worth noting that this upper bound is within a constant factor of the lower bound on
+the L2 norm of any matrix where the mean squared entry equals  2 . More precisely, it is
+easy to show that every matrix with Frobenius norm (m) 2 has L2 norm at least 
+p
+m.
+Therefore, we see that the L2 error introduced by b
+K is within a factor of 4 of the L2 error
+associated with any modification to K that has the same entrywise mean squared error.
+We will analyze three different cases of spectral stability, corresponding to progressively
+stronger assumptions. At the heart of these results is the stability of invariant subspaces
+in the presence of additive noise. This stability is very strong, but can be rather technical
+to express. In stating each of these results, it is important to note that the eigenvectors
+correspond exactly to the feature extractors associated with Kernel PCA. For an input point
+x, let v denote the vector whose ith coordinate is k(x i ; x) and recall that
+fn (x) =  1=2
+n
+m
+X
+i=1
+ n
+i v i  h n ; vi :
+
+Recall that in KPCA we associate features with the ` largest eigenvalues of b
+K, where ` is
+typically chosen by requiring  `  t >  `+1 , for some threshold t. First, we consider what
+happens when  `  `+1 is not large. Observe that in this case we cannot hope to equate
+all fn (x) and b
+fn (x), as the `th feature is very sensitive to small changes in  ` . However,
+we can show that all features with n far from t are treated consistently in K and b
+K.
+Theorem 2 Let F (t) be any matrix whose columns form an orthonormal basis for the
+space of features (eigenvectors) in K whose eigenvalue is at least t. Let F? (t) be any
+matrix whose columns form an orthonormal basis for the orthogonal complement of F (t).
+Let b
+F (t) and b
+F? (t) be the analogous matrices for b
+K. For any b > 0,
+jj b
+F T (t) F? (t b)jj  jjE K jj
+b
+and jjF T (t + b) b
+F? (t)jj  jjE K jj
+b
+:
+If we use the threshold t for the eigenvalues of b
+K, the first equation asserts that the features
+KPCA recovers are not among the features of K whose eigenvalues are less than t b.
+Similarly, the second equation asserts that KPCA will recover all the features of K whose
+eigenvalues are larger than t + b.
+Proof: We employ the techniques of Davis and Kahan [4]. Observe that
+b
+K K = EK
+b
+F T (t) b
+KF? (t b) b
+F T (t)KF? (t b) = b
+F T (t)E KF? (t b)
+b
+D b
+F T (t)F ? (t b) b
+F T (t)F ? (t b)D = b
+F T (t)E KF? (t b)
+where b
+D and D are diagonal matrices whose entries (the eigenvalues of b
+K and K) are at
+least t and at most t b, respectively. Therefore
+tjj b
+F T (t)F ? (t b)jj jj b
+F T (t)F ? (t b)jj(t b)  jj b
+F T (t)E KF? (t b)jj
+bjj b
+F T (t)F ? (t b)jj  jjE K jj
+which implies the first stated result. The second proof is essentially identical. 2
+In our second result we will still not be able to isolate individual features, as the error
+matrix can reorder their importance by, say, interchanging fn and fn+1 . However, we can
+show that any such interchange will occur consistently in all test vectors. Let f(x) be the
+`­dimensional vector whose nth coordinate is  1=2
+n fn (x), .e., here we do not normalize
+features to ``equal importance''. Recall that v is the vector whose ith coordinate is k(x i ; x).
+Theorem 3 Assume that  `  `+1  2cjjE K jj for some c  1. There is an orthonormal
+rotation matrix R such that for all x
+jj b
+f(x) R  f(x)jj  kvk=c :
+Proof: Instantiate Theorem 2 with b = 2cjjE K jj and t =  ` . 2
+Note that the rotation matrix becomes completely irrelevant if we are only concerned with
+differences, angles, or inner products of feature vectors.
+Finally, we prove that in the special case where a feature is well separated from its neigh­
+boring features in the spectrum of K, we get a particularly strong bound.
+Theorem 4 If c  1, n n+1 > 2cjjE K jj, and n 1 n > 2cjjE K jj, then
+jf n (x) b
+fn (x)j  kvk=c :
+Proof:(sketch) As before, we specialize Theorem 2, but first shift both K and b
+K by n I m .
+This does not change the eigenvectors, and allows us to consider fn in isolation. 2
+
+4 Approximating Feature Extractors Quickly
+Having determined eigenvalues and eigenvectors, given an input point x, the value of x on
+each feature reduces to evaluating, for some unit vector , a function
+f(x) =
+m
+X
+i=1
+ i k(x; x i ) ;
+where we dropped the subscript n, as well as the scaling by  1=2
+n . Assume that k(x; )
+take values in an interval of width c and let jjjj be any unit vector. We will devise a
+fast, unbiased, small­variance estimator for f , by sampling and rounding the expansion
+coefficients  i .
+Fix s > 0. For each i: if j i j  1=s then let b
+ i = s i ; if j i j < 1=s let
+b
+ i =
+( sgn( i ) with probability s  j i j
+0 otherwise.
+That is, after potentially keeping some large coefficients deterministically, we proceed to
+perform ``randomized rounding'' on the (remaining) coefficients of . Let
+b
+f(x) = s 1
+m
+X
+i=1
+b
+ i k(x; x i ) :
+Clearly, we have E[ b
+f(x)] = f(x). Moreover, using Hoeffding's inequality [7], we can
+bound the behavior of jf(x) b
+f(x)j arising from the terms subjected to probabilistic round­
+ing. In particular, this gives
+Pr
+h
+jf(x) b
+f(x)j  t
+i
+ 2 exp
+ 2(st) 2
+mc 2
+
+: (1)
+Note now that in Kernel PCA we typically expect  i  1=
+p
+m, i.e., dense eigenvectors.
+This makes c
+p
+m the natural scale for measuring f(x) and suggests that using far fewer
+than m kernel evaluations we can get good approximations of f(x). In particular, for a
+chosen (fixed) value of T let us say that f j (x) is trivial if
+f j (x) < T 
+p
+log m :
+Having picked some threshold T (for SVM expansions T is related to the classification
+offset) we want to determine whether f(x) is non­trivial and, if so, we want to get a good
+relative error estimate for it.
+Theorem 5 For any  2 (0; 2=3) and T  (c=)
+p
+m= log m set s = 2c
+p
+m=(T ). With
+probability at least 1 1=m 3
+1. There are fewer than 4c 1  m
+T
+non­zero b
+ i .
+2. Either both f j (x) and b
+f j (x) are trivial or
+(1 ) f j (x)  b
+f j (x)  (1 + ) f j (x) :
+Proof: Let b
+m denote the number of non­zero b
+ i and let I = fi : j i j  1=sg. Note that b
+m
+equals jI j plus the sum of m jI j independent Bernoulli trials. It is not hard to show that the
+probability that the event in 1 fails is bounded by the corresponding probability for the case
+where all coordinates of kk are equal. In that case, b
+m is a Binomial random variable with
+m trials and probability of success s=
+p
+m and, by our choice of s, E(bm) = 2cm=(T ).
+The Chernoff bound now implies that the event in 1 fails to occur with probability o(m 3 ).
+For the enent in 2 it suffices to observe that failure occurs only if j b
+f(x) f(x)j is at least
+(2=3)T
+p
+log m. By (1), this also occurs with probability o(m 3 ). 2
+
+5 Quick batch approximations of Kernels
+In this section we devise fast approximations of the kernel function itself. We focus on ker­
+nels sharing the following two characteristics: i) they map d­dimensional Euclidean space,
+and, ii) the mapping depends only on the distance and/or inner product of the considered
+points. We note that this covers some of the most popular kernels, e.g., RBFs and poly­
+nomial kernels. To simplify exposition we focus on the following task: given a sequence
+of (test) vectors x 1 ; x 2 ; : : : ; determine k(x i ; y j ) for each of a fixed set of (training) vectors
+y 1 ; : : : ; ym , where m  d.
+To get a fast batch approximdition, the idea is that rather than evaluating distances and
+inner products directly, we will use a fast, approximately correct oracle for these quantities
+offering the following guarantee: it will answer all queries with small relative error.
+A natural approach for creating such an oracle is to pick s of the d coordinates in input
+space and use the projection onto these coordinates to determine distances and inner prod­
+ucts. The problem with this approach is that if x i y j = (0; : : : ; 0; kx i y j k; 0; : : : ; 0),
+any coordinate sampling scheme is bound to do poorly. On the other hand, if we knew that
+all coordinates contributed ``approximately equally'' to k(x i ; y j ), then coordinate sampling
+would be much more appealing. We will do just this, using the technique of random pro­
+jections [8], which can be viewed as coordinate sampling preceded by a random rotation.
+Imagine that we applied a spherically random rotation R to y 1 ; : : : ; ym (before training)
+and then applied the same random rotation R to each input point x i as it became available.
+Clearly, all distances and inner products would remain the same and we would get exactly
+the same results as without the rotation. The interesting part is that any fixed vector z that
+was a linear combination of training and/or input vectors, e.g. x i y j , after being rotated
+becomes a spherically random vector of length kzk. As a result, the coordinates of z are
+i.i.d. random variables, in fact N(0; kzk=
+p
+d), enabling coordinate sampling.
+Our oracle amounts to multiplying each training and input point by the same ds projection
+matrix P , where s = O(log d), and using the resulting s­dimensional points to estimate
+distances and inner products. (Think of P as the result of taking a d  d rotation matrix
+R and keeping the first s columns (sampling)). Before describing the choice of P and the
+quality of the resulting approximations, let us go over the computational savings.
+1. Rotating the m training vectors takes O(md log d). Note that
+ This cost will be amortized over the sequence of input vectors.
+ This rotation can be performed in the training phase.
+2. The kernel evaluations for each x i now take O(m log d) instead of O(md).
+3. Rotating x takes time O(d log d) which is dominated by O(m log d).
+Having motivated our oracle as a spherically random rotation followed by coordinate sam­
+pling, we will actually employ a simpler method to perform the projection. Namely, we
+will rely on a recent result of [1], asserting that we can do at least as well by taking
+P ij = p ij =
+p
+d; where the fp ij g are i.i.d. with p ij 2 f1;+1g, each case having probabil­
+ity 1=2. Thus, postponing the scaling by 1=
+p
+d until the end, each of the s new coordinates
+is formed as follows: split the d coordinates randomly into two groups; sum the coordinates
+in each group; take the difference of the two sums.
+Regarding the quality of approximations we get
+Theorem 6 Consider any sets of points y 1 ; : : : ; ym and x 1 ; : : : ; x t in R d . Let n = m + t
+and for given ;  > 0 let
+s =
+4 + 2
+ 2 =2  3 =3 ln n :
+
+Let P be a random d  s matrix defined by P ij = p ij =
+p
+d; where the fp ij g are i.i.d. with
+p ij 2 f1;+1g, each case having probability 1=2. For any z 2 R d let b z denote zP .
+With probability at least 1 1=n  , for every pair of points x i ; y j
+(1 )kx i y j k 2  kbx i b
+y j k 2  (1 + )kx i y j k 2 (2)
+and
+j hbx i b
+y j i hx i y j i j < kx i k 2 + ky j k 2 : (3)
+Proof: We use Lemma 5 of [1], asserting that for any z 2 R d and any  > 0,
+Pr
+
+(1 )kzk 2  kbzk 2  (1 + )kzk 2
+
+> 1 2 exp
+ s
+2
+( 2 =2  3 =3)
+
+: (4)
+By our choice of s, the r.h.s. of (4) is 1 2=n 2+ . Thus, by the union bound, with prob­
+ability at least 1 1=n  the lengths of all mt + m + t  n
+2
+ vectors corresponding to
+x i y j and x i ; y j , i = 1 : : : t, j = 1 : : : m, are maintained within a factor of 1  . This
+readily yields (2). For (3) we observe that 2hxyi = kxk 2 + ky 2 k kx yk 2 and thus if
+kbxk 2 ; kbyk 2 and kbx b yk 2 are within 1   of kxk 2 ; kyk 2 and kx yk 2 , then (3) holds. 2
+6 Conclusion
+We have described three techniques for speeding up kernel methods through the use of ran­
+domization. While the discussion has focused on Kernel PCA, we feel that our techniques
+have potential for further development and empirical evaluation in a more general setting.
+Indeed, the methods for sampling kernel expansions and for speeding up the kernel eval­
+uation are universal; also, the Gram matrix sampling is readily applicable to any kernel
+technique based on the eigendecomposition of the Gram matrix [3]. Furthermore, it might
+enable us to speed up SVM training by sparsifying the Hessian and then applying a sparse
+QP solver, such as the ones described in [6, 9].
+Our sampling and quantization techniques, both in training and classification, amount to
+repeatedly replacing single kernel evaluations with independent random variables that have
+appropriate expectations. Note, for example, that while we have represented the sampling
+of the kernel expansion as randomized rounding of coefficients, this rounding is also equiv­
+alent to the following process: consider each coefficients as is, but replace every kernel
+invocation k(x; x j ) with an invocation of a randomized kernel function, distributed as
+b k j (x; x j ) =
+( k(x; x j )=j j j with probability sj j j
+0 otherwise.
+Similarly, the process of sampling in training can be thought of as replacing k with
+b k(x i ; x j ) =
+( 0 with probability 1 1=s
+sk(x i ; x j ) with probability 1=s ;
+while an analogous randomized kernel is the obvious choice for quantization.
+We feel that this approach suggests a notion of randomized kernels, wherein kernel evalua­
+tions are no longer considered as deterministic but inherently random, providing unbiased
+estimators for the corresponding inner products. Given bounds on the variance of these es­
+timators, it seems that algorithms which reduce to computing weighted sums of kernel eval­
+uations can exploit concentration of measure. Thus, randomized kernels appear promising
+as a general tool for speeding up kernel methods, warranting further investigation.
+
+Acknowledgments. BS would like to thank Santosh Venkatesh for detailed discussions
+on sampling kernel expansions.
+References
+[1] D. Achlioptas, Database­friendly random projections, Proc. of the 20th Symposium
+on Principle of Database Systems (Santa Barbara, California), 2001, pp. 274--281.
+[2] C. J. C. Burges, Simplified support vector decision rules, Proc. of the 13th Interna­
+tional Conference on Machine Learning, Morgan Kaufmann, 1996, pp. 71--77.
+[3] N. Cristianini, J. Shawe­Taylor, and H. Lodhi, Latent semantic kernels, Proc. of the
+18th International Conference on Machine Learning, Morgan Kaufman, 2001.
+[4] C. Davis and W. Kahan, The rotation of eigenvectors by a perturbation 3, SIAM
+Journal on Numerical Analysis 7 (1970), 1--46.
+[5] Z. F˜uredi and J. Koml’os, The eigenvalues of random symmetric matrices, Combina­
+torica 1 (1981), no. 3, 233--241.
+[6] N. I. M. Gould, An algorithm for large­scale quadratic programming, IMA Journal
+of Numerical Analysis 11 (1991), no. 3, 299--324.
+[7] W. Hoeffding, Probability inequalities for sums of bounded random variables, Journal
+of the American Statistical Association 58 (1963), 13--30.
+[8] W. B. Johnson and J. Lindenstrauss, Extensions of Lipschitz mappings into a Hilbert
+space, Conference in modern analysis and probability (New Haven, Conn., 1982),
+American Mathematical Society, 1984, pp. 189--206.
+[9] R. H. Nickel and J. W. Tolle, A sparse sequential quadratic programming algorithm,
+Journal of Optimization Theory and Applications 60 (1989), no. 3, 453--473.
+[10] E. Osuna, R. Freund, and F. Girosi, An improved training algorithm for support vector
+machines, Neural Networks for Signal Processing VII, 1997, pp. 276--285.
+[11] B. Sch˜olkopf, A. J. Smola, and K.­R. M˜uller, Nonlinear component analysis as a
+kernel eigenvalue problem, Neural Computation 10 (1998), 1299--1319.
+[12] A. J. Smola and B. Sch˜olkopf, Sparse greedy matrix approximation for machine
+learning, Proc. of the 17th International Conference on Machine Learning, Morgan
+Kaufman, 2000, pp. 911--918.
+[13] V. Vapnik, The nature of statistical learning theory, Springer, NY, 1995.
+[14] C. K. I. Williams and M. Seeger, Using the Nystrom method to speed up kernel ma­
+chines, Advances in Neural Information Processing Systems 2000, MIT Press, 2001.
+

@@ -1,0 +1,874 @@
+Rates of Convergence of Performance Gradient
+Estimates Using Function Approximation and
+Bias in Reinforcement Learning
+Gregory Z. Grudic
+University of Colorado, Boulder
+grudic@cs.colorado.edu
+Lyle H. Ungar
+University of Pennsylvania
+ungar@cis.upenn.edu
+Abstract
+We address two open theoretical questions in Policy Gradient Reinforce­
+ment Learning. The first concerns the efficacy of using function approx­
+imation to represent the state action value function, Q. Theory is pre­
+sented showing that linear function approximation representations of Q
+can degrade the rate of convergence of performance gradient estimates
+by a factor of O(ML) relative to when no function approximation of Q
+is used, where M is the number of possible actions and L is the number
+of basis functions in the function approximation representation. The sec­
+ond concerns the use of a bias term in estimating the state action value
+function. Theory is presented showing that a non­zero bias term can
+improve the rate of convergence of performance gradient estimates by
+O(1 (1=M)), where M is the number of possible actions. Experimen­
+tal evidence is presented showing that these theoretical results lead to
+significant improvement in the convergence properties of Policy Gradi­
+ent Reinforcement Learning algorithms.
+1 Introduction
+Policy Gradient Reinforcement Learning (PGRL) algorithms have recently received at­
+tention because of their potential usefulness in addressing large continuous reinforcement
+Learning (RL) problems. However, there is still no widespread agreement on how PGRL
+algorithms should be implemented. In PGRL, the agent's policy is characterized by a set
+of parameters which in turn implies a parameterization of the agent's performance metric.
+Thus if  2 < d represents a d dimensional parameterization of the agent's policy and  is
+a performance metric the agent is meant to maximize, then the performance metric must
+have the form () [6]. PGRL algorithms work by first estimating the performance gradient
+(PG) @=@ and then using this gradient to update the agent's policy using:
+ t+1 =  t + 
+c
+@
+@ (1)
+where  is a small positive step size. If the estimate of @=@ is accurate, then the agent can
+climb the performance gradient in the  parameter space, toward locally optimal policies. In
+practice, @=@ is estimated using samples of the state action value function Q. The PGRL
+formulation is attractive because 1) the parameterization  of the policy can directly imply
+
+a generalization over the agent's state space (e.g.,  can represent the adjustable weights
+in a neural network approximation), which suggests that PGRL algorithms can work well
+on very high dimensional problems [3]; 2) the computational cost of estimating @=@ is
+linear in the number of parameters , which contrasts with the computational cost for most
+RL algorithms which grows exponentially with the dimension of the state space; and 3) PG
+algorithms exist which are guaranteed to give unbiased estimates of @=@ [6, 5, 4, 2, 1].
+This paper addresses two open theoretical questions in PGRL formulations. In PGRL for­
+mulations performance gradient estimates typically have the following form:
+c
+@
+@ = f
+h
+^
+Q (s 1 ; a 1 ) b (s 1 )
+i
+; :::;
+h
+^
+Q (s T ; a T ) b (s T )
+i
+(2)
+where ^
+Q (s i ; a i ) is the estimate of the value of executing action a i in state s i (i.e. the
+state action value function), b(s i ) the bias subtracted from ^
+Q (s i ; a i ) in state s i , T is the
+number of steps the agent takes before estimating @=@, and the form of the function
+f(:) depends on the PGRL algorithm being used (see Section 2, equation (3) for the form
+being considered here). The effectiveness of PGRL algorithms strongly depends on how
+^
+Q (s i ; a i ) is obtained and the form of b(s i ). The aim of this work is to address these
+questions.
+The first open theoretical question addressed here is concerned with the use of function
+approximation (FA) to represent the state action value function Q, which is in turn used
+to estimate the performance gradient. The original formulation of PGRL [6], the REIN­
+FORCE algorithm, has been largely ignored because of the slow rate of convergence of the
+PG estimate. The use of FA techniques to represent Q based on its observations has been
+suggested as a way of improving convergence properties. It has been proven that specific
+linear FA formulations can be incorporated into PGRL algorithms, while still guaranteeing
+convergence to locally optimal solutions [5, 4]. However, whether linear FA represen­
+tations actually improves the convergence properties of PGRL is an open question. We
+present theory showing that using linear basis function representations of Q, rather than
+direct observations of it, can slow the rate of convergence of PG estimates by a factor of
+O(ML) (see Theorem 1 in Section 3.1). This result suggests that PGRL formulations
+should avoid the use of linear FA techniques to represent Q. In Section 4, experimental
+evidence is presented supporting this conjecture.
+The second open theoretical question addressed here is can a non­zero bias term b(s) in
+(2) improve the convergence properties of PG estimates? There has been speculation
+that an appropriate choice of b(s) can improve convergence properties [6, 5], but the­
+oretical support has been lacking. This paper presents theory showing that if b(s) =
+(1=M)
+P
+a Q(s; a), where M is the number actions, then the rate of convergence of the
+PG estimate is improved by O(1 (1=M)) (see Theorem 2 in Section 3.2). This sug­
+gests that the convergence properties of PGRL algorithms can be improved by using a bias
+term that is the average of Q values in each state. Section 4 gives experimental evidence
+supporting this conjecture.
+2 The RL Formulation and Assumptions
+The RL problem is modeled as a Markov Decision Process (MDP). The agent's state at time
+t 2 f1; 2; :::g is given by s t 2 S, S  < D . At each time step the agent chooses from a finite
+set of M > 1 actions a t 2 A = a 1 ; :::; aM and receives a reward r t 2 <. The dynamics of
+the environment are characterized by transition probabilities P a
+ss 0 = P rfs t+1 = s 0
+js t =
+s; a t = ag and expected rewards R a
+s = Efr t+1 js t = s; a t = ag, 8s; s 0
+2 S; a 2 A. The
+policy followed by the agent is characterized by a parameter vector  2 < d , and is defined
+by the probability distribution (s; a; ) = P rfa t = ajs t = s; g, 8s 2 S; a 2 A. We
+
+assume that (s; a; ) is differentiable with respect to .
+We use the Policy Gradient Theorem of Sutton et al. [5] and limit our analysis to the start
+state discount reward formulation. Here the reward function () and state action value
+function Q  (s; a) are defined as:
+ () = E
+ 1
+P
+t=1
+ t r t
+    s 0 ; 
+
+; Q  (s; a) = E
+ 1
+P
+k=1
+ k 1 r t+k
+    s t = s; a t = a; 
+
+where 0 <   1. Then the exact expression for the performance gradient is:
+@
+@ =
+X
+s
+d  (s)
+M
+X
+i=1
+@ (s; a i ; )
+@ (Q  (s; a i ) b (s)) (3)
+where d  (s) =
+P 1
+t=0  t Pr fs t = sj s 0 ; g and b(s) 2 <.
+This policy gradient formulation requires that the state­action value function, Q  , under
+the current policy be estimated. This estimate, ^
+Q  , is derived using the observed value
+Q 
+obs (s; a i ). We assume that Q 
+obs (s; a i ) has the following form:
+Q 
+obs (s; a i ) = Q  (s; a i ) + " (s; a i )
+where " (s; a i ) has zero mean and finite variance  2
+s;a i
+. Therefore, if ^
+Q  (s; a i ) is an es­
+timate of Q  (s; a i ) obtained by averaging N observations of Q 
+obs (s; a i ), then the mean
+and variance are given by:
+E
+h
+^
+Q  (s; a i )
+i
+= Q  (s; a i ) ; V
+h
+^
+Q  (s; a i )
+i
+=
+ 2
+s;a i
+N (4)
+In addition, we assume that Q 
+obs (s; a i ) are independently distributed. This is consistent
+with the MDP assumption.
+3 Rate of Convergence Results
+Before stating the convergence theorems, we define the following:
+ 2
+max = max
+s2S;i2f1;:::;Mg
+ 2
+s;a i
+;  2
+min = min
+s2S;i2f1;:::;Mg
+ 2
+s;a i (5)
+where  2
+s;a i
+is defined in (4) and
+C min =
+ P
+s
+(d  (s)) 2 M
+P
+i=1
+ @(s;a i ;)
+@
+ 2
+
+ 2
+min
+Cmax =
+ P
+s
+(d  (s)) 2 M
+P
+i=1
+ @(s;a i ;)
+@
+ 2
+
+ 2
+max
+(6)
+3.1 Rate of Convergence of PIFA Algorithms
+Consider the PIFA algorithm [5] which uses a basis function representation for estimated
+state action value function, ^
+Q  , of the following form:
+^
+Q  (s; a i ) = f 
+a i
+(s) =
+L
+X
+l=1
+w a i ;l  a i ;l (s) (7)
+where w a i ;l 2 < are weights and  a i ;l (s) are basis functions defined in s 2 < D . If the
+weights w a i ;l are chosen based using the observed Q 
+obs (s; a i ), and the basis functions,
+ a i ;l (s), satisfy the conditions defined in [5, 4], then the performance gradient is given by:
+@
+@ F
+=
+X
+s
+d  (s)
+M
+X
+i=1
+@ (s; a i ; )
+@ f 
+a i
+(s) (8)
+The following theorem establishes bounds on the rate of convergence for this representation
+of the performance gradient.
+
+Theorem 1: Let d
+@
+@ F be an estimate of (8) obtained using the PIFA algorithm and the basis
+function representation (7). Then, given the assumptions defined in Section 2 and equations
+(5) and (6), the rate of convergence of a PIFA algorithm is bounded below and above by:
+C min
+ML
+N  V
+" d
+@
+@ F
+#
+ Cmax ML
+N (9)
+where L is the number of basis functions, M is the number of possible actions, and N is
+the number of independent estimates of the performance gradient.
+Proof: See Appendix.
+3.2 Rate of Convergence of Direct Sampling Algorithms
+In the previous section, the observed Q 
+obs (s; a i ) are used to build a linear basis function
+representation of the state action value function, Q  (s; a i ), which is in turn used to es­
+timate the performance gradient. In this section we establish rate of convergence bounds
+for performance gradient estimates that directly use the observed Q 
+obs (s; a i ) without the
+intermediate step of building the FA representation. These bounds are established for the
+conditions b(s) = (1=M)
+P
+a Q(s; a) and b(s) = 0 in (3).
+Theorem 2: Let c @
+@ be a estimate of (3), be obtained using direct samples of Q  . Then,
+if b(s) = 0, and given the assumptions defined in Section 2 and equations (5) and (6), the
+rate of convergence of c @
+@ is bounded by:
+C min
+1
+N  V
+" c
+@
+@
+#
+ Cmax 1
+N
+(10)
+where N is the number of independent estimates of the performance gradient. If b(s) 6= 0
+is defined as:
+b (s) = 1
+M
+M
+X
+j=1
+Q  (s; a j ) (11)
+then the rate of convergence of the performance gradient d @
+@ b is bounded by:
+C min
+1
+N
+
+1
+1
+M
+
+ V
+" d @
+@ b
+#
+ Cmax 1
+N
+
+1
+1
+M
+
+(12)
+where M is the number of possible actions.
+Proof: See Appendix.
+Thus comparing (12) and (10) to (9) one can see that policy gradient algorithms such as
+PIFA which build FA representations of Q converge by a factor of O(ML) slower than
+algorithms which directly sample Q. Furthermore, if the bias term is as defined in (11),
+the bounds on the variance are further reduced by O(1 (1=M)). In the next section
+experimental evidence is given showing that these theoretical consideration can be used to
+improve the convergence properties of PGRL algorithms.
+4 Experiments
+The Simulated Environment: The experiments simulate an agent episodically interacting
+in a continuous two dimensional environment. The agent starts each episode in the same
+state s i , and executes a finite number of steps following a policy to a fixed goal state s G .
+The stochastic policy is defined by a finite set of Gaussians, each associated with a specific
+
+0 20 40 60 80 100
+-0.1
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+Number of Policy Updates
+r(p)
+Biased Q
+No Bias
+Linear FA Q
+a) Convergence of
+Algorithms
+0 2 4 6 8 10 12 14
+10
+10
+10
+10
+10
+Number of Possible Actions (M)
+V[¶
+r
+/
+¶
+q F
+]
+/
+V[¶
+r
+/
+¶
+q]
+b) V [
+c @
+@ F ]=V [
+c @
+@ ]
+0 2 4 6 8 10 12 14
+10 0
+10 1
+10 2
+Number of Possible Actions (M)
+V[¶
+r
+/
+¶
+q]
+/
+V[¶
+r
+/
+¶
+q b
+]
+c) V [
+c @
+@ ]=V [
+c @
+@ b ]
+Figure 1: Simulation Results
+action. The Gaussian associated with action am is defined as:
+gm (s) = exp
+" D
+X
+d=1
+(s d c md ) 2
+vmd
+#
+where s = (s 1 ; :::; s D ) 2 < D , is the agents state, c m1 ; :::; c mD is the Gaussian center,
+and v m1 ; :::; vmD is the variance along each state space dimension. The probability of
+executing action am in state s is
+ (s; am ; ) =
+gm (s)
+M
+P
+j=1
+g j (s)
+where  = (c 11 ; :::; c 1d ; v 11 ; :::; v 1d ; :::; c M1 ; :::; c MD ; vM1 ; :::; vMD ) defines the policy pa­
+rameters that dictate the agent's actions. Action a 1 directs the agent toward the goals state
+s G , while the remaining actions am (for m = 2; :::; M ) direct the agent towards the corre­
+sponding Gaussian center c m1 ; :::; c mD .
+Noise is modeled using a uniform random distribution between (0; 1) denoted by U(0; 1),
+such that the noise in dimension s d is given by:
+s obs
+d = s d + Æ (U (0; 1) 0:5)
+where Æ > 0 is the magnitude of the noise, s obs
+d is the state the agent observes and uses to
+choose actions, and s d is the actual state of the agent.
+The agent receives a reward of +1 when it reaches the goal state, otherwise it receives a
+reward of:
+r (s) = 0:01 exp
+" D
+X
+d=1
+s 2
+d
+4
+#
+Thus the agent gets negative rewards the closer it gets to the origin of the state space, and a
+positive reward whenever it reaches the goal state.
+Implementation of the PGRL algorithms: All the PGRL formulations studied here re­
+quire observations (i.e. samples) of the state action value function. Q 
+obs (s; a i ) is sampled
+by executing action a i in state s and thereafter following the policy. In the episodic formu­
+lation, where the agent executes a maximum of T steps during each episode, at the end of
+each episode, Q 
+obs (s t ; a t ) for step t can be evaluated as follows:
+Q 
+obs (s t ; a t ) =
+1
+X
+k=1
+ k 1 r t+k js t = s; a t = a; 
+Thus, given that the agent executes a complete episode ((s 1 ; a 1 ); :::; (s T ; a T ))
+following the policy , at the completion of the episode we can calculate
+(Q 
+obs (s 1 ; a 1 ); :::; Q 
+obs (s T ; a T )). This gives samples of T state action value pairs. Equa­
+tion (3) tells us that we require a total of MT state action value function observations to
+estimate a performance gradient (assuming the agent can execute M actions). Therefore,
+we can obtain the remaining (M 1)T observations of Q 
+obs by sending the agent out on
+
+(M 1)T epsisodes, each time allowing it to follow the policy  for all T steps, with the
+exception that action a t = am is executed when Q 
+obs (s t ; am ) is being observed. This sam­
+pling procedure requires a total of (M 1)T 1 episodes and gives a complete set of Q 
+obs
+state action pairs for any path ((s 1 ; a 1 ); :::; (s T ; a T )). For the direct sampling algorithms
+in Section 3.2, these observations are directly used to estimate the performance gradient.
+For the linear basis function based PGRL algorithm in Section 3.1, these observations are
+first used to calculate the w a i ;l as defined in [5, 4], and then the performance gradient is
+calculated using (8).
+Experimental Results: Figure 1b shows a plot of average V [ c @=@ F ]=V [ c @=@] values
+over 10,000 estimates of the performance gradient. For each estimate, the goal state, start
+state, and Gaussian centers are all chosen using a uniform random distribution ( 1; 1);
+the Gaussian variances are sampled from a uniform distribution (0:1; 1). As predicted by
+Theorem 1 in Section 3.1 and Theorem 2 in Section 3.2, as the number of actions M in­
+creases, this ratio also increases. Note that Figure 1b plots average variance ratios, not the
+bounds in variance given in Theorem 1 and Theorem 2 (which have not been experimen­
+tally sampled), so the ML ratio predicted by the theorems is supported by the increase in
+the ratio as M increases. Figure 1c shows a plot of average V [ c @=@]=V [ c @=@ b ] values
+over 10,000 estimates of the performance gradient. As above, for each estimate, the goal
+state, start state, and Gaussian centers are all chosen using a uniform random distribution
+( 1; 1); the Gaussian variances are sampled from a uniform distribution (0:1; 1). This also
+follows the predicted trends of Theorem 1 and Theorem 2. Finally, Figure 1a shows the
+average reward over 100 runs as the three algorithms converge on a two action problem.
+Each algorithm is given the same number of Q 
+obs samples to estimate the gradient before
+each update. Because c @=@ b has the least variance, it allows the policy  to converge
+to the highest reward value (). Similarly, because c
+@=@ F has the highest variance, its
+policy updates converge to the worst (). Note that because all three algorithms will con­
+verge to the same locally optimal policy given enough samples of Q 
+obs , Figure 1a simply
+demonstrates that c
+@=@ F requires more samples than c
+@=@, which in turn requires more
+samples than c @=@ b .
+5 Conclusion
+The theoretical and experimental results presented here indicate that how PGRL algorithms
+are implemented can substantially affect the number of observations of the state action
+value function (Q) needed to obtain good estimates of the performance gradient. Further­
+more, they suggest that an appropriately chosen bias term, specifically the average value of
+Q over all actions, and the direct use of observed Q values can improve the convergence of
+PGRL algorithms. In practice linear basis function representations of Q can significantly
+degrade the convergence properties of policy gradient algorithms. This leaves open the
+question of whether any (i.e. nonlinear) function approximation representation of value
+functions can be used to improve convergence of such algorithms.
+References
+[1] Jonathan Baxter and Peter L. Bartlett, Reinforcement learning in pomdp's via direct
+gradient ascent, Proceedings of the Seventeenth International Conference on Machine
+Learning (ICML'2000) (Stanford University, CA), June 2000, pp. 41--48.
+[2] G. Z. Grudic and L. H. Ungar, Localizing policy gradient estimates to action transi­
+tions, Proceedings of the Seventeenth International Conference on Machine Learning,
+vol. 17, Morgan Kaufmann, June 29 ­ July 2 2000, pp. 343--350.
+
+[3] , Localizing search in reinforcement learning, Proceedings of the Seventeenth
+National Conference on Artificial Intelligence, vol. 17, Menlo Park, CA: AAAI Press /
+Cambridge, MA: MIT Press, July 30 ­ August 3 2000, pp. 590--595.
+[4] V. R. Konda and J. N. Tsitsiklis, Actor­critic algorithms, Advances in Neural Informa­
+tion Processing Systems (Cambridge, MA) (S. A. Solla, T. K. Leen, and K.­R. Mller,
+eds.), vol. 12, MIT Press, 2000.
+[5] R. S. Sutton, D. McAllester, S. Singh, and Y. Mansour, Policy gradient methods for
+reinforcement learning with function approximation, Advances in Neural Information
+Processing Systems (Cambridge, MA) (S. A. Solla, T. K. Leen, and K.­R. Mller, eds.),
+vol. 12, MIT Press, 2000.
+[6] R. J. Williams, Simple statistical gradient­following algorithms for connectionist rein­
+forcement learning, Machine Learning 8 (1992), no. 3, 229--256.
+Appendix: Proofs of Theorems 1 and 2
+Proof of Theorem 1: Consider the definition of f 
+a i
+given in (7). In [5] it is shown that
+there exist w a i ;l and  a i ;l (s) such that:
+E
+" X
+s
+d  (s)
+M
+X
+i=1
+@ (s; a i ; )
+@ f 
+a i
+(s)
+X
+s
+d  (s)
+M
+X
+i=1
+@ (s; a i ; )
+@ Q  (s; a i )
+#
+= 0
+(13)
+Let @
+@ obs be the observation of @
+@ (3) after a single episode. Using (13), we get the
+following:
+@
+@
+   obs
+=
+P
+s
+d  (s)
+M
+P
+i=1
+@(s;a i ;)
+@ Q 
+obs (s; a i )  @
+@ + "
+=
+ P
+s
+d  (s)
+M
+P
+i=1
+@(s;a i ;)
+@ Q  (s; a i )
+
++ "
+=
+ P
+s
+d  (s)
+M
+P
+i=1
+@(s;a i ;)
+@ f 
+a i
+(s)
+
++ "
+=
+ P
+s
+d  (s)
+M
+P
+i=1
+@(s;a i ;)
+@
+L
+P
+l=1
+w a i ;l  a i ;l (s)
+
++ "
+=
+ M
+P
+i=1
+L
+P
+l=1
+w a i ;l
+ P
+s
+@(s;a i ;)
+@ d  (s)  a i ;l (s)
+
++ " 
+M
+P
+i=1
+L
+P
+l=1
+w a i ;l  il + "
+where the basis functions  il have the form
+ il =
+  X
+s
+@ (s; a i ; )
+@ d  (s)  a i ;l (s)
+!
+and E["] = 0, with variance
+V ["] = V
+ @
+@
+    obs
+
+=
+X
+s
+(d  (s)) 2
+M
+X
+i=1
+ @ (s; a i ; )
+@
+ 2
+ 2
+s;a i
+Denoting d
+@
+@ F as the least squares (LS) estimate of (3), its form is given by:
+d
+@
+@ F
+=
+ML
+X
+k=1
+ k 	 k (14)
+where  k are LS estimates of the ML weights w a i ;l and 	 k correspond to the ML basis
+functions  il . Then, it can be shown that any linear system of the type given in (14) has a
+rate of convergence given by:
+V
+" d
+@
+@ F
+#
+=
+ML
+N V ["] =
+ML
+N
+X
+s
+(d  (s)) 2
+M
+X
+i=1
+ @ (s; a i ; )
+@
+ 2
+ 2
+s;a i
+Substituting (5) and (6) into the above equation completes the proof.
+
+Proof of Theorem 2: We prove equation (10) first. For N estimates of the performance
+gradient, we get N independent samples of each Q 
+obs (s; a i ). These examples are averaged
+and therefore:
+E
+" c
+@
+@
+#
+=
+X
+s
+d  (s)
+M
+X
+i=1
+@ (s; a i ; )
+@ Q  (s; a i )
+Because each Q 
+obs (s; a i ) is independently distributed, the variance of the estimate is given
+by
+V
+" c @
+@
+#
+=
+1
+N
+X
+s
+(d  (s)) 2
+M
+X
+i=1
+ @ (s; a i ; )
+@
+ 2
+ 2
+s;a i
+(15)
+Given (5) the worst rate of convergence is bounded by:
+V
+" c @
+@
+#
+
+" X
+s
+(d  (s)) 2
+M
+X
+i=1
+ @ (s; a i ; )
+@
+ 2
+#
+ 2
+max
+M
+N = Cmax 1
+N
+A similarly argument applies to the lower bound on convergence completing the proof for
+(10). Following the same argument for (12), we have
+V
+" d @
+@ b
+#
+=
+1
+N
+X
+s
+(d  (s)) 2
+M
+X
+i=1
+ @ (s; a i ; )
+@
+ 2
+V
+2
+4 Q  (s; a i )
+1
+M
+M
+X
+j=1
+Q  (s; a j )
+3
+5
+Where
+V
+"
+Q  (s; a i ) 1
+M
+M
+P
+j=1
+Q  (s; a j )
+#
+= V
+2
+6 4 M 1
+M Q  (s; a i ) 1
+M
+M
+P
+j=1
+j 6=i
+Q  (s; a j )
+3
+7 5
+= M 1
+M
+ 2
+ 2
+s;a i
++
+M
+P
+j=1
+j 6=i
+1
+M
+ 2
+ 2
+s;a j
+(16)
+Given (5) the variance V [] on the far left of (16) is bounded by:
+2
+6 4 M 1
+M
+ 2
+ 2
+s;a i
++
+M
+P
+j=1
+j 6=i
+1
+M
+ 2
+ 2
+s;a j
+3
+7 5
+max
+= M 1
+M
+ 2
+ 2
+max +
+M
+P
+j=1
+j 6=i
+1
+M
+ 2
+ 2
+max
+=
+ M 1
+M
+ 2
++ (M 1) 1
+M
+ 2
+
+ 2
+max
+= 1 1
+M
+  2
+max
+Plugging the above into (16) and inserting Cmax from (6) completes the proof for the upper
+bound. The proof for the lower bound in the variance follows similar reasoning.
+

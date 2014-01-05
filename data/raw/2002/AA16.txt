@@ -1,0 +1,222 @@
+Fast Sparse Gaussian Process Methods: The Informative Vector Machine
+
+Neil Lawrence University of Sheffield 211 Portobello Street Sheffield, S1 4DP neil@dcs.shef.ac.uk Matthias Seeger University of Edinburgh 5 Forrest Hill Edinburgh, EH1 2QL seeger@dai.ed.ac.uk Ralf Herbrich Microsoft Research Ltd 7 J J Thomson Avenue Cambridge, CB3 0FB rherb@microsoft.com
+
+Abstract We present a framework for sparse Gaussian process (GP) methods which uses forward selection with criteria based on informationtheoretic principles, previously suggested for active learning. Our goal is not only to learn d­sparse predictors (which can be evaluated in O(d) rather than O(n), d n, n the number of training points), but also to perform training under strong restrictions on time and memory requirements. The scaling of our method is at we show that it can match prediction performance of the popular most O(n · d2), and in large real-world classification experiments support vector machine (SVM), yet can be significantly faster in training. In contrast to the SVM, our approximation produces estimates of predictive probabilities (`error bars'), allows for Bayesian model selection and is less complex in implementation. Introduction
+
+1
+
+Gaussian process (GP) models are powerful non-parametric tools for approximate Bayesian inference and learning. In comparison with other popular nonlinear architectures, such as multi-layer perceptrons, their behavior is conceptually simpler to understand and model fitting can be achieved without resorting to non-convex optimization routines. However, their training time scaling of O(n3) and memory scaling of O(n2), where n the number of training points, has hindered their more widespread use. The related, yet non-probabilistic, support vector machine (SVM) classifier often renders results that are comparable to GP classifiers w.r.t. prediction error at a fraction of the training cost. This is possible because many tasks can be solved satisfactorily using sparse representations of the data set. The SVM is triggered towards finding such representations through the use of a particular loss function1 that encourages some degree of sparsity, i.e. the final predictor depends only on a fraction of training points crucial for good discrimination on the task. Here, we call these utilized points the active set of the sparse predictor. In case of SVM classification, the active set contains the support vectors, the points closest to which cannot be interpreted as approximation to Bayesian inference.
+
+1 An SVM classifier is trained by minimizing a regularized loss functional, a process
+
+
+the decision boundary and the misclassified ones. If the active set size d is much smaller than n, an SVM classifier can be trained in average case running time beNote, however, that without any restrictions on the data distribution, d can rise to tween O(n · d2) and O(n2 · d) with memory requirements significantly less than n2. n. In an effort to overcome scaling problems a range of sparse GP approximations have been proposed [1, 8, 9, 10, 11]. However, none of these has fully achieved the goals of being a nontrivial approximation to a non-sparse GP model and matching the SVM w.r.t. both prediction performance and run time. The algorithm proposed here accomplishes these objectives and, as our experiments show, can even be significantly faster in training than the SVM. Furthermore, time and memory requirements may be restricted a priori. The potential benefits of retaining the probabilistic characteristics of the method are numerous, since hard problems, e.g. feature and model selection, can be dealt with using standard techniques from Bayesian learning. Our approach builds on earlier work of Lawrence and Herbrich [2] which we extend here by considering randomized greedy selections and focusing on an alternative representation of the GP model which facilitates generalizations to settings such as regression and multi-class classification. In the next section we introduce the GP classification model and a method for approximate inference. Section 3 then contains the derivation of our fast greedy approximation and a description of the associated algorithm. In Section 4, we present large-scale experiments on the MNIST database, comparing our method directly against the SVM. Finally we close with a discussion in Section 5. We denote vectors g = (gi)i and matrices G = (gi,j)i,j in bold-face2. If I, J are sets of row and column indices respectively, we denote the corresponding sub-
+
+matrix of G  Rp,q by GI,J, furthermore we abbreviate GI,
+
+·
+
+GI, {j}
+
+to GI,1 ...q , GI,j to
+
+, GI to GI,I, etc. The density of the Gaussian distribution with mean µ and
+
+`overloaded' operator which extracts the diagonal elements of a matrix as a vector covariance matrix  is denoted by N(·|µ, ). Finally, we use diag(·) to represent an or produces a square matrix with diagonal elements from a given vector, all other elements 0. 2 Gaussian Process Classification
+
+drawn independently and identically distributed (i.i.d.) from an unknown data disAssume we are given a sample S := ((x1, y1), . . . , (xn, yn)), xi  X , yi  {-1, +1}, tribution3 P (x, y). Our goal is to estimate P (y|x) for typical x or, less ambitiously, we introduce a latent variable u  R separating x and y, and some classification to learn a predictor x  y with small error on future data. To model this situation, noise model P (y|u) := (y ·(u+b)), where  is the cumulative distribution function of the standard Gaussian N(0, 1), and b  R is a bias parameter. From the Bayesian process (GP) model, is given a GP prior with mean function 0 and covariance kernel viewpoint, the relationship x  u is a random process u(·), which, in a Gaussian k(·, ·). This~ prior encodes the belief that (before observing any data) for any ~finite set X = {x1, . . . , xp}  X , the corresponding latent outputs (u(~x1)~, . . . , u(xp))T ~ ~ GP models are non-parametric, that is, there is in general no finite-dimensional are jointly Gaussian with mean 0  Rp and covariance matrix (k(xi, xj))i,j  Rp,p.
+
+2 Whenever we use a bold symbol g or G for a vector or matrix, we denote its compo-
+
+nents by the corresponding normal symbols gi and gi,j. to regression estimation and multi-class classification.
+
+3 We focus on binary classification, but our framework can be applied straightforwardly
+
+
+parametric representation for u(·). It is possible to write u(·) as linear function in some feature space F associated with k, i.e. u(x) = wT(x), w  F, in the sense that a Gaussian prior on w induces a GP distribution on the linear function u(·). Here,  is a feature map from X into F, and the covariance function can be written k(x, x ) = (x)T(x ). This linear function view, under which predictors become separating hyper-planes in F, is frequently used in the SVM community. the kernel function k. We denote the sequence of latent outputs at the training However, F is, in general, infinite-dimensional and not uniquely determined by K := (k(xi, xj))i,j  Rn,n. points by u := (u(x1), . . . , u(xn))T  Rn and the covariance or kernel matrix by The Bayesian posterior process for u(·) can be computed in principle using Bayes' formula. However, if the noise model P (y|u) is non-Gaussian (as is the case for binary classification), it cannot be handled tractably and is usually approximated by another Gaussian process, which should ideally preserve mean and covariance function of the former. It is easy to show that this is equivalent to fitting the moing points and a Gaussian approximation Q(u), because the conditional posterior ments between the finite-dimensional (marginal) posterior P (u|S) over the trainP (u(x)|u, S) for some non-training point x is identical to the conditional prior P (u(x)|u). In general, computing Q is also infeasible, but several authors have proposed to approximate the global moment matching by iterative schemes which locally focus on one training pattern at a time [1, 4]. These schemes (at least in their simplest forms) result in a parametric form for the approximating Gaussian
+
+Q(u)  P (u) i=1 exp - p2 (ui - mi)2 i n
+
+. (1)
+
+This may be compared with the form of the true posterior P (u|S)
+
+P (u)
+
+n i=1 P (yi|ui) and shows that Q(u) is obtained from P (u|S) by a likelihood
+
+
+
+approximation. Borrowing from graphical models vocabulary, the factors in (1) are called sites. Initially, all pi, mi are 0, thus Q(u) = P (u). In order to update the parameters for a site i, we replace it in Q(u) by the corresponding true likelihood factor P (yi|ui), resulting in a non-Gaussian distribution whose mean and covariance matrix can still be computed. This allows us to approximate it by a Gaussian Qnew(u) using moment matching. The site update is called the inclusion of i into the active set I. The factorized form of the likelihood implies that the new and old Q differ only in the parameters pi, mi of site i. This is a useful locality property of the scheme which is referred to as assumed density filtering (ADF) (e.g. [4]). The special case of ADF4 for GP models has been proposed in [5]. 3 Sparse Gaussian Process Classification The simplest way to obtain a sparse Gaussian process classification (GPC) approximation from the ADF scheme is to leave most of the site parameters at 0, i.e. pi = 0, mi = 0 for all i  I, where I  {1, . . . , n} is the active set, |I| =: d < n. For this to succeed, it is important to choose I so that the decision boundary between classes is represented essentially as accurately as if we used the whole training set. An exhaustive search over all possible subsets I is, of course, intractable. Here, we follow a greedy approach suggested in [2], including new patterns one at a time into I. The selection of a pattern to include is made by computing a score function for
+
+4 A generalization of ADF, expectation propagation (EP) [4], allows for several iterations
+
+over the data. In the context of sparse approximations, it allows us to remove points from I or exchange them against such outside I, although we do not consider such moves here.
+
+
+Algorithm 1 Informative vector machine algorithm Require: A desired sparsity d n. I = , m = 0,  = diag(0), diag(A) = diag(K), h = 0, J = {1, . . . , n}. repeat for j  J do Compute j according to (4). end for Do updates for pi and mi according to (2). Update matrices L, M, diag(A) and h according to (3). until |I| = d I  I  {i}, J  J \ {i}.
+
+i = argmaxj J j
+
+The heuristic we implement has also been considered in the context of active learnall points in J = {1, . . . , n} \ I (or a subset thereof) and then picking the winner. ing (see chapter 5 of [3]): score an example (xi, yi) by the decrease in entropy of Q(·) upon its inclusion. As a result of the locality property of ADF and the fact that Q is Gaussian, it is easy to see that the entropy difference H[Qnew] - H[Q] is proportional to the log ratio between the variances of the marginals Qnew(ui) and Q(ui). Thus, our heuristic (referred to as the differential entropy score) favors points whose inclusion leads to a large reduction in predictive (posterior) variance at the corresponding site. Whilst other selection heuristics can be argued for and utilized, it turns out that the differential entropy score together with the simple likelihood approximation in (1) leads to an extremely efficient and competitive algorithm. In the remainder of this section, we describe our method and give a schematic algorithm. A detailed derivation and discussions of some extensions can be found in [7]. From (1) we have Q(·) = N(·|h, A), A := (K-1 + )-1, h := Am and  := diag(p). If I is the current active set, then all components of p and m not in I are zero, and some algebra using the Woodbury formula gives
+
+A = K - M
+
+T M, M = L-1I 1/2
+
+KI,  Rd,n, ·
+
+where L is the lower-triangular Cholesky factor of
+
+B = I + I 1/2 KII 1/2  Rd,d.
+
+know aj,j and hj. Thus, when including i into the active set I, we need to update In order to compute the differential entropy score for a point j  I, we have to diag(A) and h accordingly, which in turn requires the matrices L and M to be kept up-to-date. The update equations for pi, mi are
+
+pi = zi = i 1 - ai,ii
+
+, mi = hi +
+
+i =
+
+new
+
+We then update L  L appending the row µT, where
+
+l = piM·
+
+,i
+
+new
+
+, l =
+
+i , i where
+
+yi · (hi + b) , 1 + ai,i yi · N(zi|0, 1) (zi) 1 + ai,i , i = i
+
+T
+
+by appending the row (l , l) and M  M
+
+T
+
+1 + piKi,i - l l,
+
+new
+
+µ = l-1(piK· - M
+
+,i T l).
+
+i + hi + b 1 + ai,i (2)
+
+.
+
+new
+
+by (3)
+
+Finally, diag(A as
+
+entropy score for j  I can be computed based onthe variables in (2) (with i  j) h +ilpi µ. The differential
+
+j = 1 2 log(1 - aj,jj), (4)
+
+)  diag(A)-(µ2j )j and h
+
+-1/2
+
+
+which can be computed in O(1), given hj and aj,j. In Algorithm 1 we give an algorithmic version of this scheme. computation of the kernel matrix column K· . Thus the total time complexity is Each inclusion costs O(n · d), dominated by the computation of µ, apart from the
+
+,i
+
+diag(A) and h, the error or the expected log likelihood of the current predictor on O(n·d2). The storage requirement is O(n·d), dominated by the buffer for M . Given the remaining points J can be computed in O(n). These scores can be used in order to decide how many points to include into the final I. For kernel functions with constant diagonal, our selection heuristic is constant over patterns if I = , so the first (or the first few) inclusion candidate is chosen at random. After training is complete, we can predict on test points x by evaluating the approximate predictive distribution Q(u|x, S) = P (u|u)Q(u) du = N(u|µ(x), 2(x)), where
+
+T
+
+µ(x) =  k(x),
+
+with  := I
+
+1/2
+
+B-1I
+
+1/2
+
+2(x) = k(x, x) - k(x)TI
+
+mI and k(x) := (k(xi, x))i I
+
+1/2
+
+B-1I 1/2 k(x), (5)
+
+. We may compute 2(x)
+
+using one back-substitution with the factor L. The approximate predictive distribution over y can be obtained by averaging the noise model over the Gaussian. The optimal predictor for the approximation is sgn(µ(x)+b), which is independent of the variance 2(x). The simple scheme above employs full greedy selection over all remaining points to find the inclusion candidate. This is sensible during early inclusions, but computationally wasteful during later ones, and an important extension of the basic scheme of [2] allows for randomized greedy selections. To this end, we maintain a selection modify the selection index J. This means that only the components J of diag(A) index J  {1, . . . , n} with J  I =  at all times. Having included i into I we and h have to be updated, which requires only the columns M · . Hence, if J
+
+,J
+
+exhibits some inertia while moving over {1, . . . , n} \ I, many of the columns of M will not have to be kept up-to-date. In our implementation, we employ a simple delayed updating scheme for the columns of M which avoids double computations (see [7] for details). After a number of initial inclusions are done using full greedy selection, we use a J of fixed size m together with the following modification rule: size m by drawing at random from {1, . . . , n} \ (I  J). for a fraction   (0, 1), retain the  · m best-scoring points in J, then fill it up to 4 Experiments We now present results of experiments on the MNIST handwritten digits database5, comparing our method against the SVM algorithm. We considered binary tasks of the form `c-against-rest', c  {0, . . . , 9}. c is mapped to +1, all others to -1. We down-sampled the bitmaps to size 13 × 13 and split the MNIST training set into a (new) training set of size n = 59000 and a validation set of size 1000; the test set size is 10000. A run consisted of model selection, training and testing, and all results are averaged over 10 runs. We employed the RBF kernel k(x, x ) = variance) and  > 0 (inverse squared length-scale). Model selection was done by minimizing validation set error, training on random training set subsets of size 5000.6
+
+C exp(-(/(2 · 169)) x - x 2 ), x  R169 with hyper-parameters C > 0 (process
+
+5 6 Available online at http://www.research.att.com/yann/exdb/mnist/index.html. The model selection training set for a run i is the same across tested methods. The
+
+list of kernel parameters considered for selection has the same size across methods.
+
+
+c 0 1 2 3 4 5 6 7 8 9 d 1247 798 2240 2610 1826 2306 1331 1759 2636 2731
+
+SVM gen 0.22 0.20 0.40 0.41 0.40 0.29 0.28 0.54 0.50 0.58
+
+time 1281 864 2977 3687 2442 2771 1520 2251 3909 3469 c 0 1 2 3 4 5 6 7 8 9 d 1130 820 2150 2500 1740 2200 1270 1660 2470 2740
+
+IVM gen 0.18 0.26 0.40 0.39 0.33 0.32 0.29 0.51 0.53 0.55
+
+time 627 427 1690 2191 1210 1758 765 1110 2024 2444
+
+Table 1: Test error rates (gen, %) and training times (time, s) on binary MNIST tasks. SVM: Support vector machine (SMO); d: average number of SVs. IVM: Sparse GPC, randomized greedy selections; d: final active set size. Figures are means over 10 runs.
+
+Our goal was to compare the methods not only w.r.t. performance, but also running time. For the SVM, we chose the SMO algorithm [6] together with a fast elaborate kernel matrix cache (see [7] for details). For the IVM, we employed randomized greedy selections with fairly conservative settings.7 Since each binary digit classification task is very unbalanced, the bias parameter b in the GPC model was chosen to be non-zero. We simply fixed b = -1(r), where r is the ratio between +1 and -1 patterns in the training set, and added a constant vb = 1/10 to the kernel k to account for the variance of the bias hyper-parameter. Ideally, both b and vb should be chosen by model selection, but initial experiments with different values for (b, vb) exhibited no significant fluctuations in validation errors. To ensure a fair comparison, we did initial SVM runs and initialized the active set size d with the average number (over 10 runs) of SVs found, independently for each c. We then re-ran the SVM experiments, allowing for O(d n) cache space. Table 1 shows the results. Note that IVM shows comparable performance to the SVM, while achieving significantly lower training times. For less conservative settings of the randomized selection parameters, further speed-ups might be realizable. We also registered (not shown here) significant fluctuations in training time for the SVM runs, while this figure is stable and a-priori predictable for the IVM. Within the IVM, we can obtain estimates of predictive probabilities for test points, quantifying prediction uncertainties. In Figure 1, which was produced for the hardest task c = 9, we reject fractions of test set examples based on the size of |P (y = +1)-1/2|. For the SVM, the size of the discriminant output is often used to quantify predictive uncertainty heuristically. For c = 9, the latter is clearly inferior (although the difference is less pronounced for the simpler binary tasks). In the SVM community it is common to combine the `c-against-rest' classifiers to obtain a multi-class discriminant8 as follows: for a test point x, decide for the class whose associated classifier has the highest real-valued output. For the IVM, the
+
+7 First 2 selections at random, then 198 using full greedy, after that a selection index of
+
+size 500 and a retained fraction  = 1/2. based on error-correcting codes.
+
+8 Although much recent work has looked into more powerful combination schemes, e.g.
+
+
+-2
+
+10
+
+SVM IVM
+
+rate -3 10
+
+error
+
+-4
+
+10
+
+0 0.05
+
+0.1 rejected fraction 0.15 0.2
+
+Figure 1: Plot of test error rate against increasing rejection rate for the SVM (dashed) and IVM (solid), for the task c = 9 against the rest. For SVM, we reject based on "distance" from separating plane, for IVM based on estimates of predictive probabilities. The IVM line runs below the SVM line exhibiting lower classification errors for identical rejection rates.
+
+equivalent would be to compare the estimates log P (y = +1) from each c-predictor and pick the maximizing c. This is suboptimal, because the different predictors have not been trained jointly.9 However, the estimates of log P (y = +1) do depend on predictive variances, i.e. a measure of uncertainty about the predictive mean, which cannot be properly obtained within the SVM framework. This combination scheme results in test errors of 1.54%(±0.0417%) for IVM, 1.62%(±0.0316%) for SVM. When comparing these results to others in the literature, recall that our experiments were based on images sub-sampled to size 13 × 13 rather than the usual 28 × 28. 5 Discussion We have demonstrated that sparse Gaussian process classifiers can be constructed efficiently using greedy selection with a simple fast selection criterion. Although we focused on the change in differential entropy in our experiments here, the simple likelihood approximation at the basis of our method allows for other equally efficient criteria such as information gain [3]. Our method retains many of the benefits of probabilistic GP models (error bars, model combination, interpretability, etc.) while being much faster and more memory-efficient both in training and prediction. In comparison with non-probabilistic SVM classification, our method enjoys the further advantages of being simpler to implement and having strictly predictable time requirements. Our method can also be significantly faster10 than SVM with the SMO algorithm. This is due to the fact that SMO's active set typically fluctuates heavily across the training set, thus a large fraction of the full kernel matrix must be evaluated. In contrast, IVM requires only d/n of K. the training costs raise by a factor of c2. Whether this factor can be reduced to c using further sensible approximations, is an open question. active sets, and for which very simple and fast covariance functions are appropriate (e.g. sparse input patterns).
+
+9 It is straightforward to obtain the IVM for a joint GP classification model, however
+
+10 We would expect SVMs to catch up with IVMs on tasks which require fairly large
+
+
+Among the many proposed sparse GP approximations [1, 8, 9, 10, 11], our method is most closely related to [1]. The latter is a sparse Bayesian online scheme which does not employ greedy selections and uses a more accurate likelihood approximation than we do, at the expense of slightly worse training time scaling, especially when compared with our randomized version. It also requires the specification of a rejection threshold and is dependent on the ordering in which the training points are presented. It incorporates steps to remove points from I, which can also be done straightforwardly in our scheme, however such moves are likely to create numerical stability problems. Smola and Bartlett [8] use a likelihood approximation different from both the IVM and the scheme of [1] for GP regression, together with greedy selections, but in contrast to our work they use a very expensive selection selection over small selection indexes. The differential entropy score has previously heuristic (O(n · d) per score computation) and are forced to use randomized greedy been suggested in the context of active learning (e.g. [3]), but applies more directly to our problem. In active learning, the label yi is not known at the time xi has to be scored, and expected rather than actual entropy changes have to be considered. Furthermore, MacKay [3] applies the selection to multi-layer perceptron (MLP) models for which Gaussian posterior approximations over the weights can be very poor. Acknowledgments We thank Chris Williams, David MacKay, Manfred Opper and Lehel Csat´o for helpful discussions. MS gratefully acknowledges support through a research studentship from Microsoft Research Ltd. References [1] Lehel Csat´o and Manfred Opper. Sparse online Gaussian processes. N. Comp., 14:641­ 668, 2002. [2] Neil D. Lawrence and Ralf Herbrich. A sparse Bayesian compression scheme - the informative vector machine. Presented at NIPS 2001 Workshop on Kernel Methods, 2001. [3] David MacKay. Bayesian Methods for Adaptive Models. PhD thesis, California Institute of Technology, 1991. [4] Thomas Minka. A Family of Algorithms for Approximate Bayesian Inference. PhD thesis, MIT, January 2001. [5] Manfred Opper and Ole Winther. Gaussian processes for classification: Mean field algorithms. N. Comp., 12(11):2655­2684, 2000. [6] John C. Platt. Fast training of support vector machines using sequential minimal optimization. In Sch¨olkopf et. al., editor, Advances in Kernel Methods, pages 185­ 208. 1998. [7] Matthias Seeger, Neil D. Lawrence, and Ralf Herbrich. Sparse Bayesian learning: The informative vector machine. Technical report, Department of Computer Science, Sheffield, UK, 2002. See www.dcs.shef.ac.uk/~neil/papers/. [8] Alex Smola and Peter Bartlett. Sparse greedy Gaussian process regression. In Advances in NIPS 13, pages 619­625, 2001. [9] Michael Tipping. Sparse Bayesian learning and the relevance vector machine. J. M. Learn. Res., 1:211­244, 2001. [10] Volker Tresp. A Bayesian committee machine. N. Comp., 12(11):2719­2741, 2000. [11] Christopher K. I. Williams and Matthias Seeger. Using the Nystr¨om method to speed up kernel machines. In Advances in NIPS 13, pages 682­688, 2001.
+
+

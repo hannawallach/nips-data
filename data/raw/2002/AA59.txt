@@ -1,0 +1,360 @@
+Multiclass Learning by Probabilistic Embeddings
+
+Ofer Dekel and Yoram Singer School of Computer Science & Engineering The Hebrew University, Jerusalem 91904, Israel {oferd,singer}@cs.huji.ac.il Abstract We describe a new algorithmic framework for learning multiclass categorization problems. In this framework a multiclass predictor is composed of a pair of embeddings that map both instances and labels into a common space. In this space each instance is assigned the label it is nearest to. We outline and analyze an algorithm, termed Bunching, for learning the pair of embeddings from labeled data. A key construction in the analysis of the algorithm is the notion of probabilistic output codes, a generalization of error correcting output codes (ECOC). Furthermore, the method of multiclass categorization using ECOC is shown to be an instance of Bunching. We demonstrate the advantage of Bunching over ECOC by comparing their performance on numerous categorization problems. 1 Introduction The focus of this paper is supervised learning from multiclass data. In multiclass problems the goal is to learn a classifier that accurately assigns labels to instances where the set of labels is of finite cardinality and contains more than two elements. Many machine learning applications employ a multiclass categorization stage. Notable examples are document classification, spoken dialog categorization, optical character recognition (OCR), and partof-speech tagging. Dietterich and Bakiri [6] proposed a technique based on error correcting output coding (ECOC) as a means of reducing a multiclass classification problem to several binary classification problems and then solving each binary problem individually to obtain a multiclass classifier. More recent work of Allwein et al. [1] provided analysis of the empirical and generalization errors of ECOC-based classifiers. In the above papers, as well as in most previous work on ECOC, learning the set of binary classifiers and selecting a particular error correcting code are done independently. An exception is a method based on continuous relaxation of the code [3] in which the code matrix is post-processed once based on the learned binary classifiers. The inherent decoupling of the learning process from the class representation problem employed by ECOC is both a blessing and a curse. On one hand it offers great flexibility and modularity, on the other hand, the resulting binary learning problems might be unnatural and therefore potentially difficult. We instead describe and analyze an approach that ties the learning problem with the class representation problem. The approach we take perceives the set of binary classifiers as an embedding of the instance space and the code matrix as an embedding of the label set into a common space. In this common space each instance is assigned the label from which it's divergence is smallest. To construct these embeddings, we introduce the notion of probabilistic output codes. We then describe an algorithm that constructs the label and instance embeddings such that the resulting classifier achieves a small empirical error. The result is a paradigm that includes ECOC as a special case.
+
+
+The algorithm we describe, termed Bunching, alternates between two steps. One step improves the embedding of the instance space into the common space while keeping the embedding of the label set fixed. This step is analogous to the learning stage of the ECOC technique, where a set of binary classifiers are learned with respect to a predefined code. The second step complements the first by updating the label embedding while keeping the instance embedding fixed. The two alternating steps resemble the steps performed by the EM algorithm [5] and by Alternating Minimization [4]. The techniques we use in the design and analysis of the Bunching algorithm also build on recent results in classification learning using Bregman divergences [8, 2]. The paper is organized as follows. In the next section we give a formal description of the multiclass learning problem and of our classification setting. In Sec. 3 we give an alternative view of ECOC which naturally leads to the definition of probabilistic output codes presented in Sec. 4. In Sec. 5 we cast our learning problem as a minimization problem of a continuous objective function and in Sec. 6 we present the Bunching algorithm. We describe experimental results that demonstrate the merits of our approach in Sec. 7 and conclude in Sec. 8. 2 Problem Setting
+
+Let X be a domain of instance encodings from m and let Y be a set of r labels that can  
+
+be assigned to each instance from X. Given a training set of instance-label pairs S = learning a classification function that predicts the labels of instances from X. This problem is often referred to as multiclass learning. In other multiclass problem settings it is common to encode the set Y as a prefix of the integers {1, . . ., r}, however in our setting it will prove is, the i'th label in Y is encoded by the vector whose i'th component is set to 1, and all of its other components are set to 0. The classification functions we study in this paper are composed of a pair of embeddings from the spaces X and Y into a common space Z, and a measure of divergence between vectors in Z. That is, given an instance x  X,
+
+(xj , yj)nj =1 such that each xj is in X and each yj is in Y, we are faced with the problem of
+
+useful to assume that the labels are encoded as the set of r standard unit vectors in r   . That
+
+we embed it into Z along with all of the label vectors in Y and predict the label that x is closest to in Z. The measure of distance between vectors in Z builds upon the definitions given below:
+
+The logistic transformation  :
+
+k = 1,...,s
+
+s  (0,1)s is defined  
+
+s
+
+Figure 1: An illustration of the embedding model used.
+
+k() = (1 + e-k )- 1
+
+The entropy of a multivariate Bernoulli random variable with parameter p  [0, 1]s is H[p] = - [pk log(pk) + (1 - pk) log(1 - pk)] .
+
+s
+
+k=1
+
+The Kullback-Leibler (KL) divergence between a pair of multivariate Bernoulli random variables with respective parameters p, q  [0, 1]s is
+
+s
+
+D[p q] = pk log
+
+k=1
+
+pk qk + (1 - pk) log 1 - pk 1 - qk . (1)
+
+Returning to our method of classification, let s be some positive integer and let Z denote
+
+the space [0, 1]s. Given any two linear mappings T :
+
+T is given as a matrix in
+
+s×m
+
+and C as a matrix in    
+
+m s×r
+
+
+
+s
+
+and C :
+
+r
+
+
+
+s
+
+       
+
+, where
+
+, instances from X are embedded
+
+into Z by (Tx) and labels from Y are embedded into Z by (Cy). An illustration of the two embeddings is given in Fig. 1.
+
+
+We define the divergence between any two points z1, z2  Z as the sum of the KLdivergence between them and the entropy of z1, D[z1 z2] + H[z1]. We now define the loss of each instance-label pair as the divergence of their respective images, (x, y|C, T ) = D[(Cy) (T x)] + H[(Cy)] . (2) This loss is clearly non-negative and can be zero iff x and y are embedded to the same point in Z and the entropy of this point is zero. is our means of classifying new instances: given a new instance we predict its label to be y^ if y^ = argmin (x, y|C, T ) . (3)
+
+yY
+
+For brevity, we restrict ourselves to the case where only a single label attains the minimum loss, and our classifier is thus always well defined. We point out that our analysis is still valid when this constraint is relaxed. We name the loss over the entire training set S the empirical loss and use the notation L(S|C,T) = (x, y|C, T ) . (4)
+
+(x,y)S
+
+Our goal is to learn a good multiclass prediction function by finding a pair (C, T) that attains a small empirical loss. As we show in the sequel, the rationale behind this choice of empirical loss lies in the fact that it bounds the (discrete) empirical classification error attained by the classification function. 3 An Alternative View of Error Correcting Output Codes The technique of ECOC uses error correcting codes to reduce an r-class classification problem to multiple binary problems. Each binary problem is then learned independently via an external binary learning algorithm and the learned binary classifiers are combined into one r-class classifier. We begin by giving a brief overview of ECOC for the case where the binary learning algorithm used is a logistic regressor. code word that corresponds to a label in Y. Recall that the set of labels Y is assumed to is simply the product of the matrix C and the vector y, Cy. The distance  of a code C is defined as the minimal Hamming distance between any two code words, formally (C) = min Ck,i(1 - Ck,j ) + Ck,j (1 - Ck,i) . For any k  {1, . . ., s}, the k'th row of C, denoted henceforth by Ck, defines a partition of the set of labels Y into two disjoint subsets: the first subset constitutes labels for which Ck · y = 0 (i.e., the set of labels in Y which are mapped according to Ck to the binary label 0) and the labels for which Ck · y = 1. Thus, each Ck induces a binary classification problem from the original multiclass problem. Formally, we construct for each k a binary-
+
+A binary output code C is a matrix in {0, 1}s ×r where each of C's columns is an s-bit
+
+r . Therefore, the code word corresponding to the label y   be the standard unit vectors in
+
+s
+
+i=j k=1
+
+labeled sample Sk = {(xj, Ck · yj)}nj
+
+=1
+
+function Tk : X 
+
+ 
+
+and for each Sk we learn a binary classification
+
+using a logistic regression algorithm. That is, for each original
+
+instance xj and induced binary label Ck · yj we posit a logistic model that estimates the conditional probability that Ck · yj equals 1 given xj, P r[Ck · yj = 1| xj ; Tk] = (Tk · xj ) . (5) Given a predefined code matrix C the learning task at hand is to find Tk that maximizes the log-likelihood of the labelling given in Sk, Tk = argmax log(P r[Ck · yj | xj ; Tk]) . (6)
+
+n
+
+Tk m
+
+j=1  
+
+
+Defining 0 log 0 = 0, we can use the logistic estimate in Eq. (5) and the KL-divergence from Eq. (1) to rewrite Eq. (6) as follows Tk = argmin D[Ck · yj (Tk · xj )] . In words, a good set of binary predictors is found by minimizing the sample-averaged KLdivergence between the binary vectors induced by C and the logistic estimates induced by
+
+n
+
+Tk m j=1  
+
+T1, . . . , Ts. Let T
+
+vectors {Tk }sk
+
+s×m
+
+ 
+
+be the matrix in constructed by the concatenation of the row
+
+. For any instance x  X, (T x) is a vector of probability estimates
+
+=1
+
+that the label of x is 1 for each of the s induced binary problems. We can summarize the learning task defined by the code C as the task of finding a matrix T such that T = argmin D[Cyj (T xj)] . Given a code matrix C and a transformation T we classify a new instance as follows, y^ = argmin D[Cy (T x)] . (7)
+
+n
+
+T  s×m j=1  
+
+yY
+
+A classification error occurs if the predicted label y^ is different from the correct label y. Building on Thm. 1 from Allwein et al. [1] it is straightforward to show that the empirical classification error (y^ = y) is bounded above by the empirical KL-divergence between the correct code word Cy and the estimated probabilities (Tx) divided by the code distance,
+
+(T xj)] |{y^j = yj}nj
+
+=1
+
+n j=1
+
+|  D[Cyj (C) . (8)
+
+This bound is a special case of the bound given below in Thm. 1 for general probabilistic output codes. We therefore defer the discussion on this bound to the following section. 4 Probabilistic Output Codes We now describe a relaxation of binary output codes by defining the notion of probabilistic output codes. We give a bound on the empirical error attained by a classifier that uses probabilistic output codes which generalizes the bound in Eq. (8). The rationale for our construction is that the discrete nature of ECOC can potentially induce difficult binary classification problems. In contrast, probabilistic codes induce real-valued problems that may be easier to learn. conjunction with the logistic transformation to produce a set of r probability vectors that correspond to the r labels in Y. Namely, C maps each label y  Y to the probabilistic code word (Cy)  [0, 1]s. As before, we assume that Y is the set of r standard unit vectors in {0, 1}r and therefore each probabilistic code word is the image of one of C's columns under the logistic transformation. The natural extension of code distance to probabilistic codes is achieved by replacing Hamming distance with expected Hamming distance. If for each y  Y and k  {1, . . . , s} we view the k'th component of the code word that corresponds to y as a Bernoulli random variable with parameter p = k(Cy) then the expected Hamming distance between the code word for classes i and j is,
+
+Analogous to discrete codes, A probabilistic output code C is a matrix in s×r   used in
+
+s
+
+k(Cyi)(1 - k(Cyj)) + k(Cyj )(1 - k(Cyi)) . Analogous to discrete codes we define the distance  of a code C as the minimum expected Hamming distance between all pairs of code words in C, that is,
+
+k=1
+
+
+s
+
+(C) = min i=j k(Cyi)(1 - k(Cyj)) + k(Cyj)(1 - k(Cyi)) .
+
+k=1
+
+Put another way, we have relaxed the definition of code words from deterministic vectors to multivariate Bernoulli random variables. The matrix C now defines the distributions of these random variables. When C's entries are all ± then the logistic transformation of C's entries defines a deterministic code and the two definitions of  coincide. a loss (x, y|C, T) with each instance-label pair (x, y) using Eq. (2) and we measure the empirical loss over the entire training set S as defined in Eq. (4). We classify new instances by finding the label y^ that attains the smallest loss as defined in Eq. (3). This construction is equivalent to the classification method discussed in Sec. 2 that employs embeddings except that instead of viewing C and T as abstract embeddings C is interpreted as a probabilistic output code and the rows of T are viewed as binary classifiers. Note that when all of the entries of C are ± then the classification rule from Eq. (3) is reduced to the classification rule for ECOC from Eq. (7) since the entropy of (Cy) is zero for all y. We now give a theorem that builds on our construction of probabilistic output codes and relates the classification rule from Eq. (3) with the empirical loss defined by Eq. (4). As noted before, the theorem generalizes the bound given in Eq. (8).
+
+Given a probabilistic code matrix C  s×r and a transformation T  s×m     we associate
+
+Theorem 1 Let Y be a set of r vectors in
+
+code with distance (C) and let T 
+
+S = {(xj , yj)}ni
+
+=j
+
+r . Let C  s×r
+
+   
+
+be a probabilistic output
+
+s×m
+
+ 
+
+be a transformation matrix. Given a sample
+
+of instance-label pairs where xj  X and yj  Y, denote by L the loss
+
+on S with respect to C and T as given by Eq. (4) and denote by y^j the predicted label of xj according to the classification rule given in Eq. (3). Then, |{y^j = yj}nj |  . The proof of the theorem is omitted due to the lack of space. 5 The Learning Problem We now discuss how our formalism of probabilistic output codes via embeddings and the accompanying Thm. 1 lead to a learning paradigm in which both T and C are found concurrently. Thm. 1 implies that the empirical error over S can be reduced by minimizing the empirical loss over S while maintaining a large distance (C). A naive modification of C so as to minimize the loss may result in a probabilistic code whose distance is undesirably small. Therefore, we assume that we are initially provided with a fixed reference matrix matrix C remain relatively close to C0 (in a sense defined shortly) throughout the learning procedure. Rather than requiring that C attain a fixed distance to C0 we add a penalty proportional to the distance between C and C0 to the loss defined in Eq. (4). This penalty on C can be viewed as a form of regularization (see for instance [10]). Similar paradigms have been used extensively in the pioneering work of Warmuth and his colleagues on online learning (see for instance [7] and the references therein) and more recently for incorporating prior knowledge into boosting [11]. The regularization factor we employ is the KL-divergence between the images of C and C0 under the logistic transformation, R(S|C,C0) = D[(Cyj ) (C0yj)] .
+
+=1
+
+L(S|C,T) (C)
+
+C0  s×r   that is known to have a large code distance. We now require that the learned
+
+n
+
+j=1
+
+The influence of this penalty term is controlled by a parameter   [0, ]. The resulting objective function that we attempt to minimize is O(S|C,T) = L(S|C,T) + R(S|C,C0) (9)
+
+
+where  and C0 are fixed parameters. The goal of learning boils down to finding a pair (C , T ) that minimizes the objective function defined in Eq. (9). We would like to note that this objective function is not convex due to the concave entropic term in the definition of . Therefore, the learning procedure described in the sequel converges to a local minimum or a saddle point of O.
+
+6 The Learning Algorithm The goal of the learning algorithm is to find C and T that minimize the objective function defined above. The algorithm alternates between two complementing steps for decreasing the objective function. The first step, called IMPROVE-T, improves T leaving C unchanged, and the second step, called IMPROVE-C, finds the optimal matrix C for any given matrix T . The algorithm is provided with initial matrices C0 and T0, where C0 is assumed to have a large code distance . The IMPROVE-T step makes the assumption that all of the instances in S satfor all i  {1, 2, ..., m}, 0  xi. Any finite training set can be easily shifted and scaled to conform with these constraints and therefore they do not impose any real limitation. In addition, the IMPROVE-C step is presented for the case where Y is the set of standard unit vectors in .
+
+isfy the constraints m i=1 xi  1 and
+
+r  
+
+ 
+
++ s×r s×m
+
+BUNCH S,   ¡ , C0  ¡ , T0  ¢ ¡
+
+For t = 1, 2, ... Tt = IMPROVE-T (S, Ct- , Tt- )
+
+1 1
+
+Ct = IMPROVE-C (S, , Tt, C0) IMPROVE-T (S, C, T )
+
+For k = 1, 2, ..., s
+
++
+
+Wk,i =
+
+-
+
+Wk,i =
+
+£
+
+and i = 1, 2, ..., m (Cky) (-Tkx) xi
+
+(x,y)S
+
+£
+
+(-Cky) (Tkx) xi
+
++
+
+Wk,i
+
+-
+
+Wk,i
+
+(x,y)S
+
+¤
+
+1 2 k,i = ln
+
+¥
+
+Return T +  IMPROVE-C (S, , T , C0) For each y  Y Sy = {(x, y¯)  S
+
+C(y = C0 +  ) (y)
+
+1
+
+:
+
+£
+
+y¯ = y} T x
+
+|Sy|
+
+xSy
+
+Return C = ¦ C(1), . . . , C(r ) §
+
+Figure 2: The Bunching Algorithm.
+
+Since the regularization factor R is independent of T we can restrict our description and analysis of the IMPROVE-T step to considering only the loss term L of the objective function O. The IMPROVE-T step receives the current matrices C and T as input and calculates a matrix  that is used for updating the current T additively. Denoting the iteration index the IMPROVE-T step decreases the loss or otherwise T remains unchanged and is globally optimal with respect to C. Again, the proof is omitted due to space constraints.
+
+by t, the update is of the form Tt +1 = Tt + . The next theorem states that updating T by
+
+Theorem 2 Given matrices C  s×r and T  s×m , let Wk,i, Wk,i and  be as defined + -    
+
+in the IMPROVE-T step of Fig. 2. Then, the decrease in the loss L is bounded below by,
+
+s m 2
+
+Wk,i - Wk,i + -  L(S|C,T) - L(S|C,T + ) .
+
+k=1 i=1
+
+Based on the theorem above we can derive the following corollary Corollary 1 If  is generated by a call to IMPROVE-T and L(S|C, T + ) = L(S|C, T) then  is the zero matrix and T is globally optimal with respect to C. In the IMPROVE-C step we fix the current matrix T and find a code matrix C that globally minimizes the objective function. According to the discussion above, the matrix C defines
+
+
+an embedding of the label vectors from Y into Z and the images of this embedding constitute the classification rule. For each y  Y denote its image under C and the logistic transformation by py = (Cy) and let Sy be the subset of S that is labeled y. Note that the objective function can be decomposed into r separate summands according to y, O(S|C,T) = O(Sy|C,T) ,
+
+where yY
+
+(T x)] + H[py] + D[py O(Sy|C,T) = D[py (C0y0)] .
+
+(x,y)Sy
+
+We can therefore find for each y  Y the vector py that minimizes O(Sy) independently and then reconstruct the code matrix C that achieves these values. It is straightforward to show that O(Sy) is convex in py, and our task is reduced to finding it's stationary point. We examine the derivative of O(Sy) with respect to py,k and get,
+
+Oy(Sy) py,k = -log (Tk · x) 1 - (Tk · x) - |Sy| C0,k · y + log py,k 1 - py,k .
+
+(x,y)Sy
+
+We now plug py = (Cy) into the equation above and evaluate it at zero to get that,
+
+Cy = C0y + 1 |Sy| T x .
+
+(x,y)Sy
+
+Since Y was assumed to be the set of standard unit vectors, Cy is a column of C and the above is simply a column wise assignment of C. We have shown that each call to IMPROVE-T followed by IMPROVE-C decreases the objective function until convergence to a pair (C , T ) such that C is optimal given T and T is optimal given C . Therefore O(S|C , T ) is either a minimum or a saddle point.
+
+7 Experiments To assess the merits of Bunching we compared it to a standard ECOCbased algorithm on numerous multiclass problems. For the ECOCbased algorithm we used a logistic regressor as the binary learning algorithm, trained using the parallel update described in [2]. The two approaches share the same form of classifiers (logistic regressors) and differ solely in the coding matrix they employ: while ECOC uses a fixed code matrix Bunching adapts its code matrix during the learning process. We selected the following multiclass datasets: glass, isolet, letter, satimage, soybean and vowel
+
+70
+
+random one-vs-rest
+
+60
+
+50
+
+% 40
+
+30
+
+performance
+
+20 Relative
+
+10
+
+0
+
+-10 glass isolet letter mnist satimage soybean vowel
+
+Figure 3: The relative performance of Bunching compared to ECOC on various datasets.
+
+from the UCI repository (www.ics.uci.edu/mlearn/MLRepository.html) and the mnist dataset available from LeCun's homepage (yann.lecun.com/exdb/mnist/index.html). The only dataset not supplied with a test set is glass for which we use 5-fold cross validation. For each dataset, we compare the test error rate attained by the ECOC classifier and the Bunching classifier. We conducted the experiments for two families of code matrices. The
+
+
+first family corresponds to the one-vs-rest approach in which each class is trained against the rest of the classes and the corresponding code is a matrix whose logistic transformation is simply the identity matrix. The second family is the set of random code matrices with r log2 r rows where r is the number of different labels. These matrices are used as C0 for Bunching and as the fixed code for ECOC. Throughout all of the experiments with Bunching, we set the regularization parameter  to 1. A summary of the results is depicted in Fig. 3. The height of each bar is proportional to (eE - eB)/eE where eE is the test error attained by the ECOC classifier and eB is the test error attained by the Bunching classifier. As shown in the figure, for almost all of the experiments conducted Bunching outperforms standard ECOC. The improvement is more significant when using random code matrices. This can be explained by the fact that random code matrices tend to induce unnatural and rather difficult binary partitions of the set of labels. Since Bunching modifies the code matrix C along its run, it can relax difficult binary problems. This suggests that Bunching can improve the classification accuracy in problems where, for instance, the one-vs-rest approach fails to give good results or when there is a need to add error correction properties to the code matrix. 8 A Brief Discussion In this paper we described a framework for solving multiclass problems via pairs of embeddings. The proposed framework can be viewed as a generalization of ECOC with logistic regressors. It is possible to extend our framework in a few ways. First, the probabilistic embeddings can be replaced with non-negative embeddings by replacing the logistic transformation with the exponential function. In this case, the KL divergence is replaced with its unormalized version [2, 9]. The resulting generalized Bunching algorithm is somewhat more involved and less intuitive to understand. Second, while our work focuses on linear embeddings, our algorithm and analysis can be adapted to more complex mappings by employing kernel operators. This can be achieved by replacing the k'th scalar-product Tk · x with an abstract inner-product (Tk, x). Last, we would like to note that it is possible to devise an alternative objective function to the one given in Eq. (9) which is jointly convex in (T, (C)) and for which we can state a bound of a form similar to the bound in Thm. 1. References [1] E.L. Allwein, R.E. Schapire, and Y. Singer. Reducing multiclass to binary: A unifying approach for margin classifiers. Journal of Machine Learning Research, 1:113­141, 2000. [2] Michael Collins, Robert E. Schapire, and Yoram Singer. Logistic regression, adaboost and bregman distances. Machine Learning, 47(2/3):253­285, 2002. [3] K. Crammer and Y. Singer. On the learnability and design of output codes for multiclass problems. In Proc. of the Thirteenth Annual Conference on Computational Learning Theory, 2000. [4] I. Csisz´ar and G. Tusn´ady. Information geometry and alternaning minimization procedures. Statistics and Decisions, Supplement Issue, 1:205­237, 1984. [5] A.P. Dempster, N.M. Laird, and D.B. Rubin. Maximum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society, Ser. B, 39:1­38, 1977. [6] Thomas G. Dietterich and Ghulum Bakiri. Solving multiclass learning problems via errorcorrecting output codes. Journal of Artificial Intelligence Research, 2:263­286, January 1995. [7] Jyrki Kivinen and Manfred K. Warmuth. Additive versus exponentiated gradient updates for linear prediction. Information and Computation, 132(1):1­64, January 1997. [8] John D. Lafferty. Additive models, boosting and inference for generalized divergences. In Proceedings of the Twelfth Annual Conference on Computational Learning Theory, 1999. [9] S. Della Pietra, V. Della Pietra, and J. Lafferty. Duality and auxilary functions for Bregman distances. Technical Report CS-01-10, CMU, 2002. [10] T. Poggio and F. Girosi. Networks for approximation and learning. Proc. of IEEE, 78(9), 1990. [11] R.E. Schapire, M. Rochery, M. Rahim, and N. Gupta. Incorporating prior knowledge into boosting. In Machine Learning: Proceedings of the Nineteenth International Conference, 2002.
+
+

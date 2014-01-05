@@ -1,0 +1,838 @@
+Bayesian Monte Carlo
+
+Carl Edward Rasmussen and Zoubin Ghahramani Gatsby Computational Neuroscience Unit University College London 17 Queen Square, London WC1N 3AR, England edward,zoubin@gatsby.ucl.ac.uk http://www.gatsby.ucl.ac.uk
+
+Abstract We investigate Bayesian alternatives to classical Monte Carlo methods for evaluating integrals. Bayesian Monte Carlo (BMC) allows the incorporation of prior knowledge, such as smoothness of the integrand, into the estimation. In a simple problem we show that this outperforms any classical importance sampling method. We also attempt more challenging multidimensional integrals involved in computing marginal likelihoods of statistical models (a.k.a. partition functions and model evidences). We find that Bayesian Monte Carlo outperformed Annealed Importance Sampling, although for very high dimensional problems or problems with massive multimodality BMC may be less adequate. One advantage of the Bayesian approach to Monte Carlo is that samples can be drawn from any distribution. This allows for the possibility of active design of sample points so as to maximise information gain.
+
+1 Introduction Inference in most interesting machine learning algorithms is not computationally tractable, and is solved using approximations. This is particularly true for Bayesian models which require evaluation of complex multidimensional integrals. Both analytical approximations, such as the Laplace approximation and variational methods, and Monte Carlo methods have recently been used widely for Bayesian machine learning problems. It is interesting to note that Monte Carlo itself is a purely frequentist procedure [O'Hagan, 1987; MacKay, 1999]. This leads to several inconsistencies which we review below, outlined in a paper by O'Hagan [1987] with the title "Monte Carlo is Fundamentally Unsound". We then investigate Bayesian counterparts to the classical Monte Carlo. Consider the evaluation of the integral:
+
+¡£¢¥¤§¦¨¡©© !#"  
+
+¡©$
+
+(1)
+
+© where
+
+©
+
+is a probability (density), and is the function we wish to integrate. For
+
+¡©
+
+example,
+
+could be© posterior distribution and  the the¡©%¤&#©$')( made by a model predictions 
+
+with parameters , or could be the parameter prior and the likelihood
+
+so that equation (1) evaluates the marginal likelihood (evidence) for a model. Classical
+
+
+Monte Carlo makes the approximation:
+
+¦ ¡£¢  ¡ 
+
+£¢ ¥¦
+
+where
+
+
+
+¤ §©¨ ¦
+
+¡©$   "
+
+ #©
+
+are random (not necessarily independent) draws from
+
+the right answer in the limit of large numbers of samples, . If sampling directly from
+
+© ¡©
+
+is hard, or if high density regions in do not match up with areas where
+
+£
+
+(2) , which converges to
+
+©
+
+has large
+
+magnitude, it is also possible to draw samples from some importance sampling distribution
+
+©
+
+to obtain the estimate: ¡£¢  ¤ ¦
+
+¡©#©$
+
+
+
+©$
+
+
+
+¦
+
+© © !   £¢ ¥ ¦ ¡©   
+
+
+
+¦  
+
+¦©$ 
+
+¦ ¦
+
+ (3)
+
+As O'Hagan [1987] points out, there are two important objections to these procedures.
+
+© 
+
+First, the estimator not only depends on the values of
+
+©
+
+tirely" arbitrary choice of the sampling distribution 
+
+
+
+" 
+
+ ¨ ¤
+
+ ! ¡©$
+
+
+
+but also on the en-
+
+. Thus, if the same set of samples
+
+ 
+
+¡ ¢   would be obtained. This
+
+, conveying exactly the same information about
+
+¡ ¢  
+
+two different sampling distributions, two different estimates of
+
+¦
+
+dependence on irrelevant (ancillary) information is unreasonable and violates the Likelihood Principle. The second objection is that classical Monte Carlo procedures entirely
+
+
+
+ignore the values of the
+
+  
+
+when forming the estimate. Consider the simple example of
+
+
+
+three points that are sampled from
+
+ ¤ 
+
+second,
+
+#" #$
+
+and the third happens to fall on the same point as the
+
+, were obtained from
+
+, conveying no extra information about the integrand. Simply aver-
+
+aging the integrand at these three points, which is the classical Monte Carlo estimate, is clearly inappropriate; it would make much more sense to average the first two (or the first and third). In practice points are unlikely to fall on top of each other in continuous spaces, however, a procedure that weights points equally regardless of their spatial distribution is ignoring relevant information. To summarize the objections, classical Monte Carlo bases its estimate on irrelevant information and throws away relevant information. We seek to turn the problem of evaluating the integral (1) into a Bayesian inference problem which, as we will see, avoids the inconsistencies of classical Monte Carlo and  can result in better estimates. To do this, we think of the unknown desired quantity as being random. Although this interpretation is not the most usual one, it is entirely consistent with the Bayesian view that all forms of uncertainty are represented using probabilities: in this
+
+¡ ¢
+
+¡©$
+
+case uncertainty arises because we cannot afford to compute
+
+¡£¢  ¡©
+
+the desired
+
+is a function of ¡
+
+at every location. Since
+
+(which is unknown until we evaluate it) we proceed
+
+¡
+
+by putting a prior on , combining it with the observations to obtain the posterior over which in turn implies a distribution over the desired . ¡ ¢  
+
+A very convenient way of putting priors over functions is through Gaussian Processes (GP). Under a GP prior the joint distribution of any (finite) number of function values (indexed
+
+
+
+by the inputs, ) is Gaussian: ¤ © ¡©
+
+%  
+
+¨  " ¡©$ #$  "  " ¡©$
+
+ #& ('0)01 32© 54"
+
+   " (4)
+
+where here we take the mean to be zero. The covariance matrix is given by the covariance
+
+function, a convenient choice being:1
+
+4¨¢6 87@9BA ¤
+
+C where the
+
+© ¡© ¢  " ¡©$
+
+
+
+ 6 DCFEGIHQPSRT
+
+¢ UWV¥X X6
+
+
+
+Xba
+
+  ¤ ©$
+
+X¢
+
+
+
+T  $B` C $
+
+  "
+
+§Y¨ (5)
+
+parameters are hyperparameters. Gaussian processes, including optimization
+
+of hyperparameters, are discussed in detail in [Williams and Rasmussen, 1996]. the diagonal of the covariance matrix to improve numerical conditioning.
+
+1 Although the function values obtained are assumed to be noise-free, we added a tiny constant to
+
+
+2 The Bayesian Monte Carlo Method
+
+ 
+
+#© ¡ 
+
+The Bayesian Monte Carlo method starts with¤ a prior¢¡ over the function, ¡ © " ¡© £¡  ( ¤ ¤
+
+inferences about from a set of samples
+
+© ¡ ( 
+
+  posterior distribution
+
+ 
+
+   ¢
+
+
+
+¦¥
+
+and makes giving the
+
+. Under a GP prior the posterior is (an infinite dimensional
+
+joint) Gaussian; since the integral eq. (1) is just a linear projection (on the direction defined by ), the posterior is also Gaussian, and fully characterized by its mean and variance. The average over functions of eq. (1) is the expectation of the average function: ¡£¢  ¤)¦ ¦ ¡©© ! #© ¡ (   ¡ ©
+
+#© ¡£¢  ( 
+
+ 
+
+§©¨  
+
+ 
+
+¤ ¦ ¦ ¡©#© ¡ (   ¡ #©   ¤ ¦ ¡ ©#©$   "  
+
+ 
+
+  (6)
+
+¡   
+
+where is the posterior mean function. Similarly, for the variance:
+
+$
+
+!"¨# $ % ¡£¢  ¤ ¦& ¦¨¡©#©$  
+
+¤ ¦ ¦ ¦)( ¡©
+
+¤ ¦ ¦ 7@9BA R
+
+
+
+T
+
+T
+
+¦ ¡©"' #©$ '     '  © ¡ (   ¡
+
+ 
+
+¡©$10 ¡©$  ( '
+
+a
+
+  ©T ¡© 20 #© ¡ (   ¡ ©#©$  !!
+
+' '
+
+ 
+
+  '
+
+(7)
+
+¡© " ¡©$  #©$©      "
+
+' ' '
+
+where
+
+7@9BA  is the posterior covariance. The standard results for the GP model for the
+
+posterior mean and covariance are:
+
+¡ © ¤43 ©#"65  
+
+%
+
+5
+
+where
+
+  4 ¨
+
+87 "
+
+7@9BA R 
+
+and
+
+% a
+
+¡©$ " ¡©  ¤93 ©#"   ' ' @3 T ©#"65  (4 ¨
+
+A7 3 B5 © "   " '
+
+(8)
+
+and are the observed inputs and function values respectively. In general combin-
+
+ing eq. (8) with eq. (6-7) may lead to expressions which are difficult to evaluate, but there are several interesting special cases.
+
+ 1lytical¤results."
+
+If the density
+
+©BG 
+
+¡
+
+§©¨ $
+
+
+
+£¡ IH
+
+¡ ¢¤9P  
+
+#©$ In¤ detail, if
+
+and the©
+
+covariance function eq. (5) are both Gaussian, we obtain ana-
+
+¤
+
+C© $ (C" $
+
+¨ 
+
+"
+
+©DC "FE¨
+
+ 
+
+then the expectation evaluates to:
+
+ESRUT ( 7 FV
+
+¨ $ GIHQP T 2 T '
+
+
+
+ ©BG YC  ©BH`R`E  XW
+
+and the Gaussian kernels on the data points are
+
+7
+
+¨ T ©BG YC 2  DC E ¨
+
+( H 7 V
+
+1
+
+diag
+
+' 4 ¨
+
+7
+
+%
+
+"QP ¤ (9)
+
+a result which has previously been derived under the name of Bayes-Hermite Quadrature [O'Hagan, 1991]. For the variance, we get:
+
+!"¨# $ % ¡£¢  ¤
+
+CFE U ¨
+
+Ua H 7 a EbR8Tca 7 6V
+
+¨ $ T ' 4 ¨
+
+QP 7 P "
+
+a (10)
+
+P
+
+with as defined in eq. (9). Other choices that lead to analytical results include polynomial
+
+#©
+
+kernels and mixtures of Gaussians for 2.1 A Simple Example .
+
+To illustrate the method we evaluated the integral of a one-dimensional function under a
+
+©
+
+Gaussian density (figure 1, left). We generated samples independently from
+
+¡©
+
+ated
+
+, evalu-
+
+at those points, and optimised the hyperparameters of our Gaussian process fit
+
+to the function. Figure 1 (middle) compares the error in the Bayesian Monte Carlo (BMC) estimate of the integral (1) to the Simple Monte Carlo (SMC) estimate using the same samples. As we would expect the squared error in the Simple Monte Carlo estimate decreases as where is the sample size. In contrast, for more than about 10 samples, the BMC estimate improves at a much higher rate. This is achieved because the prior on allows
+
+¢ ` £ £
+
+¡
+
+
+the method to interpolate between sample points. Moreover, whereas the SMC estimate is invariant to permutations of the values on the axis, BMC makes use of the smoothness of the function. Therefore, a point in a sparse region is far more informative about the shape of the function for BMC than points in already densely sampled areas. In SMC if two samples happen to fall close to each other the function value there will be counted with double weight. This effect means that large numbers of samples are needed to adequately represent 
+
+#©$ #©$
+
+. BMC circumvents this problem by analytically integrating its mean function w.r.t. .
+
+In figure 1 left, the negative log density of the true value of the integral under the predictive distributions are compared for BMC and SMC. For not too small sample sizes, BMC outperforms SMC. Notice however, that for very small sample sizes BMC occasionally has
+
+
+
+very bad performance. This is due to examples where the random draws of
+
+¡©$
+
+tion values
+
+lead to func-
+
+that are consistent with much longer length scale than the true function;
+
+the mean prediction becomes somewhat inaccurate, but worse still, the inferred variance becomes very small (because a very slowly varying function is inferred), leading to very poor performance compared to SMC. This problem is to a large extent caused by the optimization of the length scale hyperparameters of the covariance function; we ought instead to have integrated over all possible length scales. This integration would effectively "blend in" distributions with much larger variance (since the data is also consistent with a shorter length scale), thus alleviating the problem, but unfortunately this is not possible in closed form. The problem disappears for sample sizes of around 16 or greater. In the previous example, we chose to be Gaussian. If you wish to use BMC to integrate w.r.t. non-Gaussian densities then an importance re-weighting trick becomes necessary:
+
+©
+
+¦ ¡©$©   ¤ ¦
+
+¡©$©
+
+¡©©
+
+
+
+ ©$ ©$
+
+ ©   "
+
+ ©
+
+(11)
+
+© is where the Gaussian process models
+
+` and is a Gaussian and
+
+an arbitrary©density which can be evaluated. See Kennedy [1998] for extension to nonGaussian . 2.2 Optimal Importance Sampler For the simple example discussed above, it is also interesting to ask whether the efficiency of SMC could be improved by generating independent samples from more-cleverly de-
+
+¦
+
+signed distributions. As we have seen in equation (3), importance sampling gives an unbiased estimate of by sampling from and computing: ¡£¢ 
+
+¦
+
+¡   ¤ ¤
+
+£¢ ¥ ¦ © ¡©$  
+
+#©$
+
+
+
+
+
+©  (12)
+
+
+
+
+
+¦ ¦
+
+
+
+where
+
+ ©$ ¢¡ 2 wherever
+
+!
+
+© © ¡  ¤
+
+  ¤
+
+£¡ 2
+
+. The variance of this estimator is given by:
+
+£¢ ¤ $ $
+
+¦
+
+¡© ©
+
+
+
+©$
+
+! ST ¦¥¢$ ¡  
+
+(13)
+
+Using calculus of variations it is simple to show that the optimal (minimum variance) importance sampling distribution is:
+
+¨§ © ¤ ©
+
+( ¡©£(© ( ¡©  (#©  !
+
+' ' ' (14)
+
+¡© is !
+
+¡
+
+ 
+
+needed to know in advance to normalise . For functions that take on both positive and
+
+
+
+§ ¤ always non-negative or non-positive then 2
+
+§
+
+which we can substitute into equation (13)! to get the minimum variance,
+
+. If
+
+, which is unsurprising given that we
+
+
+-2
+
+10
+
+0.5 0.4 0.3 0.2 0.1 0 -0.1 -0.2 -0.3 -0.4 -0.5 -4
+
+function f(x) measure p(x)
+
+Bayesian inference Simple Monte Carlo Optimal importance Bayesian inference Simple Monte Carlo
+
+20
+
+-3
+
+10 value
+
+15
+
+error
+
+-4
+
+10 correct
+
+of 10
+
+squared
+
+-5
+
+10 5 density
+
+log average 0
+
+-6
+
+10
+
+minus
+
+-5
+
+-7
+
+10 -2 0 2 4 1
+
+10 2 10 1 10 2 10
+
+sample size
+
+¡ Figure 1: Left: a simple one-dimensional function
+
+¡
+
+sample size (full) and Gaussian density (dashed)
+
+with respect to which we wish to integrate . Middle: average squared error for simple Monte Carlo sampling from (dashed), the optimal achievable bound for importance sampling (dot-dashed), and the Bayesian Monte Carlo estimates. The values plotted are averages over up to 2048 repetitions. Right: Minus the log of the Gaussian predictive density with mean eq. (6) and variance eq. (7), evaluated at the true value of the integral (found by numerical integration), `x'. Similarly for the Simple Monte Carlo procedure, where the mean and variance of the predictive distribution are computed from the samples, 'o'. 
+
+!
+
+§ ¤ © negative values ¢ ` £  © ¢ ( ¡©£( § 
+
+¡©$
+
+$ T $ ¡    which is a constant times the variance of
+
+a Bernoulli random variable (sign ). The lower bound from this optimal importance
+
+sampler as a function of number of samples is shown in figure 1, middle. As we can see, Bayesian Monte Carlo improves on the optimal importance sampler considerably. We stress that the optimal importance sampler is not practically achievable since it requires knowledge of the quantity we are trying to estimate.
+
+3 Computing Marginal Likelihoods
+
+We now consider the problem of estimating the marginal likelihood of a statistical model. This problem is notoriously difficult and very important, since it allows for comparison of different models. In the physics literature it is known as free-energy estimation. Here we compare the Bayesian Monte Carlo method to two other techniques: Simple Monte Carlo sampling (SMC) and Annealed Importance Sampling (AIS). Simple Monte Carlo, sampling from the prior, is generally considered inadequate for this problem, because the likelihood is typically sharply peaked and samples from the prior are unlikely to fall in these confined areas, leading to huge variance in the estimates (although they are unbiased). A family of promising "thermodynamic integration" techniques for computing marginal likelihoods are discussed under the name of Bridge and Path sampling in [Gelman and Meng, 1998] and Annealed Importance Sampling (AIS) in [Neal, 2001]. The central idea is to divide one difficult integral into a series of easier ones, parameterised
+
+
+by (inverse) temperature,   . In detail:
+
+¡£¢ ¡ E ¡ E
+
+the
+
+¤
+
+¡ ¡ ¡ E ¡ ¨ $¨¥¤¦¤§¤ ¡¨¢ ¡ ¢ "
+
+¨
+
+where
+
+¡¨© ¤ ¦ #©$' ( 
+
+7
+
+
+
+¤ ¦ #©   ¤
+
+
+
+¢ and  
+
+© (15)
+
+¢
+
+#©$   "
+
+where  
+
+#©$')( 
+
+©D3 
+
+is 3
+
+inverse temperature of the annealing schedule and  
+
+To compute each fraction we sample from equilibrium from the distribution
+
+7
+
+© ¤ ¦
+
+and compute importance weights:
+
+©')( 
+
+#©')( 
+
+ © ¨
+
+7
+
+©
+
+© #©$
+
+ © ©     7 ¨
+
+
+
+£¢ ¥ ©')( 
+
+    ©  © ¨
+
+¢¡
+
+© ¡© ¡ ©
+
+  ¨
+
+7
+
+¨
+
+
+
+In practice
+
+£
+
+¡
+
+¤ §Y¨
+
+7 7
+
+34©©   ¤
+
+¨ ©$ 7  .
+
+
+
+(16)
+
+can be set to 1, to allow very slow reduction in temperature. Each of the
+
+intermediate ratios are much easier to compute than the original ratio, since the likelihood function to the power of a small number is much better behaved that the likelihood itself. Often elaborate non-linear cooling schedules are used, but for simplicity we will just take a linear schedule for the inverse temperature. The samples at each temperature are drawn using a single Metropolis proposal, where the proposal width is chosen to get a fairly high fraction of acceptances. The model in question for which we attempt to compute the marginal likelihood was itself a Gaussian process regression fit to the an artificial dataset suggested by [Friedman, noise variance parameter. Thus the marginal likelihood is an integral© over ¤a 7 dimensional hyperparameter space. The log of the hyperparameters are given priors. Figure 2 shows a comparison of the three methods. Perhaps surprisingly, AIS and SMC are seen to be very comparable, which can be due to several reasons: 1) whereas the SMC samples are drawn independently, the AIS samples have considerable auto-correlation because of the Metropolis generation mechanism, which hampers performance for low sample sizes, 2) the annealing schedule was not optimized nor the proposal width adjusted with temperature, which might possibly have sped up convergence. Further, the difference between AIS and SMC would be more dramatic in higher dimensions and for more highly peaked likelihood functions (i.e. more data). The Bayesian Monte Carlo method was run on the same samples as were generate by the AIS procedure. Note that BMC can use samples from any distribution, as long as can be evaluated. Another obvious choice for generating samples for BMC would be to use an MCMC method to draw samples from the posterior. Because BMC needs to model the integrand using a GP, we need to limit the number of samples since computation (for fitting
+
+C E
+
+1988].2 We had W length scale hyperparameters, a signal variance ( ) and an explicit
+
+1 2 "!" $ $#
+
+
+
+©
+
+hyperparameters and computing the % 's) scales as U 2&#(' U 2)#0'
+
+we limit the number of samples to
+
+"
+
+¥ . Thus for sample size greater than
+
+, chosen equally spaced from the AIS Markov
+
+chain. Despite this thinning of the samples we see a generally superior performance of BMC, especially for smaller sample sizes. In fact, BMC seems to perform equally well for almost any of the investigated sample sizes. Even for this fairly large number of samples, the generation of points from the AIS still dominates compute time. 4 Discussion An important aspect which we have not explored in this paper is the idea that the GP model used to fit the integrand gives errorbars (uncertainties) on the integrand. These error bars
+
+G8HPIAQSR2The
+
+24TU3 5 3WV8DYXa` 243bdc 9efD X 3Wg¨Xae¦3 B Xah
+
+data was 100 samples generated from the 5-dimensional function
+
+, where
+
+h
+
+H H V G8H 1 2436587@9@9"9@7A3CB8DFE
+
+is zero mean unit variance Gaussian
+
+noise and the inputs are sampled independently from a uniform [0, 1] distribution.
+
+
+Likelihood
+
+Marginal
+
+Log
+
+-45 -50 -55 -60 -65 -70
+
+True SMC AIS BMC
+
+5
+
+10 3 10 4 10 Number of Samples
+
+Figure 2: Estimates of the marginal likelihood for different sample sizes using Simple Monte Carlo sampling (SMC; circles, dotted line), Annealed Importance Sampling (AIS; (solid straight line) is estimated from a single sample long run of AIS. For comparison,
+
+  , dashed line), and Bayesian Monte Carlo (BMC; triangles, solid line). The true value ¢ 2¢¡
+
+the maximum log likelihood is
+
+T¤£¦¥ )#£ 
+
+(which is an upper bound on the true value).
+
+could be used to conduct an experimental design, i.e. active learning. A simple approach would be to evaluate the function at points where the GP has large uncertainty and integral scales as . For a fixed Gaussian Process covariance function these design points can often be pre-computed, see e.g. [Minka, 2000]. However, as we are adapting the covariance function depending on the observed function values, active learning would have to be an integral part of the procedure. Classical Monte Carlo approaches cannot make use of active learning since the samples need to be drawn from a given distribution. When using BMC to compute marginal likelihoods, the Gaussian covariance function used here (equation 5) is not ideally suited to modeling the likelihood. Firstly, likelihoods are non-negative whereas the prior is not restricted in the values the function can take. Secondly, the likelihood tends to have some regions of high magnitude and variability and other regions which are low and flat; this is not well-modelled by a stationary covariance function. In practice this misfit between the GP prior and the function modelled has even occasionally led to negative values for the estimate of the marginal likelihood! There could be several approaches to improving the appropriateness of the prior. An importance distribution such as one computed from a Laplace approximation or a mixture of Gaussians can be used to dampen the variability in the integrand [Kennedy, 1998]. The GP could be used to model the log of the likelihood [Rasmussen, 2002]; however this makes integration more difficult. The BMC method outlined in this paper can be extended in several ways. Although the choice of Gaussian process priors is computationally convenient in certain circumstances, in general other function approximation priors can be used to model the integrand. For discrete (or mixed) variables the GP model could still be used with appropriate choice of covariance function. However, the resulting sum (analogous to equation 1) may be difficult
+
+ ©
+
+#©$
+
+is not too small: the expected contribution to the uncertainty in the estimate of the ©$#© !
+
+!
+
+
+¡ to evaluate. For discrete , GPs are not directly applicable. Although BMC has proven successful on the problems presented here, there are several limitations to the approach. High dimensional integrands can prove difficult to model. In such cases a large number of samples may be required to obtain good estimates of the function. Inference using a Gaussian Process prior is at present limited computationally to a few thousand samples. Further, models such as neural networks and mixture models exhibit an exponentially large number of symmetrical modes in the posterior. Again modelling this with a GP#©$ would typically be difficult. Finally, the BMC method requires prior that the distribution can be evaluated. This contrasts with classical MC where many methods only require that samples can be drawn from some distribution , for which the normalising constant is not necessarily known (such as in equation 16). Unfortunately, this limitation makes it difficult, for example, to design a Bayesian analogue to Annealed Importance Sampling. We believe that the problem of computing an integral using a limited number of function evaluations should be treated as an inference problem and that all prior knowledge about the function being integrated should be incorporated into the inference. Despite the limitations outlined above, Bayesian Monte Carlo makes it possible to do this inference and can achieve performance equivalent to state-of-the-art classical methods despite using a fraction of sample evaluations, even sometimes exceeding the theoretically optimal performance of some classical methods. Acknowledgments We would like to thank Radford Neal for inspiring discussions. References Friedman, J. (1988). Multivariate Adaptive Regression Splines. Technical Report No. 102, November 1988, Laboratory for Computational Statistics, Department of Statistics, Stanford University. Kennedy, M. (1998). Bayesian quadrature with non-normal approximating functions, Statistics and Computing, 8, pp. 365­375. MacKay, D. J. C. (1999). Introduction to Monte Carlo methods. In Learning in Graphical Models, M. I. Jordan (ed), MIT Press, 1999. Gelman, A. and Meng, X.-L. (1998) Simulating normalizing constants: From importance sampling to bridge sampling to path sampling, Statistical Science, vol. 13, pp. 163­185. Minka, T. P. (2000) Deriving quadrature rules from Gaussian processes, Technical Report, Statistics Department, Carnegie Mellon University. Neal, R. M. (2001). Annealed Importance Sampling, Statistics and Computing, 11, pp. 125­139. O'Hagan, A. (1987). Monte Carlo is fundamentally unsound, The Statistician, 36, pp. 247-249. O'Hagan, A. (1991). Bayes-Hermite Quadrature, Journal of Statistical Planning and Inference, 29, pp. 245­260. O'Hagan, A. (1992). Some Bayesian Numerical Analysis. Bayesian Statistics 4 (J. M. Bernardo, J. O. Berger, A. P. Dawid and A. F. M. Smith, eds), Oxford University Press, pp. 345­365 (with discussion). C. E. Rasmussen (2003). Gaussian Processes to Speed up Hybrid Monte Carlo for Expensive Bayesian Integrals, Bayesian Statistics 7 (J. M. Bernardo, M. J. Bayarri, J. O. Berger, A. P. Dawid, D. Heckerman, A. F. M. Smith and M. West, eds), Oxford University Press. Williams, C. K. I. and C. E. Rasmussen (1996). Gaussian Processes for Regression, in D. S. Touretzky, M. C. Mozer and M. E. Hasselmo (editors), NIPS 8, MIT Press.
+
+ ©
+
+

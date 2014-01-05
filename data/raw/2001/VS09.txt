@@ -1,0 +1,405 @@
+Contextual Modulation of Target Saliency
+Antonio Torralba
+Dept. of Brain and Cognitive Sciences
+MIT, Cambridge, MA 02139
+torralba@ai.mit.edu
+Abstract
+The most popular algorithms for object detection require the use of
+exhaustive spatial and scale search procedures. In such approaches,
+an object is dened by means of local features. In this paper we
+show that including contextual information in object detection pro-
+cedures provides an e∆cient way of cutting down the need for
+exhaustive search. We present results with real images showing
+that the proposed scheme is able to accurately predict likely object
+classes, locations and sizes.
+1 Introduction
+Although there is growing evidence of the role of contextual information in human
+perception [1], research in computational vision is dominated by object-based rep-
+resentations [5,9,10,15]. In real-world scenes, intrinsic object information is often
+degraded due to occlusion, low contrast, and poor resolution. In such situations, the
+object recognition problem based on intrinsic object representations is ill-posed. A
+more comprehensive representation of an object should include contextual informa-
+tion [11,13]: Obj: representation = fintrisic obj: model; contextual obj: modelg.
+In this representation, an object is dened by 1) a model of the intrinsic proper-
+ties of the object and 2) a model of the typical contexts in which the object is
+immersed. Here we show how incorporating contextual models can enhance target
+object saliency and provide an estimate of its likelihood and intrinsic properties.
+2 Target saliency and object likelihood
+Image information can be partitioned into two sets of features: local features, ~v L ,
+that are intrinsic to an object, and contextual features, ~v c which encode structural
+properties of the background. In a statistical framework, object detection requires
+evaluation of the likelihood function (target saliency function): P (O j ~v L ; ~v C ) which
+provides the probability of presence of the object O given a set of local and contex-
+tual measurements. O is the set of parameters that dene an object immersed in a
+scene: O = fon ; x; y; ~ tg with on =object class, (x,y)=location in image coordinates
+
+and ~ t=object appearance parameters. By applying Bayes rule we can write:
+P (O j ~v L ; ~v C ) = 1
+P (~v L j ~v C ) P (~v L j O; ~v C )P (O j ~v C ) (1)
+Those three factors provide a simplied framework for representing three levels of at-
+tention guidance when looking for a target: The normalization factor, 1=P (~v L j ~v C ),
+does not depend on the target or task constraints, and therefore is a bottom-up fac-
+tor. It provides a measure of how unlikely it is to nd a set of local measurements ~v L
+within the context ~v C . We can dene local saliency as S(x; y) = 1=P (~v L (x; y) j ~v C ).
+Saliency is large for unlikely features in a scene. The second factor, P (~v L j O; ~v C ),
+gives the likelihood of the local measurements ~v L when the object is present at such
+location in a particular context. We can write P (~v L j O; ~v C ) ' P (~v L j O), which is a
+convenient approximation when the aspect of the target object is fully determined
+by the parameters given by the description O. This factor represents the top-down
+knowledge of the target appearance and how it contributes to the search. Regions
+of the image with features unlikely to belong to the target object are vetoed and
+regions with attended features are enhanced. The third factor, the PDF P (O j ~v C ),
+provides context-based priors on object class, location and scale. It is of capital
+importance for insuring reliable inferences in situations where the local image mea-
+surements ~v L produce ambiguous interpretations. This factor does not depend on
+local measurements and target models [8,13]. Therefore, the term P (O j ~v C ) mod-
+ulates the saliency of local image properties when looking for an object of the class
+on . Contextual priors become more evident if we apply Bayes rule successively in
+order to split the PDF P (O j ~v C ) into three factors that model three kinds of context
+priming on object search:
+P (O; j ~v C ) ' P ( ~ t j ~v C ; on )P (x; y j ~v C ; o n )P (o n ; j ~v C ) (2)
+According to this decomposition of the PDF, the contextual modulation of target
+saliency is a function of three main factors:
+Object likelihood: P (o n j ~v C ) provides the probability of presence of the object class
+on in the scene. If P (o n j ~v C ) is very small, then object search need not be initiated
+(we do not need to look for cars in a living room).
+Contextual control of focus of attention: P (x; y j o n ; ~v C ). This PDDF gives the
+most likely locations for the presence of object o n given context information, and
+it allocates computational resources into relevant scene regions.
+Contextual selection of local target appearance: P ( ~ t j ~v C ; on ). This gives the likely
+(prototypical) shapes (point of views, size, aspect ratio, object aspect) of the object
+on in the context ~v C . Here ~ t = f; pg, with =scale and p=aspect ratio. Other
+parameters describing the appearance of an object in an image can be added.
+The image features most commonly used for describing local structures are the
+energy outputs of oriented band-pass lters, as they have been shown to be relevant
+for the task of object detection [9,10] and scene recognition [2,4,8,12]. Therefore,
+the local image representation at the spatial location (~x) is given by the vector
+~v L (~x) = fv(~x; k)g k=1;N with:
+v(~x; k) =
+    
+X
+~x 0
+i(~x 0 )g k (~x ~x 0 )
+     (3)
+
+1 2 3 4
+0
+1
+1 2 3 4
+0
+1
+1 2 3 4
+0
+1
+p(o
+n
+|v
+c
+)
+p(o
+n
+|v
+c
+)
+p(o
+n
+|v
+c
+)
+Figure 1: Contextual object priming of four objects categories (1-people, 2-
+furniture, 3-vehicles and 4-trees)
+where i(~x) is the input image and g k (~x) are oriented band-pass lters dened by
+g k (~x) = e k~xk 2 = 2
+k e 2j< ~
+fk ;~x> . In such a representation [8], v(~x; k) is the output
+magnitude at the location ~x of a complex Gabor lter tuned to the spatial fre-
+quency ~
+f k . The variable k indexes lters tuned to dierent spatial frequencies and
+orientations.
+On the other hand, contextual features have to summarize the structure of the
+whole image. It has been shown that a holistic low-dimensional encoding of the
+local image features conveys enough information for a semantic categorization of
+the scene/context [8] and can be used for contextual priming in object recognition
+tasks [13]. Such a representation can be achieved by decomposing the image features
+into the basis functions provided by PCA:
+an =
+X
+~x
+X
+k
+v(~x; k)  n (~x; k) v(~x; k) '
+N
+X
+n=1
+an n (~x; k) (4)
+We propose to use the decomposition coe∆cients ~v C = fan gn=1;N as context fea-
+tures. The functions  n are the eigenfunctions of the covariance operator given by
+v(~x; k). By using only a reduced set of components (N = 60 for the rest of the
+paper), the coe∆cients fangn=1;N encode the main spectral characteristics of the
+scene with a coarse description of their spatial arrangement. In essence, fan gn=1;N
+is a holistic representation as all the regions of the image contribute to all the co-
+e∆cients, and objects are not encoded individually [8]. In the rest of the paper we
+show the e∆cacy of this set of features in context modeling for object detection
+tasks.
+3 Contextual object priming
+The PDF P (o n j ~v C ) gives the probability of presence of the object class o n given
+contextual information. In other words, the PDF P (o n j ~v C ) evaluates the con-
+sistency of the object o n with the context ~v C . For instance, a car has a high
+probability of presence in a highway scene but it is inconsistent with an indoor
+environment. The goal of P (o n j ~v C ) is to cut down the number of possible ob-
+ject categories to deal with before expending computational resources in the object
+recognition process. The learning of the PDF P (o n j ~v C ) = P (~v C j on )P (o n )=p(~v C )
+with p(~v C ) = P (~v C j on )P (o n ) + P (~v C j :on )P (:on ) is done by approximating the
+in-class and out-of-class PDFs by a mixture of Gaussians:
+P (~v C j o n ) =
+L
+X
+i=1
+b i;n G(~v C ; ~v i;n ; V i;n ) (5)
+
+Figure 2: Contextual control of focus of attention when the algorithm is looking for
+cars (upper row) or heads (bottom row).
+The model parameters (b i;n ; ~v i;n ; V i;n ) for the object class o n are obtained using the
+EM algorithm [3]. The learning requires the use of few Gaussian clusters (L = 2
+provides very good performances). For the learning, the system is trained with
+a set of examples manually annotated with the presence/absence of four objects
+categories (1-people, 2-furniture, 3-vehicles and 4-trees). Fig. 1 shows some typical
+results from the priming model on the four superordinate categories of objects
+dened. Note that the probability function P (o n j ~v C ) provides information about
+the probable presence of one object without scanning the picture. If P (o n j ~v C ) > 1
+th then we can predict that the target is present. On the other hand, if P (o n j ~v C ) <
+th we can predict that the object is likely to be absent before exploring the image.
+The number of scenes in which the system may be able to take high condence
+decisions will depend on dierent factors such as: the strength of the relationship
+between the target object and its context and the ability of ~v C for e∆ciently charac-
+terizing the context. Figure 1 shows some typical results from the priming model for
+a set of super-ordinate categories of objects. When forcing the model to take binary
+decisions in all the images (by selecting an acceptance threshold of th = 0:5) the
+presence/absence of the objects was correctly predicted by the model on 81% of the
+scenes of the test set. For each object category, high condence predictions (th = :1)
+were made in at least 50% of the tested scene pictures and the presence/absence
+of each object class was correctly predicted by the model on 95% of those images.
+Therefore, for those images, we do not need to use local image analysis to decide
+about the presence/absence of the object.
+4 Contextual control of focus of attention
+One of the strategies that biological visual systems use to deal with the analysis
+of real-world scenes is to focus attention (and, therefore, computational resources)
+onto the important image regions while neglecting others. Current computational
+models of visual attention (saliency maps and target detection) rely exclusively on
+local information or intrinsic object models [6,7,9,14,16]. The control of the focus
+of attention by contextual information that we propose here is both task driven
+(looking for object on ) and context driven (given global context information: ~v C ).
+However, it does not include any model of the target object at this stage. In our
+framework, the problem of contextual control of the focus of attention involves the
+
+100
+10
+1
+1 10 100
+pixels
+Real scale
+Estimated
+scale HEADS 100
+10
+1
+Estimated scale
+Real scale
+1 10 100
+pixels
+CARS
+1 1.8
+1
+1.8
+Real pose
+Estimated
+pose
+HEADS
+1
+0.4
+0.4
+1 CARS
+Real pose
+Estimated pose
+Figure 3: Estimation results of object scale and pose based on contextual features.
+evaluation of the PDF P (~xj o n ; ~v C ). For the learning, the joint PDF is modeled
+as a sum of gaussian clusters. Each cluster is decomposed into the product of
+two gaussians modeling respectively the distribution of object locations and the
+distribution of contextual features for each cluster:
+P (~x; ~v C j o n ) =
+L
+X
+i=1
+b i;n G(~x; ~x i;n ; X i;n )G(~v C ; ~v i;n ; V i;n ) (6)
+The training set used for the learning of the PDF P (~x; ~v C j on ) is a subset of the
+pictures that contain the object o n . The training data is f~v t g t=1;N t
+and f~x t g t=1;N t
+where ~v t are the contextual features of the picture t of the training set and ~x t is
+the location of object on in the image. The model parameters are obtained using
+the EM algorithm [3,13]. We used 1200 pictures for training and a separate set of
+1200 pictures for testing. The success of the PDF in narrowing the region of the
+focus of attention will depend on the consistency of the relationship between the
+object and the context. Fig. 2 shows several examples of images and the selected
+regions based on contextual features when looking for cars and faces. From the
+PDF P (~x; ~v C j o n ) we selected the region with the highest probability (33% of the
+image size on average). 87% of the heads present in the test pictures were inside
+the selected regions.
+5 Contextual selection of object appearance models
+One major problem for computational approaches to object detection is the large
+variability in object appearance. The classical solution is to explore the space of
+possible shapes looking for the best match. The main sources of variability in object
+appearance are size, pose and intra-class shape variability (deformations, style, etc.).
+We show here that including contextual information can reduce at least the rst
+two sources of variability. For instance, the expected size of people in an image
+diers greatly between an indoor environment and a perspective view of a street.
+Both environments produce dierent patterns of contextual features ~v C [8]. For
+the second factor, pose, in the case of cars, there is a strong relationship between
+the possible orientations of the object and the scene conguration. For instance,
+looking down a highway, we expect to see the back of the cars, however, in a street
+view, looking towards the buildings, lateral views of cars are more likely.
+The expected scale and pose of the target object can be estimated by a regression
+procedure. The training database used for building the regression is a set of 1000
+images in which the target object o n is present. For each training image the target
+
+Figure 4: Selection of prototypical object appearances based on contextual cues.
+object was selected by cropping a rectangular window. For faces and cars we dene
+the  = scale as the height of the selected window and the p = pose as the ratio be-
+tween the horizontal and vertical dimensions of the window (y=x). On average,
+this denition of pose provides a good estimation of the orientation for cars but not
+for heads. Here we used regression using a mixture of gaussians for estimating the
+conditional PDFs between scale, pose and contextual features: P ( j ~v C ; on ) and
+P (p j ~v C ; on ). This yields the next regression procedures [3]:
+ =
+P
+i  i;n b i;n G(~v C ; ~v i;n ; V i;n )
+P
+i b i;n G(~v C ; ~v i;n ; V i;n ) p =
+P
+i p i;n b i;n G(~v C ; ~v i;n ; V i;n )
+P
+i b i;n G(~v C ; ~v i;n ; V i;n ) (7)
+The results summarized in g. 3 show that context is a strong cue for scale selec-
+tion for the face detection task but less important for the car detection task. On
+the other hand, context introduces strong constraints on the prototypical point of
+views of cars but not at all for heads. Once the two parameters (pose and scale)
+have been estimated, we can build a prototypical model of the target object. In the
+case of a view-based object representation, the model of the object will consist of
+a collection of templates that correspond to the possible aspects of the target. For
+each image the system produces a collection of views, selected among a database
+of target examples that have the scale and pose given by eqs. (7). Fig. 4 shows
+some results from this procedure. In the statistical framework, the object detec-
+tion requires the evaluation of the function P (~v L j O; ~v C ). We can approximate
+
+Object priming and
+Target model selection
+Contextual control 
+of focus of attention
+Target saliency
+1 2 3 4
+Integration of
+local features
+ Input image
+(target = cars)
+1
+0
+Figure 5: Schematic layout of the model for object detection (here cars) by inte-
+gration of contextual and local information. The bottom example is an error in
+detection due to incorrect context identication.
+P (~v L j O; ~v C ) ' P (~v L j on ; ; p). Fig. 5 and 6 show the complete chain of opera-
+tions and some detection results using a simple correlation technique between the
+image and the generated object models (100 exemplars) at only one scale. The last
+image of each row shows the total object likelihood obtained by multiplying the
+object saliency maps (obtained by the correlation) and the contextual control of
+the focus of attention. The result shows how the use of context helps reduce false
+alarms. This results in good detection performances despite the simplicity of the
+matching procedure used.
+6 Conclusion
+The contextual schema of a scene provides the likelihood of presence, typical loca-
+tions and appearances of objects within the scene. We have proposed a model for
+incorporating such contextual cues in the task of object detection. The main aspects
+of our approach are: 1) Progressive reduction of the window of focus of attention:
+the system reduces the size of the focus of attention by rst integrating contextual
+information and then local information. 2) Inhibition of target like patterns that
+are in inconsistent locations. 3) Faster detection of correctly scaled targets that
+have a pose in agreement with the context. 4) No requirement of parsing a scene
+into individual objects. Furthermore, once one object has been detected, it can
+introduce new contextual information for analyzing the rest of the scene.
+Acknowledgments
+The author wishes to thank Dr. Pawan Sinha, Dr. Aude Oliva and Prof. Whitman
+Richards for fruitful discussions.
+References
+[1] Biederman, I., Mezzanotte, R.J., & Rabinowitz, J.C. (1982). Scene perception: detect-
+ing and judging objects undergoing relational violations. Cognitive Psychology, 14:143{
+177.
+
+Local
+analysis
+Local
+analysis
+Target model
+selection
+p( O V L , V C
+p( O V L , V C ) 
+p(O | V C )
+p(O | V C )
+p(V L | O, V C )
+p(V | V )
+p(V L | O, V C )
+p(V L | V C )
+#
+#
+#
+v C
+# 1
+# 2
+# #
+v
+}
+Feature maps
+Global encoding
+v L
+Local 
+encoding
+.
+.
+.
+.
+.
+.
+Figure 6: Schema for object detection (e.g. cars) integrating local and global infor-
+mation.
+[2] Carson, C., Belongie, S., Greenspan, H., and Malik, J. (1997). Region-based image
+querying. Proc. IEEE W. on Content-Based Access of Image and Video Libraries, pp:
+42{49.
+[3] Gershnfeld, N. The nature of mathematical modeling. Cambridge university press, 1999.
+[4] Gorkani, M. M., Picard, R. W. (1994). Texture orientation for sorting photos 'at a
+glance'. Proc. Int. Conf. Pat. Rec., Jerusalem, Vol. I: 459-464.
+[5] Heisle, B., T. Serre, S. Mukherjee and T. Poggio. (2001) Feature Reduction and Hier-
+archy of Classiers for Fast Object Detection in Video Images. In: Proceedings of 2001
+IEEE Computer Society Conference on Computer Vision and Pattern Recognition, IEEE
+Computer Society Press, Jauai, Hawaii.
+[6] Itti, L., Koch, C., & Niebur, E. (1998). A model of saliency-based visual attention for
+rapid scene analysis. IEEE Trans. Pattern Analysis and Machine Vision, 20(11):1254.
+[7] Moghaddam, B., & Pentland, A. (1997). Probabilistic Visual Learning for Object Rep-
+resentation. IEEE Trans. Pattern Analysis and Machine Vision, 19(7):696-710.
+[8] Oliva, A., & Torralba, A. (2001). Modeling the Shape of the Scene: A holistic repre-
+sentation of the spatial envelope. Int. Journal of Computer Vision, 42(3):145-175.
+[9] Rao, R.P.N., Zelinsky, G.J., Hayhoe, M.M., & Ballard, D.H. (1996). Modeling saccadic
+targeting in visual search. NIPS 8. Cambridge, MA: MIT Press.
+[10] Schiele, B., Crowley, J. L. (2000) Recognition without Correspondence using Multidi-
+mensional Receptive Field Histograms, Int. Journal of Computer Vision, Vol. 36(1):31-50.
+[11] Strat, T. M., & Fischler, M. A. (1991). Context-based vision: recognizing objects
+using information from both 2-D and 3-D imagery. IEEE trans. on Pattern Analysis and
+Machine Intelligence, 13(10): 1050-1065.
+[12] Szummer, M., and Picard, R. W. (1998). Indoor-outdoor image classication. In
+IEEE intl. workshop on Content-based Access of Image and Video Databases, 1998.
+[13] Torralba, A., & Sinha, P. (2001). Statistical context priming for object detection.
+IEEE Proc. Of Int. Conf in Comp. Vision.
+[14] Treisman, A., & Gelade, G. (1980). A feature integration theory of attention. Cogni-
+tive Psychology, Vol. 12:97{136.
+[15] Viola, P. and Jones, M. (2001). Rapid object detection using a boosted cascade
+of simple features. In: Proceedings of 2001 IEEE Computer Society Conference on Com-
+puter Vision and Pattern Recognition (CVPR 2001), IEEE Computer Society Press, Jauai,
+Hawaii.
+[16] Wolfe, J. M. (1994). Guided search 2.0. A revised model of visual search. Psycho-
+nomic Bulletin and Review, 1:202-228
+

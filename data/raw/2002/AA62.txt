@@ -1,0 +1,470 @@
+Annealing and the Rate Distortion Problem
+
+Albert E. Parker Department of Mathematical Sciences Montana State University Bozeman, MT 59771 parker@math.montana.edu Toma´s Gedeon Department of Mathematical Sciences Montana State University gedeon@math.montana.edu
+
+Alexander G. Dimitrov Center for Computational Biology Montana State University alex@nervana.montana.edu
+
+Abstract
+
+In this paper we introduce methodology to determine the bifurcation structure of optima for a class of similar cost functions from Rate Distortion Theory, Deterministic Annealing, Information Distortion and the Information Bottleneck Method. We also introduce a numerical algorithm which uses the explicit form of the bifurcating branches to find optima at a bifurcation point.
+
+1 Introduction This paper analyzes a class of optimization problems max G(q) + D(q)
+
+q
+
+(1)
+
+where  is a linear constraint space, G and D are continuous, real valued functions of q,
+
+smooth in the interior of , and maxq  G(q) is known. Furthermore, G and D are invariant
+
+under the group of symmetries SN. The goal is to solve (1) for  = B  [0, ). This type of problem, which appears to be NP hard, arises in Rate Distortion Theory [1, 2], Deterministic Annealing [3], Information Distortion [4, 5, 6] and the Information Bottleneck Method [7, 8]. The following basic algorithm, various forms of which have appeared in [3, 4, 6, 7, 8], can be used to solve (1) for  = B. Algorithm 1 Let q0 be the maximizer of max G(q)
+
+q
+
+(2)
+
+ = B for some . and let 0 = 0. For k  0, let (qk, k) be a solution to (1). Iterate the following steps until
+
+1. Perform -step: Let k +1 = k + dk where dk > 0.
+
+
+2. Take qk
+
+(0)
+
++1
+
+solution qk
+
+= qk + , where  is a small perturbation, as an initial guess for the
+
++1 at k +1 .
+
+3. Optimization: solve
+
+max G(q) + k q +1 D(q)
+
+to get the maximizer qk
+
+(0)
+
+, using initial guess qk
+
++1
+
++1 .
+
+We introduce methodology to efficiently perform algorithm 1. Specifically, we implement numerical continuation techniques [9, 10] to effect steps 1 and 2. We show how to detect bifurcation and we rely on bifurcation theory with symmetries [11, 12, 13] to search for the desired solution branch. This paper concludes with the improved algorithm 6 which solves (1). 2 The cost functions The four problems we analyze are from Rate Distortion Theory [1, 2], Deterministic Annealing [3], Information Distortion [4, 5, 6] and the Information Bottleneck Method [7, 8]. We discuss the explicit form of the cost function (i.e. G(q) and D(q)) for each of these scenarios in this section. 2.1 The distortion function D(q) Rate distortion theory is the information theoretic approach to the study of optimal source coding systems, including systems for quantization and data compression [2]. To define how well a source, the random variable Y , is represented by a particular representation using N symbols, which we call YN, one introduces a distortion function between Y and YN D(q(yN |y)) = D(Y, YN ) = Ey,yN d(y, yN ) = q(yN |y)p(y)d(y, yN ) where d(y, yN) is the pointwise distortion function on the individual elements of y  Y and The constraint space yN  YN . q(yN |y) is a stochastic map or quantization of Y into a representation YN [1, 2].  := {q(yN |y) | q(yN |y) = 1 and q(yN |y)  0 y  Y } (3)
+
+y yN
+
+yN
+
+(compare with (1)) is the space of valid quantizers in there is a quantizer q(yN|y) such that D(q) = minq
+
+n . A representation YN is optimal if
+
+ D(q).
+
+In engineering and imaging applications, the distortion function is usually chosen as the mean squared error [1, 3, 14], D(Y, YN) = Ey,yN d^(y, yN), where the pointwise distortion func^ tion d^(y, yN) is the Euclidean squared distance. In this case, D(Y, YN) is a linear function ^ of the quantizer. In [4, 5, 6], the information distortion measure DI(Y, YN ) := p(y, yN )KL(p(x|yN )||p(x|y)) = I(X; Y ) - I(X; YN ) is used, where the Kullback-Leibler divergence KL is the pointwise distortion function. Unlike the pointwise distortion functions usually investigated in information theory [1, 3], this one is nonlinear, it explicitly considers a third space, X, of inputs, and it depends on the quantizer q(yN|y) through p(x|yN) = . The only term in DI which depends on the quantizer is I(X; YN), so we can replace DI with the effective distortion Def (q) := I(X; YN ).
+
+y,yN
+
+y
+
+p(x|y) q(yp
+
+N |y)p(y)
+
+(yN )
+
+f
+
+Def (q) is the function D(q) from (1) which has been considered in [4, 5, 6, 7, 8]. f
+
+
+2.2 Rate Distortion There are two related methods used to analyze communication systems at a distortion D(q)  minimum rate at a given distortion is posed as a minimal information rate distortion problem: D0 for some given D0  0 [1, 2, 3]. In rate distortion theory [1, 2], the problem of finding a
+
+minq
+
+R(D0) = (yN |y)
+
+I(Y ; YN )
+
+. (4)
+
+D(Y ; YN )  D0
+
+This formulation is justified by the Rate Distortion Theorem [1]. A similar exposition using the Deterministic Annealing approach [3] is a maximal entropy problem
+
+maxq
+
+(yN |y)
+
+D(Y ; YN )  D0
+
+H(YN |Y ) . (5)
+
+The justification for using (5) is Jayne's maximum entropy principle [15]. These formulations are related since I(Y ; YN) = H(YN) - H(YN|Y ). Let I0 > 0 be some given information rate. In [4, 6], the neural coding problem is formulated as an entropy problem as in (5)
+
+maxq
+
+(yN |y)
+
+Def (q)  I0
+
+f
+
+H(YN |Y ) . (6)
+
+which uses the nonlinear effective information distortion measure Def . f
+
+Tishby et. al. [7, 8] use the information distortion measure to pose an information rate distortion problem as in (4)
+
+minq
+
+(yN |y)
+
+I(Y ; YN )
+
+. (7)
+
+Def (q)  I0
+
+f
+
+Using the method of Lagrange multipliers, the rate distortion problems (4),(5),(6),(7) can be reformulated as finding the maxima of max F (q, ) = max[G(q) + D(q)] (8)
+
+q q
+
+as in (1) where  = B. For the maximal entropy problem (6), F (q, ) = H(YN |Y ) + Def (q)
+
+f (9)
+
+distortion problem (7), and so G(q) from (1) is the conditional entropy H(YN|Y ). For the minimal information rate
+
+F (q, ) = -I(Y ; YN ) + Def (q) and so G(q) = -I(Y ; YN). f
+
+lim
+
+In [3, 4, 6], one explicitly considers B =
+
+ maxq  F (q, ) = maxq 
+
+(10)
+
+Def (q) which in turn gives minq f
+
+.
+
+For (9), this involves taking Rate Distortion Theory and the Information Bottleneck Method, one could be interested in solutions to (8) for finite B which takes into account a tradeoff between I(Y ; YN) and Def .
+
+(yN |y) DI. In
+
+f
+
+For lack of space, here we consider (9) and (10). Our analysis extends easily to similar formulations which use a norm based distortion such as D(q), as in [3]. ^ 3 Improving the algorithm We now turn our attention back to algorithm 1 and indicate how numerical continuation [9, 10], and bifurcation theory with symmetries [11, 12, 13] can improve upon the choice of the algorithm's parameters.
+
+
+We begin by rewriting (8), now incorporating the Lagrange multipliers for the equality con-
+
+straint yN
+
+q(yN |yk) = 1 from (3) which must be satisfied for each yk  Y . This gives the
+
+K
+
+Lagrangian
+
+L(q,,) = F(q,) + k( q(yN |yk) - 1). (11)
+
+k=1 yN
+
+There are optimization schemes, such as the Fixed Point [4, 6] and projected Augmented Lagrangian [6, 16] methods, which exploit the structure of (11) to find local solutions to (8) for step 3 of algorithm 1. 3.1 Bifurcation structure of solutions It has been observed that the solutions {qk} undergo bifurcations or phase transitions [3, 4, 6, 7, 8]. We wish to pose (8) as a dynamical system in order to study the bifurcation structure of local solutions for   [0, B]. To this end, consider the equilibria of the flow
+
+q 
+
+q, L(q,,) (12)
+
+for   [0, B]. These are points
+
+= q 
+
+where q, L(q,,) = 0 for some . The
+
+qF (q, ) is negative definite, are local solutions of (8) [16, 17]. Jacobian of this system is the Hessian q,L(q, , ). Equilibria, (q, ), of (12), for which
+
+Let |Y | = K, |YN| = N, and n = NK. Thus, q    (n + K) Hessian of (11) is
+
+q,L(q, , ) = qF (q, ) J
+
+n
+
+and   K . The (n + K) ×
+
+JT 0
+
+where 0 is K × K [17]. qF is the n × n block diagonal matrix of N K × K matrices
+
+{Bi}N
+
+i=1
+
+[4]. J is the K × n Jacobian of the vector of K constraints from (11), J = ( IK IK ... IK ) .
+
+N blocks
+
+(13)
+
+to (8). This is due to the fact that bifurcation of an equilibria (q, ) of (12) at  =  The kernel of q,L plays a pivotal role in determining the bifurcation structure of solutions happen when ker q,L(q, , ) is nontrivial. Furthermore, the bifurcating branches are tangent to certain linear subspaces of ker q,L(q, , ) [12]. 3.2 Bifurcations with symmetry
+
+labels of the classes of YN. For example, if P1 and P2 are two n × 1 vectors such that for Any solution q(yN|y) to (8) gives another equivalent solution simply by permuting the where q^(yN = 1|y) = P2, q^(yN = 2q,y) = P1 and q^(yN|y) = q(yN|y) for all other a solution q(yN|y), q(yN = 1|y) = P1 and q(yN = 2|y) = P2, then the quantizer classes yN is a maximizer of (8) with F(^ ) = F(q, ). Let SN be the algebraic group of | all permutations on N symbols [18, 19]. We say that F(q, ) is SN-invariant if F(q, ) = F ((q), ) where (q) denotes the action on q by permutation of the classes of YN as defined for M  N. Bifurcations at  =  in this scenario are called symmetry breaking if the by any   SN [17]. Now suppose that a solution q is fixed by all the elements of SM bifurcating solutions are fixed (and only fixed) by subgroups of SM.
+
+
+To determine where a bifurcation of a solution (q, , ) occurs, one determines  for which qF(q, ) has a nontrivial kernel. This approach is justified by the fact that q,L(q, , ) is singular if and only if qF (q, ) is singular [17]. At a bifurcation (q, , ) where q is fixed by SM for M  N , qF (q, ) has M identical blocks. The bifurcation is generic if
+
+each of the identical blocks has a single 0-eigenvector, v, and the other blocks are nonsingular. (14)
+
+identical blocks of qF(q, ). We call the classes of YN which correspond to identical Thus, a generic bifurcation can be detected by looking for singularity of one of the K × K blocks unresolved classes. The classes of YN that are not unresolved are called resolved classes. The Equivariant Branching Lemma and the Smoller-Wasserman Theorem [12, 13] ascertain are fixed by special subgroups of SM [12, 13]. Of particular interest are the bifurcating the existence of explicit bifurcating solutions in subspaces of ker q,L(q, , ) which solutions in subspaces of ker q,L(q, , ) of dimension 1 guaranteed by the following theorem Theorem 2 [17] Let (q, , ) be a generic bifurcation of (12) which is fixed (and only fixed) by SM, for 1 < M  N. Then, for small t, with (t = 0) = , there exists M bifurcating solutions,
+
+q  +  tum (t)
+
+, where 1  m  M, (15)
+
+[um] =
+
+ (M--v1)v 
+
+if  is the mth unresolved class of YN if  is some other unresolved class of YN
+
+(16)
+
+and v is defined asin (14). Furthermore, each of these solutions is fixed by the symmetry 0 otherwise
+
+group SM -1 .
+
+For a bifurcation from the uniform quantizer, q
+
+1 N
+
+, which is identically 1 N for all y and all yN,
+
+all of the classes of YN are unresolved. In this case, um = (-vT , ..., -vT , (N - 1)vT , -vT , ..., -vT , 0T )T where (N - 1)v is in the mth component of um. Relevant to the computationalist is that instead of looking for a bifurcation by looking for ), one may look for singularity of one of the been detected at  = , knowledge of the bifurcating directions makes finding solutions of interest for  >  much easier (see section 3.4.1). 3.3 The subcritical bifurcation In all problems under consideration, the solution for  = 0 is known. For (9), (10) this explicitly the critical value  where q0 loses stability for the Euclidean pointwise distortion function. We have the following related result. Theorem 3 [20] Consider problems (9), (10). The solution q0 = 1/N loses stability at  =  where 1/ is the second largest eigenvalue of a discrete Markov chain on vertices
+
+K × K identical blocks, where K =
+
+singularity of the n × n Hessian qF(nq., After
+
+N bifurcation of a local solution to (8) has
+
+solution is q0 = q 1 N . For (4) and (5), q0 is the mean of Y . Rose [3] was able to compute
+
+y  Y , where the transition probabilities p(yl  yk) := i p(yk|xi)p(xi|yl).
+
+
+Corollary 4 Bifurcation of the solution (q 1 N , ) in (9), (10) occurs at   1.
+
+The discriminant of the bifurcating branch (15) is defined as [17]
+
+(q, , um) = 3 3
+
+-3 um,q,L(q,,)[um,um,um] , um, q,L(q, , )[um, EL-Eq,L(q, , )[um, um]]
+
+n
+
+derivative of L, E is the projection matrix onto range(q,L(q, , )), and L- is the where ·, · is the Euclidean inner product, q,L[·, ..., ·] is the multilinear form of the nth Moore-Penrose generalized inverse of the Hessian q,L(q, , ). Theorem 5 [17] If (q, ,um) < 0, then the bifurcating branch (15) is subritical (i.e. a first order phase transition). If (q, ,um) > 0, then (15) is supercritical. For a data set with a joint probability distribution modelled by a mixture of four Gaussians as N  3. The existence of a subcritical bifurcation (a first order phase transition) is intriguing.
+
+in [4], Theorem 5 predicts a subcritical bifurcation from (q 1 N ,   1.038706) for (9) when
+
+Subcritical Bifurcating Branch for F=H(YN|Y)+ I(X;YN) from uniform solution q1/N for N=4
+
+3
+
+4
+
+2.5
+
+2
+
+||
+
+-q 1/N 1.5 *
+
+||q
+
+1
+
+0.5
+
+0 1.034 1.036 1.038 1.04
+
+1.042  1.044 1.046
+
+Local Maximum Stationary Solution 1.048
+
+1.05
+
+Figure 1: A joint probability space on the random variables (X, Y ) was constructed from a mixture of four Gaussians as in [4]. Using this probability space, the equilibria of (12) for F as defined in (9) were found using Newton's method. Depicted is the subcritical bifurcation from (q 1 ,   1.038706). In analogy to the rate distortion curve [2, 1], we can define an H-I curve for the problem (6) H(I0) := max
+
+4
+
+q,Def
+
+f
+
+I0
+
+H(YN |Y ).
+
+Let Imax = maxq 
+
+Def . Then for each I0  (0, Imax) the value H(I0) is well defined = 0 (compare with (11) and (12)) and this  solves problem (9). Therefore,
+
+f
+
+and achieved at a point where Def
+
+such that q,
+
+f = I0. At such a point there is a Lagrange multiplier 
+
+of a subcritical bifurcation in  implies that this correspondence is not monotone for small values of I. 3.4 Numerical Continuation Numerical continuation methods efficiently analyze the solution behavior of dynamical sys-
+
+tems such as (12) [9, 10]. Continuation methods can speed up the search for the solution qk
+
+at k
+
+(0)
+
+in step 3 of algorithm 1 by improving upon the perturbed choice qk
+
++1
+
++1
+
++1
+
+= qk +. First,
+
+for each I  (0L, Imax), there is a corresponding  which solves problem (9). The existence
+
+
+the vector (qk
+
+T
+
+Tk )T which is tangent to the curve q,
+
+is computed by solving the matrix system
+
+q,L(qk, k, k) qk k
+
+L(q,,) = 0 at (qk,k,k)
+
+= - q, L(qk,k,k).
+
+Now the initial guess in step 2 becomes qk
+
+||qk||2+
+
+s ||k||2+1
+
+(0)
+
++1
+
+for s > 0. Furthermore, k
+
+=
+
++1
+
+qk + dkqk where dk
+
+(17) =
+
+in step 1 is found by using this
+
+same dk. This choice of dk assures that a fixed step along (qk
+
+T
+
+k )T is taken for each
+
+T
+
+k. We use three different continuation methods which implement variations of this scheme: Parameter, Tangent and Pseudo Arc-Length [9, 17]. These methods can greatly decrease the significant, especially when continuation is used in conjunction with a Newton type optimization scheme which explicitly uses the Hessian qF(qk, k). Otherwise, the CPU time incurred from solving (17) may outweigh this benefit. 3.4.1 Branch switching Suppose that a bifurcation of a solution q of (8) has been detected at . To proceed, one uses the explicit form of the bifurcating directions, {um}M from (16) to search for the do this, let u = um for some m  M(0)then implementu.a branch switch [9] , 4 A numerical algorithm We conclude with a numerical algorithm to solve (1). The section numbers in parentheses indicate the location in the text supporting each step.
+
+optimization iterations needed to find qk
+
+(0)
+
+from qk
+
++1
+
++1 in step 3. The cost savings can be
+
+m=1
+
+bifurcating solution of interest, say qk +1 , whose existence is guaranteed by Theorem 2. To
+
+qk +1 = q + dk · u
+
+Algorithm 6 Let q0 be the maximizer of maxq 
+
+let (qk, k) be a solution to (1). Iterate the following steps until  = B for some . G, 0 = 1 (3.3) and s > 0. For k  0,
+
+1. (3.4) Perform -step: solve (17) for (qk
+
+where dk =
+
+||qk||2+ s ||k||2+1
+
+.
+
+T Tk )T and select k +1 = k + dk
+
+2. (3.4) The initial guess for qk 3. Optimization: solve
+
+(0)
+
+is qk
+
++1
+
++1 at k +1 = qk + dk · qk.
+
+max G(q) + k q +1 D(q)
+
+to get the maximizer qk
+
+(0)
+
+, using initial guess qk
+
++1
+
++1 .
+
+4. (3.2) Check for bifurcation: compare the sign of the determinant of an identical block of each of
+
+q[G(qk) + kD(qk)] and q[G(qk
+
+If a bifurcation is detected, then set qk for some m  M, and repeat step 3. Acknowledgments
+
+(0)
+
++1
+
++1 ) + k +1 D(qk +1 )].
+
+= qk + dk · u where u is defined as in (16)
+
+Many thanks to Dr. John P. Miller at the Center for Computational Biology at Montana State University-Bozeman. This research is partially supported by NSF grants DGE 9972824, MRI 9871191, and EIA-0129895; and NIH Grant R01 MH57179.
+
+
+References [1] Thomas Cover and Jay Thomas. Elements of Information Theory. Wiley Series in Communication, New York, 1991. [2] Robert M. Gray. Entropy and Information Theory. Springer-Verlag, 1990. [3] Kenneth Rose. Deteministic annealing for clustering, compression, classification, regerssion, and related optimization problems. Proc. IEEE, 86(11):2210­2239, 1998. [4] Alexander G. Dimitrov and John P. Miller. Neural coding and decoding: communication channels and quantization. Network: Computation in Neural Systems, 12(4):441­ 472, 2001. [5] Alexander G. Dimitrov and John P. Miller. Analyzing sensory systems with the information distortion function. In Russ B Altman, editor, Pacific Symposium on Biocomputing 2001. World Scientific Publushing Co., 2000. [6] Tomas Gedeon, Albert E. Parker, and Alexander G. Dimitrov. Information distortion and neural coding. Canadian Applied Mathematics Quarterly, 2002. [7] Naftali Tishby, Fernando C. Pereira, and William Bialek. The information bottleneck method. The 37th annual Allerton Conference on Communication, Control, and Computing, 1999. [8] Noam Slonim and Naftali Tishby. Agglomerative information bottleneck. In S. A. Solla, T. K. Leen, and K.-R. Muller, editors, Advances in Neural Information Process¨ ing Systems, volume 12, pages 617­623. MIT Press, 2000. [9] Wolf-Jurgen Beyn, Alan Champneys, Eusebius Doedel, Willy Govaerts, Yuri A. Kuznetsov, and Bjorn Sandstede. Handbook of Dynamical Systems III. World Scientific, 1999. Chapter in book: Numerical Continuation and Computation of Normal Forms. [10] Eusebius Doedel, Herbert B. Keller, and Jean P. Kernevez. Numerical analysis and control of bifurcation problems in finite dimensions. International Journal of Bifurcation and Chaos, 1:493­520, 1991. [11] M. Golubitsky and D. G. Schaeffer. Singularities and Groups in Bifurcation Theory I. Springer Verlag, New York, 1985. [12] M. Golubitsky, I. Stewart, and D. G. Schaeffer. Singularities and Groups in Bifurcation Theory II. Springer Verlag, New York, 1988. [13] J. Smoller and A. G. Wasserman. Bifurcation and symmetry breaking. Inventiones mathematicae, 100:63­95, 1990. [14] Allen Gersho and Robert M. Gray. Vector Quantization and Signal Compression. Kluwer Academic Publishers, 1992. [15] E. T. Jaynes. On the rationale of maximum-entropy methods. Proc. IEEE, 70:939­952, 1982. [16] J. Nocedal and S. J. Wright. Numerical Optimization. Springer, New York, 2000. [17] Albert E. Parker III. Solving the rate distortion problem. PhD thesis, Montana State University, 2003. [18] H. Boerner. Representations of Groups. Elsevier, New York, 1970. [19] D. S. Dummit and R. M. Foote. Abstract Algebra. Prentice Hall, NJ, 1991. [20] Tomas Gedeon and Bryan Roosien. Phase transitions in information distortion. In preparation, 2003.
+
+

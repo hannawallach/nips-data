@@ -1,0 +1,407 @@
+Cluster Kernels for
+Semi-Supervised Learning
+Olivier Chapelle, Jason Weston, Bernhard Scholkopf
+Max Planck Institute for Biological Cybernetics, 72076 Tubingen, Germany
+frst.lastg@tuebingen.mpg.de
+Abstract
+We propose a framework to incorporate unlabeled data in kernel
+classier, based on the idea that two points in the same cluster are
+more likely to have the same label. This is achieved by modifying
+the eigenspectrum of the kernel matrix. Experimental results assess
+the validity of this approach.
+1 Introduction
+We consider the problem of semi-supervised learning, where one has usually few
+labeled examples and a lot of unlabeled examples. One of the rst semi-supervised
+algorithms [1] was applied to web page classication. This is a typical example
+where the number of unlabeled examples can be made as large as possible since
+there are billions of web page, but labeling is expensive since it requires human
+intervention. Since then, there has been a lot of interest for this paradigm in the
+machine learning community; an extensive review of existing techniques can be
+found in [10].
+It has been shown experimentally that under certain conditions, the decision func-
+tion can be estimated more accurately, yielding lower generalization error [1, 4, 6].
+However, in a discriminative framework, it is not obvious to determine how unla-
+beled data or even the perfect knowledge of the input distribution P (x) can help in
+the estimation of the decision function. Without any assumption, it turns out that
+this information is actually useless [10].
+Thus, to make use of unlabeled data, one needs to formulate assumptions. One
+which is made, explicitly or implicitly, by most of the semi-supervised learning
+algorithms is the so-called \cluster assumption" saying that two points are likely to
+have the same class label if there is a path connecting them passing through regions
+of high density only. Another way of stating this assumption is to say that the
+decision boundary should lie in regions of low density. In real world problems, this
+makes sense: let us consider handwritten digit recognition and suppose one tries to
+classify digits 0 from 1. The probability of having a digit which in between a 0 and
+1 is very low.
+In this article, we will show how to design kernels which implement the cluster
+assumption, i.e. kernels such that the induced distance is small for points in the
+same cluster and larger for points in dierent clusters.
+
+Figure 1: Decision function obtained by an SVM with the kernel (1). On this
+toy problem, this kernel implements perfectly the cluster assumption: the decision
+function cuts a cluster only when necessary.
+2 Kernels implementing the cluster assumption
+In this section, we explore dierent ideas on how to build kernels which take into
+account the fact that the data is clustered. In section 3, we will propose a framework
+which unies the methods proposed in [11] and [5].
+2.1 Kernels from mixture models
+It is possible to design directly a kernel taking into account the generative model
+learned from the unlabeled data. Seeger [9] derived such a kernel in a Bayesian
+setting. He proposes to use the unlabeled data to learn a mixture of models and
+he introduces the Mutual Information kernel which is dened in such way that
+two points belonging to dierent components of the mixture model will have a
+low dot product. Thus, in the case of a mixture of Gaussians, this kernel is an
+implementation of the cluster assumption. Note that in the case of a single mixture
+model, the Fisher kernel [3] is an approximation of this Mutual Information kernel.
+Independently, another extension of the Fisher kernel has been proposed in [12]
+which leads, in the case of a mixture of Gaussians ( k ;  k ) to the Marginalized
+kernel whose behavior is similar to the mutual information kernel,
+K(x; y) =
+q
+X
+k=1
+P (kjx)P (kjy)x >  1
+k y: (1)
+To understand the behavior of the Marginalized kernel, we designed a 2D-toy prob-
+lem (gure 1): 200 unlabeled points have been sampled from a mixture of two
+Gaussians, whose parameters have then been learned with EM applied to these
+points. An SVM has been trained on 3 labeled points using the Marginalized kernel
+(1). The behavior of this decision function is intuitively very satisfying: on the
+one hand, when not enough label data is available, it takes into account the cluster
+assumption and does not cut clusters (right cluster), but on the other hand, the
+kernel is exible enough to cope with dierent labels in the same cluster (left side).
+2.2 Random walk kernel
+The kernels presented in the previous section have the drawback of depending on
+a generative model: rst, they require an unsupervised learning step, but more
+
+importantly, in a lot of real world problems, they cannot model the input distri-
+bution with suÆcient accuracy. When applying the mixture of Gaussians method
+(presented above) to real world problems, one cannot expect the \ideal" result of
+gure 1.
+For this reason, in clustering and semi-supervised learning, there has been a lot
+of interest to nd algorithms which do not depend on a generative model. We
+will present two of them, nd out how they are related and present a kernel which
+extends them. The rst one is the random walk representation proposed in [11].
+The main idea is to compute the RBF kernel matrix (with the labeled and unlabeled
+points) K ij = exp( kx i x j k 2 =2 2 ) and to interpret it as a transition matrix of
+a random walk on a graph with vertices x i , P (x i ! x j ) = K ij
+P
+p K ip
+: After t steps
+(where t is a parameter to be determined), the probability of going from a point
+x i to a point x j should be quite high if both points belong to the same cluster and
+should stay low if they are in two dierent clusters.
+Let D be the diagonal matrix whose elements are D ii =
+P
+j K ij . The one step
+transition matrix is D 1 K and after t steps it is P t = (D 1 K) t . In [11], the
+authors design a classier which uses directly those transition probabilities. One
+would be tempted to use P t as a kernel matrix for a SVM classier. However, it
+is not possible to directly use P t as a kernel matrix since it is not even symmetric.
+We will see in section 3 how a modied version of P t can be used as a kernel.
+2.3 Kernel induced by a clustered representation
+Another idea to implement the cluster assumption is to change the representation
+of the input points such that points in the same cluster are grouped together in the
+new representation. For this purpose, one can use tools of spectral clustering (see
+[13] for a review) Using the rst eigenvectors of a similarity matrix, a representation
+where the points are naturally well clustered has been recently presented in [5]. We
+suggest to train a discriminative learning algorithm in this representation. This
+algorithm, which resembles kernel PCA, is the following:
+1. Compute the aÆnity matrix, which is an RBF kernel matrix but with
+diagonal elements being 0 instead of 1.
+2. Let D be a diagonal matrix with diagonal elements equal to the sum of the
+rows (or the columns) of K and construct the matrix L = D 1=2 KD 1=2 .
+3. Find the eigenvectors (v 1 ; : : : ; v k ) of L corresponding the rst k eigenvalues.
+4. The new representation of the point x i is (v i1 ; : : : ; v ik ) and is normalized
+to have length one: '(x i ) p = v ip = (
+P k
+j=1 v 2
+ij ) 1=2 :
+The reason to consider the rst eigenvectors of the aÆnity matrix is the following.
+Suppose there are k clusters in the dataset innitely far apart from each other. One
+can show that in this case, the rst k eigenvalues of the aÆnity matrix will be 1 and
+the eigenvalue k + 1 will be strictly less than 1 [5]. The value of this gap depends
+on how well connected each cluster is: the better connected, the larger the gap is
+(the smaller the k + 1st eigenvalue). Also, in the new representation in R k there
+will be k vectors z 1 ; : : : ; z k orthonormal to each other such that each training point
+is mapped to one of those k points depending on the cluster it belongs to.
+This simple example show that in this new representation points are naturally
+clustered and we suggest to train a linear classier on the mapped points.
+
+3 Extension of the cluster kernel
+Based on the ideas of the previous section, we propose the following algorithm:
+1. As before, compute the RBF matrix K from both labeled and unlabeled
+points (this time with 1 on the diagonal and not 0) and D, the diagonal
+matrix whose elements are the sum of the rows of K.
+2. Compute L = D 1=2 KD 1=2 and its eigendecomposition L = UU > .
+3. Given a transfer function ', let ~
+ i = '( i ), where the  i are the eigenvalues
+of L, and construct ~
+L = U ~
+U > .
+4. Let ~
+D be a diagonal matrix with ~
+D ii = 1= ~
+L ii and compute ~
+K = ~
+D 1=2 ~
+L ~
+D 1=2 .
+The new kernel matrix is ~
+K. Dierent transfer function lead to dierent kernels:
+Linear '() = . In this case ~
+L = L and ~
+D = D (since the diagonal elements of
+K are 1). It turns out that ~
+K = K and no transformation is performed.
+Step '() = 1 if    cut and 0 otherwise. If  cut is chosen to be equal to the k-th
+largest eigenvalue of L, then the new kernel matrix ~
+K is the dot product
+matrix in the representation of [5] described in the previous section.
+Linear-step Same as the step function, but with '() =  for    cut . This is
+closely related to the approach consisting in building a linear classier in
+the space given by the rst Kernel PCA components [8]: if the normaliza-
+tion matrix D and ~
+D were equal to the identity, both approaches would be
+identical. Indeed, if the eigendecomposition of K is K = UU > , the coor-
+dinates of the training points in the kernel PCA representation are given
+by the matrix U 1=2 .
+Polynomial '() =  t . In this case, ~
+L = L t and ~
+K =
+~
+D 1=2 D 1=2 (D 1 K) t D 1=2 ~
+D 1=2 . The matrix D 1 K is the transition
+matrix in the random walk described in section 2.2 and ~
+K can be inter-
+preted as a normalized and symmetrized version of the transition matrix
+corresponding to a t step random walk.
+This makes the connection between the idea of the random walk kernel of section
+2.2 and a linear classier trained in a space induced by either the spectral clustering
+algorithm of [5] or the Kernel PCA algorithm.
+How to handle test points If test points are available during training and if
+they are also drawn from the same distribution as the training points (an assumption
+which is commonly made), then they should be considered as unlabeled points and
+the matrix ~
+K described above should be built using training, unlabeled and test
+points.
+However, it might happen that test points are not available during training. This is
+a problem, since our method produces a new kernel matrix, but not an analytic form
+of the eective new kernel that could readily be evaluated on novel test points. In
+this case, we propose the following solution: approximate a test point x as a linear
+combination of the training and unlabeled points, and use this approximation to
+express the required dot product between the test point and other points in the
+feature space. More precisely, let
+ 0 = arg min 
+     (x)
+n+nu X
+i=1
+ i (x i )
+     = K 1 v
+
+2 4 8 16 32 64 128
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+Nb of labeled points
+Test
+error
+Linear (Normal SVM)
+Polynomial
+Step
+Poly-step
+Figure 2: Test error on a text classication problem for training set size varying
+from 2 to 128 examples. The dierent kernels correspond to dierent kind of transfer
+functions.
+with v i = K(x; x i ) 1 . Here,  is the feature map corresponding to K, i.e., K(x; x 0 ) =
+((x)  (x 0 )). The new dot product between the test point x and the other points
+is expressed as a linear combination of the dot products of ~
+K,
+~
+K(x; x i )  ( ~
+K 0 ) i = ( ~
+KK 1 v) i :
+Note that for a linear transfer function, ~
+K = K, and the new dot product is the
+standard one.
+4 Experiments
+4.1 Inuence of the transfer function
+We applied the dierent kernel clusters of section 3 to the text classication task of
+[11], following the same experimental protocol. There are two categories mac and
+windows with respectively 958 and 961 examples of dimension 7511. The width of
+the RBF kernel was chosen as in [11] giving  = 0:55. Out of all examples, 987
+were taken away to form the test set. Out of the remaining points, 2 to 128 were
+randomly selected to be labeled and the other points remained unlabeled. Results
+are presented in gure 2 and averaged over 100 random selections of the labeled
+examples. The following transfer functions were compared: linear (i.e. standard
+SVM), polynomial '() =  5 , step keeping only the n+10 where n is the number of
+labeled points, and poly-step dened in the following way (with 1   1   2  : : : ),
+'( i ) =
+ p
+ i i  n + 10
+ 2
+i i > n + 10
+For large sizes of the (labeled) training set, all approaches give similar results. The
+interesting case are small training sets. Here, the step and poly-step functions work
+very well. The polynomial transfer function does not give good results for very small
+training sets (but nevertheless outperforms the standard SVM for medium sizes).
+This might be due to the fact that in this example, the second largest eigenvalue is
+0.073 (the largest is by construction 1). Since the polynomial transfer function tends
+1 We consider here an RBF kernel and for this reason the matrix K is always invertible.
+
+to push to 0 the small eigenvalues, it turns out that the new kernel has \rank almost
+one" and it is more diÆcult to learn with such a kernel. To avoid this problem,
+the authors of [11] consider a sparse aÆnity matrix with non-zeros entries only for
+neighbor examples. In this way the data are by construction more clustered and
+the eigenvalues are larger. We veried experimentally that the polynomial transfer
+function gave better results when applied to a sparse aÆnity matrix.
+Concerning the step transfer function, the value of the cut-o index corresponds
+to the number of dimensions in the feature space induced by the kernel, since the
+latter is linear in the representation given by the eigendecomposition of the aÆnity
+matrix. Intuitively, it makes sense to have the number of dimensions increase with
+the number of training examples, that is the reason why we chose a cuto index
+equal to n + 10.
+The poly-step transfer function is somewhat similar to the step function, but is not as
+rough: the square root tends to put more importance on dimensions corresponding
+to large eigenvalues (recall that they are smaller than 1) and the square function
+tends to discard components with small eigenvalues. This method achieves the best
+results.
+4.2 Automatic selection of the transfer function
+The choice of the poly-step transfer function in the previous choice corresponds to
+the intuition that more emphasis should be put on the dimensions corresponding to
+the largest eigenvalues (they are useful for cluster discrimination) and less on the
+dimensions with small eigenvalues (corresponding to intra-cluster directions). The
+general form of this transfer function is
+'( i ) =
+
+ p
+i i  r
+ q
+i i > r ; (2)
+where p; q 2 R and r 2 N are 3 hyperparameters. As before, it is possible to choose
+qualitatively some values for these parameters, but ideally, one would like a method
+which automatically chooses good values. It is possible to do so by gradient descent
+on an estimate of the generalization error [2]. To assess the possibility of estimating
+accurately the test error associated with the poly-step kernel, we computed the span
+estimate [2] in the same setting as in the previous section. We xed p = q = 2 and
+the number of training points to 16 (8 per class). The span estimate and the test
+error are plotted on the left side of gure 3.
+Another possibility would be to explore methods that take into account the spec-
+trum of the kernel matrix in order to predict the test error [7].
+4.3 Comparison with other algorithms
+We summarized the test errors (averaged over 100 trials) of dierent algorithms
+trained on 16 labeled examples in the following table.
+Normal SVM Transductive SVM [4] Random walk [11] Cluster kernel
+27.5% ( 7) 15.6% ( 2.5) 15.5% 12.6% ( 5.3)
+The transductive SVM algorithm consists in maximizing the margin on both labeled
+and unlabeled. To some extent it implements also the cluster assumption since it
+tends to put the decision function in low density regions. This algorithm has been
+successfully applied to text categorization [4] and is a state-of-the-art algorithm for
+
+5 10 15 20 25 30
+0.1
+0.15
+0.2
+0.25
+Test error
+Span estimate
+6 8 10 12 14 16 18 20
+0.15
+0.16
+0.17
+0.18
+0.19
+0.2
+0.21
+0.22
+Test error
+Span estimate
+Figure 3: The span estimate predicts accurately the minimum of the test error
+for dierent values of the cuto index r in the poly-step kernel (2). Left: text
+classication task, right: handwritten digit classication
+performing semi-supervised learning. The result of the Random walk kernel is taken
+directly from [11]. Finally, the cluster kernel performance has been obtained with
+p = q = 2 and r = 10 in the transfer function 2. The value of r was the one
+minimizing the span estimate (see left side of gure 3).
+Future experiments include for instance the Marginalized kernel (1) with the stan-
+dard generative model used in text classication by Naive Bayes classier [6].
+4.4 Digit recognition
+In a second set of experiments, we considered the task of classifying the handwritten
+digits 0 to 4 against 5 to 9 of the USPS database. The cluster assumption should
+apply fairly well on this database since the dierent digits are likely to be clustered.
+2000 training examples have been selected and divided into 50 subsets on 40 ex-
+amples. For a given run, one of the subsets was used as the labeled training set,
+whereas the other points remained unlabeled. The width of the RBF kernel was set
+to 5 (it was the value minimizing the test error in the supervised case).
+The mean test error for the standard SVM is 17.8% (standard deviation 3.5%),
+whereas the transductive SVM algorithm of [4] did not yield a signicant improve-
+ment (17:6%  3:2%). As for the cluster kernel (2), the cuto index r was again
+selected by minimizing the span estimate (see right side of gure 3). It gave a test
+error of 14.9% (standard deviation 3.3%). It is interesting to note in gure 3 the
+local minimum at r = 10, which can be interpreted easily since it corresponds to
+the number of dierent digits in the database.
+It is somehow surprising that the transductive SVM algorithm did not improve the
+test error on this classication problem, whereas it did for text classication. We
+conjecture the following explanation: the transductive SVM is more sensitive to
+outliers in the unlabeled set than the cluster kernel methods since it directly tries
+to maximize the margin on the unlabeled points. For instance, in the top middle
+part of gure 1, there is an unlabeled point which would have probably perturbed
+this algorithm. However, in high dimensional problems such as text classication,
+the inuence of outlier points is smaller. Another explanation is that this method
+can get stuck in local minima, but that again, in higher dimensional space, it is
+easier to get out of local minima.
+
+5 Conclusion
+In a discriminative setting, a reasonable way to incorporate unlabeled data is
+through the cluster assumption. Based on the ideas of spectral clustering and
+random walks, we proposed a framework for constructing kernels which implement
+the cluster assumption: the induced distance depends on whether the points are in
+the same cluster or not. This is done by changing the spectrum of the kernel ma-
+trix. Since there exist several bounds for SVMs which depend on the shape of this
+spectrum, the main direction for future research is to perform automatic model se-
+lection based on these theoretical results. Finally, note that the cluster assumption
+might also be useful in a purely supervised learning task.
+Acknowledgments
+The authors would like to thank Martin Szummer for helpful discussion on this
+topic and for having provided us with his database.
+References
+[1] A. Blum and T. Mitchell. Combining labeled and unlabeled data with co-training.
+In COLT: Proceedings of the Workshop on Computational Learning Theory. Morgan
+Kaufmann Publishers, 1998.
+[2] O. Chapelle, V. Vapnik, O. Bousquet, and S. Mukherjee. Choosing multiple param-
+eters for support vector machines. Machine Learning, 46(1-3):131{159, 2002.
+[3] T. Jaakkola and D. Haussler. Exploiting generative models in discriminative classi-
+ers. In Advances in Neural Information Processing, volume 11, pages 487{493. The
+MIT Press, 1998.
+[4] T. Joachims. Transductive inference for text classication using support vector ma-
+chines. In Proceedings of the 16th International Conference on Machine Learning,
+pages 200{209. Morgan Kaufmann, San Francisco, CA, 1999.
+[5] A. Y. Ng, M. I. Jordan, and Y. Weiss. On spectral clustering: Analysis and an
+algorithm. In Advances in Neural Information Processing Systems, volume 14, 2001.
+[6] K. Nigam, A. K. McCallum, S. Thrun, and T. M. Mitchell. Learning to classify text
+from labeled and unlabeled documents. In Proceedings of AAAI-98, 15th Conference
+of the American Association for Articial Intelligence, pages 792{799, Madison, US,
+1998. AAAI Press, Menlo Park, US.
+[7] B. Scholkopf, J. Shawe-Taylor, A. J. Smola, and R. C. Williamson. Generalization
+bounds via eigenvalues of the Gram matrix. Technical Report 99-035, NeuroColt,
+1999.
+[8] B. Scholkopf, A. Smola, and K.-R. Muller. Nonlinear component analysis as a kernel
+eigenvalue problem. Neural Computation, 10:1299{1310, 1998.
+[9] M. Seeger. Covariance kernels from Bayesian generative models. In Advances in
+Neural Information Processing Systems, volume 14, 2001.
+[10] M. Seeger. Learning with labeled and unlabeled data. Technical report, Edinburgh
+University, 2001.
+[11] M. Szummer and T. Jaakkola. Partially labeled classication with markov random
+walks. In Advances in Neural Information Processing Systems, volume 14, 2001.
+[12] K. Tsuda, T. Kin, and K. Asai. Marginalized kernels for biological sequences. Bioin-
+formatics, 2002. To appear. Also presented at ICMB 2002.
+[13] Y. Weiss. Segmentation using eigenvectors: A unifying view. In International Con-
+ference on Computer Vision, pages 975{982, 1999.
+

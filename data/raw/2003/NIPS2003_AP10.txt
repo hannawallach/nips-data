@@ -1,0 +1,646 @@
+Kernels for Structured Natural Language Data
+
+Jun Suzuki, Yutaka Sasaki, and Eisaku Maeda NTT Communication Science Laboratories, NTT Corp. 2-4 Hikaridai, Seika-cho, Soraku-gun, Kyoto, 619-0237 Japan {jun, sasaki, maeda}@cslab.kecl.ntt.co.jp
+
+Abstract This paper devises a novel kernel function for structured natural language data. In the field of Natural Language Processing, feature extraction consists of the following two steps: (1) syntactically and semantically analyzing raw data, i.e., character strings, then representing the results as discrete structures, such as parse trees and dependency graphs with part-of-speech tags; (2) creating (possibly high-dimensional) numerical feature vectors from the discrete structures. The new kernels, called Hierarchical Directed Acyclic Graph (HDAG) kernels, directly accept DAGs whose nodes can contain DAGs. HDAG data structures are needed to fully reflect the syntactic and semantic structures that natural language data inherently have. In this paper, we define the kernel function and show how it permits efficient calculation. Experiments demonstrate that the proposed kernels are superior to existing kernel functions, e.g., sequence kernels, tree kernels, and bag-of-words kernels.
+
+1 Introduction Recent developments in kernel technology enable us to handle discrete structures, such as sequences, trees, and graphs. Kernel functions suitable for Natural Language Processing (NLP) have recently been proposed. Convolution Kernels [4, 12] demonstrate how to build kernels over discrete structures. Since texts can be analyzed as discrete structures, these discrete kernels have been applied to NLP tasks, such as sequence kernels [8, 9] for text categorization and tree kernels [1, 2] for (shallow) parsing. In this paper, we focus on tasks in the application areas of NLP, such as Machine Translation, Text Summarization, Text Categorization and Question Answering. In these tasks, richer types of information within texts, such as syntactic and semantic information, are required for higher performance. However, syntactic information and semantic information are formed by very complex structures that cannot be written in simple structures, such as sequences and trees. The motivation of this paper is to propose kernels specifically suited to structured natural language data. The proposed kernels can handle several of the structures found within texts and calculate kernels with regard to these structures at a practical cost and time. Accordingly, these kernels can be efficiently applied to learning and clustering problems in NLP applications.
+
+
+Text : J un ic h ir o Koizumi is p r ime min is t e r of J a p a n .
+
+( 1 ) r e s ul t of a p a r t - of - s p e e c h t a g g e r
+
+J un ic h ir o Koizumi N N P N N P is V B J p r ime J J
+
+( 2 ) r e s ul t of a n oun p h r a s e c h un k e r
+
+J un ic h ir o Koizumi is N P p r ime min is t e r N N of I N J a p a n N N P .
+
+.
+
+min is t e r N P of J a p a n N P .
+
+( 3 ) r e s ul t of a n a me d e n t it ie s t a g g e r
+
+J un ic h ir o Koizumi P e r s on is p r ime min is t e r of
+
+( 4 ) r e s ul t of a d e p e n d e n c y s t r uc t ur e a n a l y ze r
+
+J a p a n C oun t r y .
+
+J un ic h ir o Koizumi is p r ime min is t e r of J a p a n .
+
+( 1 ) - ( 5 )
+
+( 5 ) s e ma n t ic in f or ma t ion f r om d ic t ion a r y ( e g . W or d - N e t ) J un ic h ir o Koizumi is p r ime min is t e r of J a p a n
+
+.
+
+J u n i c h i r o N N P K o i z u m i N N P i s V B J p r i m e J J
+
+[n um b er ]
+
+m i n i s ter N N
+
+[executive]
+
+N P
+
+o f I N
+
+J a p a n N N P
+
+[A s ia n C o un tr y ]
+
+C o u n tr y N P
+
+..
+
+P er s o n N P [n um b er ] [executive] [executive d ir ecto r ] [A s ia n C o un tr y ] [A s ia n n a tio n ]
+
+Figure 1: Examples of structures within texts as determined by basic NLP tools
+
+2 Structured Natural Language Data for Application Tasks in NLP In general, natural language data contain many kinds of syntactic and semantic structures. For example, texts have several levels of syntactic and semantic chunks, such as part-ofspeech (POS) chunks, named entities (NEs), noun phrase (NP) chunks, sentences, and discourse segments, and these are bound by relation structures, such as dependency structures, anaphora, discourse relations and coreference. These syntactic and semantic structures can provide important information for understanding natural language and, moreover, tackling real tasks in application areas of NLP. The accuracies of basic NLP tools such as POS taggers, NP chunkers, NE taggers, and dependency structure analyzers have improved to the point that they can help to develop real applications. This paper proposes a method to handle these syntactic and semantic structures in a single framework: We combine the results of basic NLP tools to make one hierarchically structured data set. Figure 1 shows an example of structures within texts analyzed by basic NLP tools that are currently available and that offer easy use and high performance. As shown in Figure 1, structures in texts can be hierarchical or recursive "graphs in graph". A certain node can be constructed or characterized by other graphs. Nodes usually have several kinds of attributes, such as words, POS tags, semantic information such as WordNet [3], and classes of the named entities. Moreover, the relations between nodes are usually directed. Therefore, we should employ a (1) directed, (2) multi-labeled, and (3) hierarchically structured graph to model structured natural language data. Let V be a set of vertices (or nodes) and E be a set of edges (or links). Then, a graph G = (V, E) is called a directed graph if E is a set of directed links E  V × V . Definition 1 (Multi-Labeled Graph) Let  be a set of labels (or attributes) and M  V × be label allocations. Then, G = (V,E,M) is called a multi-labeled graph. Definition 2 (Hierarchically Structured Graph) Let Gi = (Vi,Ei) be a subgraph in G = (V, E) where Vi  V and Ei  E, and G = {G1, . . . , Gn} be a set of subgraphs in G. F  V × G represents a set of vertical links from a node v  V to a subgraph Gi  G. Then, G = (V,E,G,F) is called a hierarchically structured graph if each node has at most
+
+one vertical edge. Intuitively, vertical link fi,
+
+Gj
+
+that node vi contains graph Gj.
+
+ F from node vi to graph Gj indicates
+
+Finally, in this paper, we successfully represent structured natural language data by using a multi-labeled hierarchical directed graph. Definition 3 (Multi-Labeled Hierarchical Directed Graph) G = (V,E,M,G,F) is a multi-labeled hierarchical directed graph.
+
+
+A G r a p h i ca l m o d e l o f s t r u ct u r e s w i t h i n t e x t
+
+a c b d e b P
+
+a
+
+N
+
+P N V a c
+
+P
+
+d
+
+: c h u nk : r el a t i on b et w een c h u nk s
+
+M u l t i - L a b e l e d H i e r a r ch i ca l D i r e ct e d G r a p h
+
+1
+
+:
+
+q1 q5 q7 2 r 1 e 1 , 4 r 4
+
+G 1 , 5 5 , 7 G : e e P P P
+
+1 1 f5 G
+
+, 1 2 f7 G , 1 3
+
+f1 G , 2
+
+f1 G , 1
+
+f4 G ,
+
+r 6
+
+2 2
+
+r 5
+
+2
+
+e
+
+r 3 2 2 a e 6 , 5 q2 q3
+
+q4 q6 q8 r G
+
+a c
+
+2, 4
+
+e 3 , 4 b e 6 , 4 d a
+
+1 3
+
+e 2, 3
+
+N N
+
+b V
+
+: node : s u b g r a p h
+
+qi, r
+
+G
+
+i
+
+j
+
+f6 G ,
+
+7 , 8
+
+r
+
+2 3
+
+1 1 1 2
+
+e 7 , 3
+
+G e r
+
+2 3
+
+7
+
+c
+
+e 8 G G
+
+2 d
+
+: di r ec t ed l i nk : v er t i c a l l i nk
+
+e
+
+fi
+
+i,j
+
+G j ,
+
+G 1 G
+
+Figure 2: Examples of Hierarchical Directed Graph structures (these are also HDAG): each letter represents an attribute
+
+Figure 2 shows examples of multi-labeled hierarchical directed graphs. In this paper, we call a multi-labeled hierarchical directed graph a hierarchical directed graph. 3 Kernels on Hierarchical Directed Acyclic Graph At first, in order to calculate kernels efficiently, we add one constraint: that the hierarchical directed graph has no cyclic paths. First, we define a path on a Hierarchical Directed Graph. If a node has no vertical link, then the node is called a terminal node, which is denoted as T  V ; otherwise it is a non-terminal node, which is denoted as T¯  V . Definition 4 (Hierarchical Path (HiP)) Let p = vi, ei,j, vj, . . . , vk, ek,l, vl be a path. Let (v) be a function that returns a subgraph Gi that is linked with v by a vertical link if v  T¯. Let P(G) be a function that returns the set of all HiPs in G, where links between defined as a HiP, where h(v) returns vphx, phx  P(Gx) s.t. Gx = (v) if v  T¯ otherwise returns v. Intuitively, a HiP is constructed by a path in the path structure, e.g., ph = vi, ei,j, vj vm, em,n, vn , . . . , vk, ek,l, vl . Definition 5 (Hierarchical Directed Acyclic Graph (HDAG)) hierarchical directed graph G = (V,E,M,G,F) is an HDAG if there is no HiP from any node v to the same node v. A primitive feature for defining kernels on HDAGs is a hierarchical attribute subsequence. Definition 6 (Hierarchical Attribute Subsequence (HiAS)) A HiAS is defined as a list of attributes with hierarchical information extracted from nodes on HiPs. For example, let ph = vi,ei,j,vj vm,em,n,vn ,... ,vk,ek,l,vl be a HiP, then, HiASs in ph are written as  (ph) = ai, aj am, an , . . . , ak, al , which is all combinations for all ai   (vi), where  (v) of node v is a function that returns the set of attributes allocated to node v, and (ph) of HiP ph is a function that returns all possible HiASs extracted from HiP ph.  denotes all possible HiASs constructed by the attribute in  and i   denotes the i'th HiAS. An explicit representation of a feature vector of an HDAG kernel is defined as (G) = (1(G),... ,||(G)), where  represents the explicit feature mapping from HDAG to the numerical feature space. The value of i(G) becomes the weighted number of occurrences of i in G. According to this approach, the HDAG kernel, K(G1,G2) =
+
+v  G and v  G are ignored. Then, ph = / h(vi), ei,j, h(vj), . . . , h(vk), ek,l, h(vl) is
+
+|| i=1
+
+i(G1) · i(G2) , calculates the inner product of the weighted common HiASs in
+
+
+G v : 1 :1.0
+
+L5 :1.0 Li : w e i g h t o f La b e l Li
+
+v : w e i g h t o f n o d e v i
+
+ei, j
+
+i
+
+f1,G:0 .8
+
+1
+
+v 2 :0 .8
+
+L1 :0 .4 L2 :0 .5
+
+v 3 :0 .7
+
+L3 :1.2
+
+e2
+
+v 4 :0 .9
+
+L4 :0 .9
+
+, 4 :0 .7
+
+: node : s u b g r a p h v i
+
+G j
+
+e3
+
+: w e i g h t o f d i r e c t e d l i n k
+
+f r o m v
+
+i
+
+t o v
+
+j
+
+, 4 :0 .6
+
+: di r ec t ed l i nk : v er t i c a l l i nk
+
+ei
+
+fi ,
+
+,j
+
+G j f i, G : w e i g h t o f v e r t i c a l l i n k
+
+j
+
+f r o m v t o
+
+i
+
+G
+
+j
+
+G 1
+
+Figure 3: An Example of Hierarchical Directed Graph "G" with weight factors
+
+two HDAGs, G1 and G2. In this paper, we use | stand for the meaning of "such that," since it is simple. KHDAG(G1, G2) = Wi(ph1)Wi(ph2), (1) where Wi(ph) represents the weight value of HiAS i in HiP ph. The weight of HiAS i in HiP ph is determined by Wi(ph) = WV (v) WE(vi, vj) WF (vi, Gj) W(a), (2)
+
+i i (ph)|phP(G1) i (ph)|phP(G2) 1 1 2 2
+
+vV (ph) ei,j E(ph) fi,Gj F (ph) a (i)
+
+where WV (v), WE(vi,vj), WF(vi,Gj), and W(a) represent the weight of node v, link from vi to vj, vertical link from vi to subgraph Gj, and attribute a, respectively. An example of how each weight factor is given is shown in Figure 3. In the case of NL data, for example, W(a) might be given by the score of tf  idf from large scale documents, WV (v) by the type of chunk such as word, phrase or named entity, WE(vi,vj) by the type of relation between vi and vj, and WF(vi,Gj) by the number of nodes in Gj. Soft Structural Matching Frameworks Since HDAG kernels permit not only the exact matching of substructures but also approximate matching, we add the framework of node skip and relaxation of hierarchical information. First, we discuss the framework of the node skip. We introduce decay function V (v)(0 < V (v)  1), which represents the cost of skipping node v when extracting HiASs from the HiPs, which is almost the same architecture as [8]. For example, a HiAS under the node skips is written as  a2,a3 ,, a5 from HiP v1 v2,v3 ,v4, v5 , where  is the explicit representation of a node that is skipped. Next, in the case of the relaxation of hierarchical information, we perform two processes: (1) we form one hierarchy if there is multiple hierarchy information in the same point, for example, ai, aj , ak becomes ai, aj , ak ; and (2) we delete hierarchical information if there exists only one node, for example, ai ,aj,ak becomes ai,aj,ak . These two frameworks achieve approximate substructure matching automatically. Table 1 shows an explicit representation of the common HiASs (features) of G1 and G2 in Figure 2. For the sake of simplicity, for all the weights WV (v), WE(vi,vj), WF(vi,Gj), and W(a), are taken as 1 and for all v, V (v) =  if v has at least one attribute, otherwise V (v) = 1. Efficient Recursive Computation In general, when the dimension of the feature space || becomes very high, it is computationally infeasible to generate feature vector (G) explicitly. We define an efficient calculation formula between HDAGs G1 and G2, which is written as: KHDAG(G1, G2) = K(q, r), (3)
+
+qQ rR
+
+
+Table 1: Common HiASs of G1 and G2 in Figure 2: (N.S. represents the node skip, H.R. represents the relaxation of hierarchical information)
+
+G1 G2 N.S. N.S.+ H.R.
+
+HiAS P N a b c d c, b d, b P a P c N , a N , P N, b
+
+N , b , d a
+
+value 2 1 2 1 1 1 1 1 2 1
+
+  3 2
+
+HiAS with  P N a b c d c, b
+
+d , P a P c b
+
+HiAS P N a b c d c, b
+
+d , P a P c N ,
+
+b
+
+value common HiAS value common HiAS value
+
+1 1 1 1 1 1 1 1 1 1  1 1   1  1 1 1 1 1  1  1
+
+P N a b c d c, b P a N ,
+
+2 1 2 1 1 1 1 0 2 0
+
+  4 2
+
+2 1 2 1 1 1 1 1 2 1
+
+  4 2
+
+HiAS with  P N a b c d c, b d, b P a P c
+
+ N ,  N ,  ,  a  , P
+
+N, b  N ,
+
+ b ,  b ,
+
+d
+
+ ,  a  , P
+
+1 
+
+  3 2
+
+b , P
+
+b , c , c , d , d a d a
+
+ b ,
+
+ c ,
+
+d
+
+ ,  a
+
+ c , d
+
+d ,  a
+
+ N ,  b ,  , P a  , P a
+
+  
+
+3 
+
+    2 2 3 2
+
+N , P a b , P a N, b , a N, b , P N, b , d N, b , P a
+
+ N, b ,  N, b ,  ,  a  , P
+
+ N, b ,
+
+ N, b ,
+
+d 
+
+2   , P a
+
+N ,  a N , P N, b N ,  d b ,  a b , P b ,  d c , a c, d d , a N , P a b , P a N, b ,  a N, b , P N, b ,  d N, b , P a
+
+a
+
+N , P N, b
+
+N , b , d a
+
+b , P b , d c , a c, d d , a N , P a b , P a N, b , a N, b , P N, b , d N, b , P a
+
+a
+
+N , P N, b b , a b , P N , P a b , P a N, b , a N, b , P N, b , P a
+
+1 0
+
+  4 2
+
+0 0 0 0
+
+    2 2 4 2
+
+0
+
+2 
+
+P N a b c d c, b b, d P a P c N, a N, P N, b N, d b, a b, P b, d c, a c, d d, a N, P a b, P a N, b , a N, b , P N, b , d N, b , P a
+
+1
+
+     2 4 2 2 3
+
+ 
+
+      2 2 4 2 2 2
+
+where Q = {q1,... ,q| } and R = {r1,... ,r| } represent nodes in G1 and G2, respecQ| R|
+
+tively. K(q,r) represents the sum of the weighted common HiASs that are extracted from the HiPs whose sink nodes are q and r. K(q, r) = JG1, (4) Function I(q,r) returns the weighted number of common attributes of nodes q and r, I(q, r) = WV (q)WV (r) W(a1)W(a2)(a1, a2), (5)
+
+G2
+
+^ (q, r)H(q, r) + H(q, r)I(q, r) + I(q, r)
+
+a1 (q) a2 (r)
+
+where (a1,a2) = 1 if a1 = a2, and 0 otherwise. Let H(q,r) be a function that returns the sum of the weighted common HiASs between q and r including (q) and (r).
+
+H(q, r) = H(q, r) = ^
+
+^ I(q, r) + (I(q, r) + V (q)V (r)) H(q, r), I(q, r), otherwise if q,r  T¯
+
+(6) (7)
+
+WF (q, Gi )WF (r, Gj )JGi 1
+
+sGi |Gi =(q) tGj |Gj =(r)
+
+Let Jx,y(q,r), Jx,y(q,r), and Jx,y(q,r), where x,y are (sub)graphs, be recursive functions to calculate H(q,r) and K(q,r).
+
+(8)
+
+1 2
+
+,Gj 2 (s, t)
+
+1 1 2 2
+
+
+
+t ,
+
+Jx,y(q, r) = Jx,y(q, r)H(q, r) + H(q, r) WE(q, t) V (t)Jx,y(q, t)+Jx,y(q, t) ,
+
+if (r) = 
+
+Jx,y(q, r) =
+
+{(r)V (y)}
+
+(9)
+
+
+
+0 s ,
+
+otherwise WE(s, r) V (s)Jx,y(s, r)+Jx,y(s, r) , if (q) = 
+
+Jx,y(q, r) =
+
+{(q)V (x)}
+
+(10)
+
+0 otherwise
+
+
+where V (v) = V (v) tGi|Gi=(v) V (t) if v  T¯, V (v) = V (v) otherwise. Func-
+
+tion (q) returns a set of nodes that have direct links to node q. (q) =  means that no node has a direct link to s. Next, we show the formula when using the framework of relaxation of hierarchical information. The functions have the same meanings as in the previous formula. We denote H(q, r) = H(q, r) + H (q, r). ~
+
+K(q, r) = JG1, G2 ~ (q, r)H(q, r) + H (q, r) + H (q, r) I(q, r) + I(q, r)
+
+H(q, r) = H (q, r) + H (q, r) I(q, r) + H (q, r) + I(q, r)
+
+(11) (12)
+
+
+
+WF (r, Gj )H(q, t), if r  T¯ otherwise WF (q, Gi )H(s, r) + H(q, r), if q, r  T¯ 2 ~
+
+H (q, r) =
+
+t ,
+
+Gj |Gj =(r) 2 2 (13)
+
+H (q, r) =
+
+    
+
+0
+
+Gi |Gi =(q) 1 1
+
+1 ^
+
+s s ,
+
+ 
+
+
+
+WF (q, Gi )H(s, r), if q  T¯ otherwise Jx,y(q, r) = Jx,y(q, r)H(q, r) 1
+
+1
+
+(14)
+
+1
+
+Gi |Gi =(q)
+
+0
+
+~ (15)
+
+
+
+t ,
+
+WE(q, t) V (t)Jx,y(q, t)+Jx,y(q, t)+H(q, t) , if (r) =  ~
+
+Jx,y(q, r) =
+
+{(r)V (y)}
+
+0
+
+otherwise
+
+(16)
+
+Functions I(q,r), Jx,y(q,r), and H(q,r) are the same as those shown above. According to equation (3), given the recursive definition of KHDAG(q,r), the value between two HDAGs can be calculated in time O(|Q||R|). In actual use, we may want to evaluate only the subset of all HiASs whose sizes are under n when determining the kernel value because of the problem discussed in [1]. This can simply realized by not calculating those HiASs whose size exceeds n when calculating K(q,r); the calculation cost becomes O(n|Q||R|). Finally, we normalize the values of the HDAG kernels to remove any bias introduced by the number of nodes in the graphs. This normalization corresponds to the standard unit norm normalization of examples in the feature space corresponding to the kernel space
+
+K(x, y) = K(x, y) · (K(x, x)K(y, y))-1 ^ /2 [4].
+
+^
+
+We will now elucidate an efficient processing algorithm. First, as a pre-process, the nodes are sorted under two conditions, V ((v)) v and (v) v, where (v) represents all nodes that have a path to v. The dynamic programming technique can be used to compute HDAG kernels very efficiently: By following the sorted order, the values that are needed to calculate K(q,r) have already been calculated in the previous calculation. 4 Experiments Our aim was to test the efficiency of using the richer syntactic and semantic structures available within texts, which can be treated now for the first time by our proposed method. We evaluated the performance of the proposed method in the actual NLP task of Question Classification, which is similar to the Text Classification task except that it requires many
+
+
+question: Who i s p r i m e m i n i s t e r of w or d or d e r of a t t r i b u t e s ( S e q - K )
+
+W
+
+J a p a n ?
+
+hi e r a r c hi c a l c hu n k s a n d t he i r r e l a t i on s ( H D A G - K )
+
+W
+
+h o P is V B J p r im e J J
+
+[n um b er ]
+
+m inister N N
+
+[executive]
+
+of I N
+
+J a p a n N N P C ountr y
+
+[A s ia n C o un tr y ]
+
+.?
+
+W
+
+W
+
+h o P N P is V B J p r im e J J
+
+[n um b er ]
+
+m inister N N
+
+[executive]
+
+of I N J a p a n N N P
+
+[A s ia n C o un tr y ]
+
+C ountr y N P
+
+?.
+
+d e p e n d e n c y s t r u c t u r e s of a t t r i b u t e s ( D S - K , D A G - K )
+
+W
+
+N P
+
+W
+
+h o P is V B J p r im e J J
+
+[n um b er ]
+
+m inister N N
+
+[executive]
+
+of I N
+
+J a p a n N N P C ountr y
+
+[A s ia n C o un tr y ]
+
+?.
+
+Figure 4: Examples of input data of comparison methods
+
+Table 2: Results of question classification by SVM with comparison kernel functions evaluated by F-measure
+
+TIME TOP LOCATION ORGANIZATION NUMEX 2 3 4 2 3 4 2 3 4 2 3
+
+.951 .942 .926 .946 .913 .869 .615 .564 .403 .946 .910 .866
+
+1 -
+
+.802 .813 .784 .803 .774 .729 .544 .507 .466 .792 .774 .733
+
+1 -
+
+.716 .712 .697 .704 .671 .610 .535 .509 .419 .706 .668 .595
+
+1 -
+
+n 1 4
+
+HDAG-K -
+
+DAG-K DS-K Seq-K -
+
+.916 .922 .874 .912 .880 .813 .602 .504 .424 .913 .885 .815
+
+BOW-K .899 .906 .885 .853 .748 .772 .757 .745 .638 .690 .633 .571 .841 .846 .804 .719
+
+more semantic features within texts [7, 10]. We used three different QA data sets written in Japanese [10]. We compared the performance of the proposed kernel, the HDAG Kernel (HDAG-K), with DAG kernels (DAG-K), Dependency Structure kernels (DS-K) [2], and sequence kernels (Seq-K) [9]. Moreover, we evaluated the bag-of-words kernel (BOW-K) [6], that is, the bag-of-words with polynomial kernels, as the baseline method. The main difference between each method is the ability to treat syntactic and semantic information within texts. Figure 4 shows the differences of input objects between each method. For better understanding, these examples are shown in English. We used words, named entity tags, and semantic information [5] for attributes. Seq-K only treats word order, DS-K and DAG-K treat dependency structures, and HDAG-K treats the NP and NE chunks with their dependency structures. We used the same formula with our proposed method for DAG-K. Comparing HDAG-K to DAG-K shows the difference in performance between handling the hierarchical structures and not handling them. We extended Seq-K and DS-K to improve the total performance and to establish a more equal evaluation, with the same conditions, against our proposed method. Note that though DAG-K and DS-K handle input objects of the same form, their kernel calculation methods differ as do their return values. We used node skip parameter V (v) = 0.5 for all nodes v in each comparison. We used SVM [11] as a kernel-based machine learning algorithm. We evaluated the performance of the comparison methods with question type TIME TOP, ORGANIZATION, LOCATION, and NUMEX, which are defined in the CRL QA-data1. Table 2 shows the average F-measure as evaluated by 5-fold cross validation. n in Table 2 indicates the threshold of an attribute's number, that is, we evaluated only those HiASs that contain less than n-attributes for each kernel calculation. As shown in this table, HDAGK showed the best performance in the experiments. The experiments in this paper were designed to investigate how to improve the performance by using the richer syntactic and semantic structures within texts. In the task of Question Classification, a given question is classified into Question Type, which reflects the intention of the question. These results
+
+1 http://www.cs.nyu.edu/~sekine/PROJECT/CRLQA/
+
+
+indicate that our approach, incorporating richer structure features within texts, is well suited to the tasks in the NLP applications. The original DS-K requires exact matching of the tree structure, even when it is extended for more flexible matching. This is why DS-K showed the worst performance in our experiments. The sequence, DAG, and HDAG kernels offer approximate matching by the framework of node skip, which produces better performance in the tasks that evaluate the intention of the texts. The structure of HDAG approaches that of DAG if we do not consider the hierarchical structure. In addition, the structures of sequences and trees are entirely included in that of DAG. Thus, the HDAG kernel subsumes some of the discrete kernels, such as sequence, tree, and graph kernels. 5 Conclusions This paper proposed HDAG kernels, which can handle more of the rich syntactic and semantic information present within texts. Our proposed method is a very generalized framework for handling structured natural language data. We evaluated the performance of HDAG kernels with the real NLP task of question classification. Our experiments showed that HDAG kernels offer better performance than sequence kernels, tree kernels, and the baseline method bag-of-words kernels if the target task requires the use of the richer information within texts. References [1] M. Collins and N. Duffy. Convolution Kernels for Natural Language. In Proc. of Neural Information Processing Systems (NIPS'2001), 2001. [2] M. Collins and N. Duffy. Parsing with a Single Neuron: Convolution Kernels for Natural Language Problems. In Technical Report UCS-CRL-01-10. UC Santa Cruz, 2001. [3] C. Fellbaum. WordNet: An Electronic Lexical Database. MIT Press, 1998. [4] D. Haussler. Convolution Kernels on Discrete Structures. In Technical Report UCS-CRL-99-10. UC Santa Cruz, 1999. [5] S. Ikehara, M. Miyazaki, S. Shirai, A. Yokoo, H. Nakaiwa, K. Ogura, Y. Oyama, and Y. Hayashi, editors. The Semantic Attribute System, Goi-Taikei -- A Japanese Lexicon, volume 1. Iwanami Publishing, 1997. (in Japanese). [6] T. Joachims. Text Categorization with Support Vector Machines: Learning with Many Relevant Features. In Proc. of European Conference on Machine Learning(ECML '98), pages 137­142, 1998. [7] X. Li and D. Roth. Learning Question Classifiers. In Proc. of the 19th International Conference on Computational Linguistics (COLING 2002), pages 556­562, 2002. [8] H. Lodhi, C. Saunders, J. Shawe-Taylor, N. Cristianini, and C. Watkins. Text Classification Using String Kernel. Journal of Machine Learning Research, 2:419­444, 2002. [9] N. Cancedda and E. Gaussier and C. Goutte and J.-M. Renders. Word-Sequence Kernels. Journal of Machine Learning Research, 3:1059­1082, 2003. [10] J. Suzuki, H. Taira, Y. Sasaki, and E. Maeda. Question Classification using HDAG Kernel. In Workshop on Multilingual Summarization and Question Answering (2003), pages 61­68, 2003. [11] V. N. Vapnik. The Nature of Statistical Learning Theory. Springer, 1995. [12] C. Watkins. Dynamic Alignment Kernels. In Technical Report CSD-TR-98-11. Royal Holloway, University of London Computer Science Department, 1999.
+
+

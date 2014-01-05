@@ -1,0 +1,481 @@
+Independent Components Analysis
+through Product Density Estimation
+Trevor Hastie and Rob Tibshirani
+Department of Statistics
+Stanford University
+Stanford, CA, 94305
+fhastie,tibsg@stat.stanford.edu
+Abstract
+We present a simple direct approach for solving the ICA problem,
+using density estimation and maximum likelihood. Given a candi-
+date orthogonal frame, we model each of the coordinates using a
+semi-parametric density estimate based on cubic splines. Since our
+estimates have two continuous derivatives, we can easily run a sec-
+ond order search for the frame parameters. Our method performs
+very favorably when compared to state-of-the-art techniques.
+1 Introduction
+Independent component analysis (ICA) is a popular enhancement over principal
+component analysis (PCA) and factor analysis. In its simplest form, we observe a
+random vector X 2 IR p which is assumed to arise from a linear mixing of a latent
+random source vector S 2 IR p ,
+X = AS;
+(1)
+the components S j ; j = 1; : : : ; p of S are assumed to be independently distributed.
+The classical example of such a system is known as the \cocktail party" problem.
+Several people are speaking, music is playing, etc., and microphones around the
+room record a mix of the sounds. The ICA model is used to extract the original
+sources from these dierent mixtures.
+Without loss of generality, we assume E(S) = 0 and Cov(S) = I, and hence
+Cov(X) = AA T . Suppose S  = RS represents a transformed version of S, where R
+is p  p and orthogonal. Then with A  = AR T we have X  = A  S  = AR T RS =
+X . Hence the second order moments Cov(X) = AA T = A  A T do not contain
+enough information to distinguish these two situations.
+Model (1) is similar to the factor analysis model (Mardia, Kent & Bibby 1979),
+where S and hence X are assumed to have a Gaussian density, and inference is
+typically based on the likelihood of the observed data. The factor analysis model
+typically has fewer than p components, and includes an error component for each
+variable. While similar modications are possible here as well, we focus on the
+full-component model in this paper. Two facts are clear:
+
+ Since a multivariate Gaussian distribution is completely determined by its
+rst and second moments, this model would not be able to distinguish A
+and A  . Indeed, in factor analysis one chooses from a family of factor
+rotations to select a suitably interpretable version.
+ Multivariate Gaussian distributions are completely specied by their
+second-order moments. If we hope to recover the original A, at least p 1
+of the components of S will have to be non-Gaussian.
+Because of the lack of information in the second moments, the rst step in an ICA
+model is typically to transform X to have a scalar covariance, or to pre-whiten the
+data. From now on we assume Cov(X) = I, which implies that A is orthogonal.
+Suppose the density of S j is f j ; j = 1; : : : ; p, where at most one of the f j are
+Gaussian. Then the joint density of S is
+fS (s) =
+p
+Y
+j=1
+f j (s j );
+(2)
+and since A is orthogonal, the joint density of X is
+fX (x) =
+p
+Y
+j=1
+f j (a T
+j x);
+(3)
+where a j is the jth column of A. Equation (3) follows from S = A T X due to the
+orthogonality of A, and the fact that the determinant in this multivariate transfor-
+mation is 1.
+In this paper we t the model (3) directly using semi-parametric maximum like-
+lihood. We represent each of the densities f j by an exponentially tilted Gaussian
+density (Efron & Tibshirani 1996).
+f j (s j ) = (s j )e g j (s j ) ;
+(4)
+where  is the standard univariate Gaussian density, and g j is a smooth function,
+restricted so that f j integrates to 1. We represent each of the functions g j by a cubic
+smoothing spline, a rich class of smooth functions whose roughness is controlled by a
+penalty functional. These choices lead to an attractive and eective semi-parametric
+implementation of ICA:
+ Given A, each of the components f j in (3) can be estimated separately by
+maximum likelihood. Simple algorithms and standard software are avail-
+able.
+ The components g j represent departures from Gaussianity, and the ex-
+pected log-likelihood ratio between model (3) and the gaussian density is
+given by EX
+P
+j g j (a T
+j X), a exible contrast function.
+ Since the rst and second derivatives of each of the estimated g j are imme-
+diately available, second order methods are available for estimating the
+orthogonal matrix A. We use the xed point algorithms described in
+(Hyvarinen & Oja 1999).
+ Our representation of the g j as smoothing splines casts the estimation prob-
+lem as density estimation in a reproducing kernel Hilbert space, an innite
+family of smooth functions. This makes it directly comparable with the
+\Kernel ICA" approach of Bach & Jordan (2001), with the advantage that
+we have O(N) algorithms available for the computation of our contrast
+function, and its rst two derivatives.
+
+In the remainder of this article, we describe the model in more detail, and evaluate
+its performance on some simulated data.
+2 Fitting the Product Density ICA model
+Given a sample x 1 ; : : : ; xN we t the model (3),(4) by maximum penalized like-
+lihood. The data are rst transformed to have zero mean vector, and identity
+covariance matrix using the singular value decomposition. We then maximize the
+criterion
+p
+X
+j=1
+(
+1
+N
+N
+X
+i=1
+
+log (a T
+j x i ) + g j (a T
+j x i )
+
+ j
+Z
+g 00
+j
+2
+(t)dt
+)
+(5)
+subject to
+a T
+j a k = Æ jk 8j; k
+(6) Z
+(s)e g j (s) ds = 1 8j
+(7)
+For xed a j and hence s ij = a T
+j x i the solutions for g j are known to be cubic splines
+with knots at each of the unique values of s ij (Silverman 1986). The p terms
+decouple for xed a j , leaving us p separate penalized density estimation problems.
+We t the functions g j and directions a j by optimizing (5) in an alternating fashion,
+as described in Algorithm 1. In step (a), we nd the optimal g j for xed g j ; in
+Algorithm 1 Product Density ICA algorithm
+1. Initialize A (random Gaussian matrix followed by orthogonalization).
+2. Alternate until convergence of A, using the Amari metric (16).
+(a) Given A, optimize (5) w.r.t. g j (separately for each j), using the
+penalized density estimation algorithm 2.
+(b) Given g j ; j = 1; : : : ; p, perform one step of the xed point algorithm 3
+towards nding the optimal A.
+step (b), we take a single xed-point step towards the optimal A. In this sense
+Algorithm 1 can be seen to be maximizing the prole penalized log-likelihood w.r.t.
+A.
+2.1 Penalized density estimation
+We focus on a single coordinate, with N observations s i ; i = 1; : : : ; N (where
+s i = a T
+k x i for some k). We wish to maximize
+1
+N
+N
+X
+i=1
+flog (s i ) + g(s i )g 
+Z
+g 00 2
+(s)ds
+(8)
+subject to
+R
+(s)e g(s) ds = 1: Silverman (1982) shows that one can incorporate the
+integration constraint by using the modied criterion (without a Lagrange multi-
+plier)
+1
+N
+N
+X
+i=1
+flog (s i ) + g(s i )g
+Z
+(s)e g(s) ds 
+Z
+g 00 2
+(s)ds:
+(9)
+
+Since (9) involves an integral, we need an approximation. We construct a ne grid
+of L values s 
+` in increments  covering the observed values s i , and let
+y 
+` = #s i 2 (s 
+` =2; s 
+` +=2)
+N
+(10)
+Typically we pick L to be 1000, which is more than adequate. We can then approx-
+imate (9) by
+L
+X
+`=1
+n
+y 
+i [log((s 
+` )) + g(s 
+` )] (s 
+` )e g(s 
+` )
+o
+
+Z
+g 00 2 (s)ds:
+(11)
+This last expression can be seen to be proportional to a penalized Poisson log-
+likelihood with response y 
+` = and penalty parameter =, and mean (s) =
+(s)e g(s) . This is a generalized additive model (Hastie & Tibshirani 1990), with
+an oset term log((s)), and can be t using a Newton algorithm in O(L) opera-
+tions. As with other GAMs, the Newton algorithm is conveniently re-expressed as
+an iteratively reweighted penalized least squares regression problem, which we give
+in Algorithm 2.
+Algorithm 2 Iteratively reweighted penalized least squares algorithm for tting
+the tilted Gaussian spline density model.
+1. Initialize g  0.
+2. Repeat until convergence:
+(a) Let (s 
+` ) = (s 
+` )e g(s 
+` ) ; ` = 1; : : : ; L, and w ` = (s 
+` ).
+(b) Dene the working response
+z ` = g(s 
+` ) + y 
+` (s 
+` )
+(s 
+` )
+(12)
+(c) Update g by solving the weighted penalized least squares problem
+min
+g
+L
+X
+`=1
+w ` (z ` g(s 
+` )) 2 + 2
+
+Z
+g 00 (s) 2
+ds:
+(13)
+This amounts to tting a weighted smoothing spline to the pairs (s 
+` ; z ` )
+with weights w ` and tuning parameter 2=.
+Although other semi-parametric regression procedures could be used in (13), the
+cubic smoothing spline has several advantages:
+ It has knots at all L of the pseudo observation sites s 
+` . The values s 
+`
+can be xed for all terms in the model (5), and so a certain amount of
+pre-computation can be performed. Despite the large number of knots
+and hence basis functions, the local support of the B-spline basis functions
+allows the solution to (13) to be obtained in O(L) computations.
+ The rst and second derivatives of g are immediately available, and are
+used in the second-order search for the direction a j in Algorithm 1.
+ As an alternative to choosing a value for , we can control the amount of
+smoothing through the eective number of parameters, given by the trace
+of the linear operator matrix implicit in (13) (Hastie & Tibshirani 1990).
+
+ It can also be shown that because of the form of (9), the resulting density
+inherits the mean and variance of the data (0 and 1); details will be given
+in a longer version of this paper.
+2.2 A xed point method for nding the orthogonal frame
+For xed functions g j , the penalty term in (5) does not play a role in the search
+for A. Since all of the columns a j of any A under consideration are mutually
+orthogonal and unit norm, the Gaussian component
+p
+X
+j=1
+log (a T
+j x i ) = (2) p=2 e x T
+i AA T x i =2
+= (2) p=2 e x T
+i x i =2
+does not depend on A. Hence what remains to be optimized can be seen as the
+log-likelihood ratio between the tted model and the Gaussian model, which is
+simply
+C(A) = 1
+N
+N
+X
+i=1
+p
+X
+j=1
+g j (a T
+j x i )
+(14)
+=
+p
+X
+j=1
+C j (a j )
+Since the choice of each g j improves the log-likelihood relative to the Gaussian, it is
+easy to show that C(A) is positive and zero only if, for the particular value of A, the
+log-likelihood cannot distinguish the tilted model from a Gaussian model. C(A) has
+the form of a sum of contrast functions for detecting departures from Gaussianity.
+Hyvarinen, Karhunen & Oja (2001) refer to the expected log-likelihood ratio as the
+negentropy, and use simple contrast functions to approximate it in their FastICA
+algorithm. Our regularized approach can be seen as a way to construct a exible
+contrast function adaptively using a large set of basis functions.
+Algorithm 3 Fixed point update forA.
+1. For j = 1; : : : ; p:
+a j   E
+
+Xg 0
+j (a T
+j X) Efg 00
+j (a T
+j X)ga j
+	
+;
+(15)
+where E represents expectation w.r.t. the sample x i , and a j is the jth
+column of A.
+2. Orthogonalize A: Compute its SVD, A = UDV T , and replace A   UV T .
+Since we have rst and second derivatives avaiable for each g j , we can mimic exactly
+the fast xed point algorithm developed in (Hyvarinen et al. 2001, page 189); see
+algorithm 3. Figure 1 shows the optimization criterion C (14) above, as well as the
+two criteria used to approximate negentropy in FastICA by Hyvarinen et al. (2001)
+[page 184]. While the latter two agree with C quite well for the uniform example
+(left panel), they both fail on the mixture-of-Gaussians example, while C is also
+successful there.
+
+Index
+0.0 0.5 1.0 1.5 2.0 2.5 3.0
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Uniforms
+Index
+0.0 0.5 1.0 1.5 2.0 2.5 3.0
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Gaussian Mixtures
+PSfrag replacements
+G 1
+G 2
+Spline
+
+
+Figure 1: The optimization criteria and solutions found for two dierent examples in IR 2
+using FastICA and our ProDenICA. G1 and G2 refer to the two functions used to dene
+negentropy in FastICA. In the left example the independent components are uniformly
+distributed, in the right a mixture of Gaussians. In the left plot, all the procedures found
+the correct frame; in the right plot, only the spline based approach was successful. The
+vertical lines indicate the solutions found, and the two tick marks at the top of each plot
+indicate the true angles.
+3 Comparisons with fast ICA
+In this section we evaluate the performance of the product density approach (Pro-
+DenICA), by mimicking some of the simulations performed by Bach & Jordan (2001)
+to demonstrate their Kernel ICA approach. Here we compare ProDenICA only with
+FastICA; a future expanded version of this paper will include comparisons with other
+ICA procedures as well.
+The left panel in Figure 2 shows the 18 distributions used as a basis of comparison.
+These exactly or very closely approximate those used by Bach & Jordan (2001). For
+each distribution, we generated a pair of independent components (N=1024), and
+a random mixing matrix in IR 2 with condition number between 1 and 2. We used
+our Splus implementation of the FastICA algorithm, using the negentropy criterion
+based on the nonlinearity G 1 (s) = log cosh(s), and the symmetric orthogonalization
+scheme as in Algorithm 3 (Hyvarinen et al. 2001, Section 8.4.3). Our ProDenICA
+method is also implemented in Splus. For both methods we used ve random starts
+(without iterations). Each of the algorithms delivers an orthogonal mixing matrix A
+(the data were pre-whitened), which is available for comparison with the generating
+orthogonalized mixing matrix A 0 . We used the Amari metric(Bach & Jordan 2001)
+as a measure of the closeness of the two frames:
+d(A 0 ; A) = 1
+2p
+p
+X
+i=1
+ P p
+j=1 jr ij j
+max j jr ij j 1
+!
++ 1
+2p
+p
+X
+j=1
+P p
+i=1 jr ij j
+max i jr ij j 1
+
+;
+(16)
+where r ij = (A o A 1 ) ij . The right panel in Figure 2 shows boxplots of the pairwise
+dierences d(A 0 ; AF ) d(A 0 ; AP ) (100), where the subscripts denote ProDenICA
+or FastICA. ProDenICA is competitive with FastICA in all situations, and dom-
+inates in most of the mixture simulations. The average Amari error (100) for
+FastICA was 13.4 (2.7), compared with 3.0 (0.4) for ProDenICA (Bach & Jordan
+(2001) report averages of 6.2 for FastICA, and 3.8 and 2.9 for their two KernelICA
+methods).
+We also ran 300 simulations in IR 4 , using N = 1000, and selecting four of the
+
+a b c
+d e
+g h
+i
+k
+l
+m n o
+p q r
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+a b c d e g h k m n o p q r
+distribution
+Error(FICA)­Error(Poisson)
+Figure 2: The left panel shows eighteen distributions used for comparisons. These include
+the \t", uniform, exponential, mixtures of exponentials, symmetric and asymmetric gaus-
+sian mixtures. The right panel shows boxplots of the improvement of ProDenICA over
+FastICA in each case, using the Amari metric, based on 30 simulations in IR 2 for each
+distribution.
+18 distributions at random. The average Amari error (100) for FastICA was
+26.1 (1.5), compared with 9.3 (0.6) for ProDenICA (Bach & Jordan (2001) report
+averages of 19 for FastICA, and 13 and 9 for their two KernelICA methods).
+4 Discussion
+The ICA model stipulates that after a suitable orthogonal transformation, the data
+are independently distributed. We implement this specication directly using semi-
+parametric product-density estimation. Our model delivers estimates of both the
+mixing matrix A, and estimates of the densities of the independent components.
+Many approaches to ICA, including FastICA, are based on minimizing approxima-
+tions to entropy. The argument, given in detail in Hyvarinen et al. (2001) and
+reproduced in Hastie, Tibshirani & Friedman (2001), starts with minimizing the
+mutual information | the KL divergence between the full density and its indepen-
+dence version. FastICA uses very simple approximations based on single (or a small
+number of) non-linear contrast functions, which work well for a variety of situations,
+but not at all well for the more complex gaussian mixtures. The log-likelihood for
+the spline-based product-density model can be seen as a direct estimate of the mu-
+tual information; it uses the empirical distribution of the observed data to represent
+their joint density, and the product-density model to represent the independence
+density. This approach works well in both the simple and complex situations au-
+tomatically, at a very modest increase in computational eort. As a side benet,
+
+the form of our tilted Gaussian density estimate allows our log-likelihood criterion
+to be interpreted as an estimate of negentropy, a measure of departure from the
+Gaussian.
+Bach & Jordan (2001) combine a nonparametric density approach (via reproducing
+kernel Hilbert function spaces) with a complex measure of independence based on
+the maximal correlation. Their procure requires O(N 3 ) computations, compared to
+our O(N ). They motivate their independence measures as approximations to the
+mutual independence. Since the smoothing splines are exactly function estimates
+in a RKHS, our method shares this exibility with their Kernel approach (and is
+in fact a \Kernel" method). Our objective function, however, is a much simpler
+estimate of the mutual information. In the simulations we have performed so far,
+it seems we achieve comparable accuracy.
+References
+Bach, F. & Jordan, M. (2001), Kernel independent component analysis, Technical
+Report UCB/CSD-01-1166, Computer Science Division, University of Califor-
+nia, Berkeley.
+Efron, B. & Tibshirani, R. (1996), `Using specially designed exponential families
+for density estimation', Annals of Statistics 24(6), 2431{2461.
+Hastie, T. & Tibshirani, R. (1990), Generalized Additive Models, Chapman and
+Hall.
+Hastie, T., Tibshirani, R. & Friedman, J. (2001), The Elements of Statistical Learn-
+ing; Data mining, Inference and Prediction, Springer Verlag, New York.
+Hyvarinen, A., Karhunen, J. & Oja, E. (2001), Independent Component Analysis,
+Wiley, New York.
+Hyvarinen, A. & Oja, E. (1999), `Independent component analysis: Algorithms and
+applications', Neural Networks .
+Mardia, K., Kent, J. & Bibby, J. (1979), Multivariate Analysis, Academic Press.
+Silverman, B. (1982), `On the estimation of a probability density function by the
+maximum penalized likelihood method', Annals of Statistics 10(3), 795{810.
+Silverman, B. (1986), Density Estimation for Statistics and Data Analysis, Chap-
+man and Hall.
+

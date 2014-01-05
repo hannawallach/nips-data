@@ -1,0 +1,284 @@
+Multiple Instance Learning via Disjunctive Programming Boosting
+
+Stuart Andrews Department of Computer Science Brown University, Providence, RI, 02912 stu@cs.brown.edu
+
+Thomas Hofmann Department of Computer Science Brown University, Providence, RI, 02912 th@cs.brown.edu
+
+Abstract Learning from ambiguous training data is highly relevant in many applications. We present a new learning algorithm for classification problems where labels are associated with sets of pattern instead of individual patterns. This encompasses multiple instance learning as a special case. Our approach is based on a generalization of linear programming boosting and uses results from disjunctive programming to generate successively stronger linear relaxations of a discrete non-convex problem. Introduction
+
+1
+
+In many applications of machine learning, it is inherently difficult or prohibitively expensive to generate large amounts of labeled training data. However, it is often considerably less challenging to provide weakly labeled data, where labels or annotations y are associated with sets of patterns or bags X instead of individual patterns x  X. These bags reflect a fundamental ambiguity about the correspondence of patterns and the associated label which can be expressed logically as a disjunction of the form: (x is an example of class y). In plain English, each labeled bag contains at least one pattern (but possibly more) belonging to this class, but the identities of these patterns are unknown. A special case of particular relevance is known as multiple instance learning [5] (MIL). In MIL labels are binary and the ambiguity is asymmetric in the sense that bags with negative labels are always of size one. Hence the label uncertainty is restricted to members of positive bags. There are many interesting problems where training data of this kind arises quite naturally, including drug activity prediction [5], content-based image indexing [10] and text categorization [1]. The ambiguity typically arises, because of polymorphisms allowing multiple representations, e.g. a molecule which can be in different conformations, or because of a part/whole am-
+
+xX
+
+
+biguity, e.g. annotations may be associated with images or documents where they should be attached to objects in an image or passages in a document. Notice also that there are two intertwined objectives: the goal may be to learn a pattern-level classifier from ambiguous training examples, but sometimes one may be primarily interested in classifying new bags without necessarily resolving the ambiguity for individual patterns. A number of algorithms have been developed for MIL, including special purpose algorithms using axis-parallel rectangular hypotheses [5], diverse density [10, 14], neural networks [11], and kernel methods [6]. In [1] two versions of a maximummargin learning architecture for solving the multiple instance learning problem have been presented. Because of the combinatorial nature of the problem, a simple optimization heuristic was used in [1] to learn discriminant functions. In this paper, we take a more principled approach by carefully analyzing the nature of the resulting optimization problem and by deriving a sequence of successively stronger relaxations that can be used to compute lower and upper bounds on the objective. Since it turns out that exploiting sparseness is a crucial aspect, we have focused on a linear programming formulation by generalizing the LPBoost algorithm [7, 12, 4] we call the resulting method Disjunctive Programming Boosting (DPBoost). 2 Linear Programming Boosting LPBoost is a linear programming approach to boosting, which aims at learning ensemble classifiers of the form G(x) = sgn F (x) with F (x) = khk(x), where or features and k  0 are combination weights. The ensemble margin of a labeled example (x, y) is defined as yF (x). Given a set of labeled training examples {(x1, y1), . . . , (xm, ym)}, LPBoost formulates the supervised learning problem using the 1-norm soft margin objective min i s.t. yiF (xi)  1 - i, i  0, i, k  0, k . (1) Here C > 0 controls the tradeoff between the Hinge loss and the L1 regularization term. Notice that this formulation remains meaningful even if all training examples are just negative or just positive [13]. Following [4] the dual program of Eq. (1) can be written as max uiyihk(xi)  1, k, 0  ui  C, i . (2) It is useful to take a closer look at the KKT complementary conditions ui (yiF (xi) + i - 1) = 0, and k uiyihk(xi) - 1 = 0. (3)
+
+k
+
+hk : d
+
+ {-1,1}, k = 1,...,n are the so-called base classifiers, weak hypotheses,
+
+n m
+
+k + C , 
+
+k=1 i=1
+
+m m
+
+ui, s.t. u
+
+i=1 i=1
+
+m
+
+i=1
+
+Since the optimal values of the slack variables are implicitly determined by  as i() = [1 - yiF (xi)]+, the first set of conditions states that ui = 0 whenever yiF (xi) > 1. Since ui can be interpreted as the "misclassification" cost, this implies that only instances with tight margin constraints may have non-vanishing associated which states that a weak hypothesis hk is never included in the ensemble, if its weighted score uiyihk(xi) is strictly below the maximum score of 1. So a typical
+
+costs. The second set of conditions ensures that k = 0, if m i=1 uiyihk(xi) < 1,
+
+i
+
+
+LPBoost solution may be sparse in two ways: (i) Only a small number of weak hypothesis with k > 0 may contribute to the ensemble and (ii) the solution may only depend on a subset of the training data, i.e. those instances with ui > 0. LPBoost exploits the sparseness of the ensemble by incrementally selecting columns from the simplex tableau and optimizing the smaller tableau. This amounts to finding in each round a hypothesis hk for which the constraint in Eq. (2) is violated, adding it to the ensemble and re-optimizing the tableau with the selected columns. As a column selection heuristic the authors of [4] propose to use the magnitude of the violation, i.e. pick the weak hypothesis hk with maximal score uiyihk(xi). 3 Disjunctive Programming Boosting In order to deal with pattern ambiguity, we employ the disjunctive programming framework [2, 9]. In the spirit of transductive large margin methods [8, 3], we propose to estimate the parameters  of the discriminant function in a way that achieves a large margin for at least one of the patterns in each bag. Applying this principle, we can compile the training data into a set of disjunctive constraints on . To that extend, let us define the following polyhedra Hi(x)  (, ) : yi khk(x) + i  1 , Q  {(, ) : ,   0} . (4)
+
+i
+
+k
+
+Then we can formulate the following disjunctive program: min i, s.t. (, )  Q 
+
+n m
+
+k + C ,
+
+k=1 i=1 i xXi
+
+Hi(x) . (5)
+
+Notice that if |Xi|  2 then the constraint imposed by Xi is highly non-convex, since it is defined via a union of halfspaces. However, for trivial bags with |Xi| = 1, the resulting constraints are the same as in Eq. (1). Since we will handle these two cases quite differently in the sequel, let us introduce index sets I = {i : |Xi|  2} and J = {j : |Xj| = 1}. A suitable way to define a relaxation to this non-convex optimization problem is to replace the disjunctive set in Eq. (5) by its convex hull. As shown in [2], a whole hierarchy of such relaxations can be built, using the fundamental fact that cl-conv(A)  cl-conv(B)  cl-conv(A  B), where cl-conv(A) denotes the closure of the convex hull of the limiting points of A. This means a tighter convex relaxation is obtained, if we intersect as many sets as possible, before taking their convex hull. Since repeated intersections of disjunctive sets with more than one element each leads to an combinatorial blow-up in the number of constraints, we propose to intersect every ambiguous disjunctive constraint with every non-ambiguous constraint as well as with Q. This is also called a parallel reduction step [2]. It results in the following convex relaxation of the constraints in Eq. (5)
+
+where we have abused the notation slightly and identified Xj =xj} for bags with one pattern. The rationale in using this relaxation is that the resulting convex optimization problem is tractable and may provide a reasonably accurate approximation to the original disjunctive program, which can be further strengthened by using it in combination with branch-and-bound search.
+
+iI jJ
+
+(, )
+
+cl-conv 
+
+xXiHi(x
+
+
+
+)  Q 
+
+ Hj(xj) , {
+
+(6)
+
+
+There is a lift-and-project representation of the convex hulls in Eq. (6), i.e. one can characterize the feasible set as a projection of a higher dimensional polyhedron which can be explicitly characterized [2]. Proposition 1. Assume a set of non-empty linear constraints Hi  {z : Aiz 
+
+bi} =  is given. Then z  cl-conv such that z = zj,
+
+j
+
+Hi if and only if there exist zj and j  0
+
+i
+
+j = 1, Ajzj  jbj .
+
+j
+
+Proof. [2] Let us pause here briefly and recapitulate what we have achieved so far. We have derived a LP relaxation of the original disjunctive program for boosting with ambiguity. This relaxation was obtained by a linearization of the original non-convex constraints. Furthermore, we have demonstrated how this relaxation can be improved using parallel reduction steps. Applying this linearization to every convex hull in Eq. (6) individually, notice that one needs to introduce duplicates x, x of the parameters  and slack variables , the relevant constraint set for ambiguous bag Xi for i  I of the resulting LP can be written as
+
+for every x  Xi. In addition to the constraints k, i , j , i  0 and x x x x xXi i = 1 x
+
+x  Xi : x  Xi,j  J : k, j  I  J : yi yj k =
+
+k
+
+k
+
+khk(x) + i  i , khk(xj) + j  i ,
+
+x x x
+
+k, x j = j .
+
+x x x
+
+x
+
+(7a) (7b) (7c)
+
+xXi xXi
+
+The first margin constraint in Eq. (7a) is the one associated with the specific pattern x, while the second set of margin constraints in Eq. (7b) stems from the parallel reduction performed with unambiguous bags. One can calculate the dual LP of the above relaxation, the derivation of which can be found in the appendix. The resulting program has a more complicated bound structure on the u-variables and the following crucial constraints involving the data i, x  Xi : yiuxi hk(x) + yjuxj hk(xj)  ik, ik = 1 . (8)
+
+jJ iI
+
+However, the size of the resulting problem is significant. As a result of linearization and parallel reductions, the number of parameters in the primal LP is now O(q ·n+ q ·r), where q, r  m denote the number of patterns in ambiguous and unambiguous bags, compared to O(n + m) of the standard LPBoost. The number of constraints (variables in the dual) has also been inflated significantly from O(m) to O(q·r+p·n)), where p  q is the number of ambiguous bags. In order to maintain the spirit of LPBoost in dealing efficiently with a large-scale linear program, we propose to maintain the column selection scheme of selecting one or more k in every round. Notice that the column selection can not proceed particular, k > 0 implies k > 0, so that k > 0 for at least some z  Xi for each Xi, i  I. We hence propose to simultaneously add all columns {k : x  Xi, i  I}
+
+x
+
+independently because of the equality constraints xXi k = k for all Xi; in x
+
+x z
+
+x
+
+involving the same weak hypothesis and to prune those back after each boosting
+
+
+round in order to exploit the expected sparseness of the solution. In order to select a feature hk, we compute the following score S(k) = ¯ik - 1, ¯ik  max yiuxi hk(x) + (9) Notice that due to the block structure of the tableau, working with a reduced set of columns also eliminates a large number of inequalities (rows). However, the large set of q · r inequalities for the parallel reductions is still prohibitive. In order to address this problem, we propose to perform incremental row selection in an outer loop. Once we have converged to a column basis for the current relaxed LP, we add a subset of rows corresponding to the most useful parallel reductions. One can use the magnitude of the margin violation as a heuristic to perform this row selection. Hence we propose to use the following score
+
+x i
+
+ jJ
+
+yjuxj hk(xj) . 
+
+T (x, j) = i - yj x khk(xj), x where x  Xi, i  I, j  J (10)
+
+k
+
+This means that for current values of the duplicated ensemble weights k, one selects the parallel reduction margin constraint associated with ambiguous pattern x and unambiguous pattern j that is violated most strongly. Although the margin constraints imposed by unambiguous training instances (xj, yj) are redundant after we performed the parallel reduction step in Eq. (6), we add them to the problem, because this will give us a better starting point with respect to the row selection process, and may lead to a sparser solution. We hence add the following constraints to the primal yj khk(xj) + j  1, j  J , (11)
+
+k
+
+which will introduce additional dual variables uj, j  J. Notice that in the worst case where all inequalities imposed by ambiguous training instances Xi are vacuous, this will make sure that one recovers the standard LPBoost formulation on the unambiguous examples. One can then think of the row generation process as a way of deriving useful information from ambiguous examples. This information takes the form of linear inequalities in the high dimensional representation of the convex hull and will sequentially reduce the version space, i.e. the set of feasible (, ) pairs. Algorithm 1 DPBoost Algorithm 1: initialize H = , C = {i : i  I  J}, R = {ux : x  Xi, i  I}  {uj : j  J} 3: repeat
+
+i
+
+2: uj = 1 |J| , uxi = 0, i = 0
+
+4: 5: 6: 7: 8: 9: 10: 11: 12:
+
+repeat column selection: select hk  H with maximal S(k) H = H  {hk} C = C  {k}  {k : x  Xi, i  I}
+
+x
+
+solve LP (C, R) until max S(k) < row selection: select a set S of pairs (x, j)  R with maximal T (x, j) > 0 R = R  {uxj : (x, j)  S}, C = C  {j : (x, j)  S} solve LP (C, R)
+
+x
+
+x
+
+13: until max T (x, j) <
+
+
+90 80 70 60 50 90 80 70 60 50 90 80 70 60 50
+
+1 3 5 7 1 3 5 7 1 3 5 7
+
+Figure 1: (Left) Normalized intensity plot used to generate synthetic data sets. (Right) Performance relative to the degree of label ambiguity. Mean and standard deviation of the pattern-level classification accuracy plotted versus , for perfectknowledge (solid), perfect-selector (dotted), DPboost (dashed), and naive (dashdot) algorithms. The three plots correspond to data sets of size |I| = 10, 20, 30.
+
+4 Experiments
+
+We generated a set of synthetic weakly labeled data sets to evaluate DPboost on a small scale. These were multiple-instance data sets, where the label uncertainty was asymmetric; the only ambiguous bags (|Xi| > 1) were positive. More specifically, we generated instances x  [0, 1] × [0, 1] sampled uniformly at random from the white (yi = 1) and black (yi = -1) regions of Figure 1, leaving the intermediate gray area as a separating margin. The degree of ambiguity was controlled by generating ambiguous bags of size k  Poisson() having only one positive and k - 1 negative patterns. To control data set size, we generated a pre-specified number of ambiguous bags, and the same number of singleton unambiguous bags. As a proof of concept benchmark, we compared the classification perfomance of DPboost with two other LPboost variants: perfect-knowledge, perfect-selector, and naive algorithms. All variants use LPboost as their base algorithm and have slightly different preprocessing steps to accomodate the MIL data sets. The first corresponds to the supervised LPboost algorithm; i.e. the true pattern-level labels are used. Since this algorithm does not have to deal with ambiguity, it will perform better than DPboost. The second uses the true pattern-level labels to prune the negative examples from ambiguous bags and solves the smaller supervised problem with LPboost as above. This algorithm provides an interesting benchmark, since its performance is the best we can hope for from DPboost. At the other extreme, the third variant assumes the ambiguous pattern labels are equal to their respective bag labels. For all algorithms, we used thresholded "RBF-like" features. Figure 2 shows the discriminant boundary (black line), learned by each of the four algorithms for a data set generated with  = 3 and having 20 ambiguous bags (i.e. |I| = 20, no. ambig. = 71, no. total = 91). The ambiguous patterns are marked by "o", unambiguous ones "x", and the background is shaded to indicate the value of the ensemble F (x) (clamped to [-3, 3]). It is clear from the shading that the ensemble has a small number of active features for DPboost, perfect-selector and perfect-knowledge algorithms. For each classifier, we report the pattern-level classification accuracy for a uniform grid (21 x 21) of points. The sparsity of the dual variables was also verified; less than 20 percent of the dual variables and reductions were active. We ran 5-fold cross-validation on the synthetic data sets for  = 1, 3, 5, 7 and for data sets having |I| = 10, 20, 30. Figure 1 (right side) shows the mean pattern-level classification accuracy with error bars showing one standard deviation, as a function
+
+
+3
+
+2
+
+1
+
+0
+
+-1
+
+-2
+
+-3
+
+Figure 2: Discriminant boundaries learned by naive (accuracy = 53.3 %), DPboost (85.3 %), perfect-selector (86.6 %) and perfect-knowledge (92.7 %) algorithms.
+
+of the parameter . 5 Conclusion We have presented a new learning algorithm for classification problems where labels are associated with sets of pattern instead of individual patterns. Using synthetic data, the expected behaviour of the algorithm has been demonstrated. Our current implementation could not handle large data sets, and so improvements, followed by a large-scale validation and comparison to other algorithms using benchmark MIL data sets, will follow. Acknowledgments David Musicant for making his CPLEX MEX interface available online. Also, to Ioannis Tsochantaridis and Keith Hall, for useful discussion and advice. This work was sponsored by an NSF-ITR grant, award number IIS-0085836. References [1] Stuart Andrews, Ioannis Tsochantaridis, and Thomas Hofmann. Support vector machines for multiple-instance learning. In Advances in Neural Information Processing Systems, volume 15. MIT Press, 2003. [2] Egon Balas. Disjunctive programming and a hierarchy of relaxations for discrete optimization problems. SIAM Journal on Algebraic and Discrete Methods, 6(3):466­ 486, July 1985. [3] A. Demirez and K. Bennett. Optimization approaches to semisupervised learning. In M. Ferris, O. Mangasarian, and J. Pang, editors, Applications and Algorithms of Complementarity. Kluwer Academic Publishers, Boston, 2000. [4] Ayhan Demiriz, Kristin P. Bennett, and John Shawe-Taylor. Linear programming boosting via column generation. Machine Learning, 46(1-3):225­254, 2002. [5] T. G. Dietterich, R. H. Lathrop, and T. Lozano-Perez. Solving the multiple instance problem with axis-parallel rectangles. Artificial Intelligence, 89(1-2):31­71, 1997. [6] T. G¨artner, P. A. Flach, A. Kowalczyk, and A. J. Smola. Multi-instance kernels. In Proc. 19th International Conf. on Machine Learning. Morgan Kaufmann, San Francisco, CA, 2002. [7] A.J. Grove and D. Schuurmans. Boosting in the limit: Maximizing the margin of learned ensembles. In Proceedings of the Fifteenth National Conference on Artifical Intelligence, 1998. [8] T. Joachims. Transductive inference for text classification using support vector machines. In Proceedings 16th International Conference on Machine Learning, pages 200­209. Morgan Kaufmann, San Francisco, CA, 1999.
+
+
+[9] Sangbum Lee and Ignacio E. Grossmann. New algorithms for nonlinear general-
+
+ized disjunctive programming. Computers and Chemical Engineering Journal, 24(910):2125­2141, October 2000. [10] O. Maron and A. L. Ratan. Multiple-instance learning for natural scene classification. In Proc. 15th International Conf. on Machine Learning, pages 341­349. Morgan Kaufmann, San Francisco, CA, 1998. [11] J. Ramon and L. De Raedt. Multi instance neural networks. In Proceedings of ICML2000, Workshop on Attribute-Value and Relational Learning, 2000. [12] G. R¨atsch, T. Onoda, and K.-R. M¨uller. Soft margins for AdaBoost. Technical Report NC-TR-1998-021, Department of Computer Science, Royal Holloway, University of London, Egham, UK, 1998. [13] Gunnar R¨atsch, Sebastian Mika, Bernhard Sch¨olkopf, and Klaus-Robert M¨uller. Constructing boosting algorithms from svms: an application to one-class classification. IEEE Transactions on Pattern Analysis and Machine Intelligence, 24(9):1184­1199, 2002. [14] Qi Zhang and Sally A. Goldman. EM-DD: An improved multiple-instance learning technique. In Advances in Neural Information Processing Systems, volume 14. MIT Press, 2002.
+
+Appendix The primal variables are k, k, i, i , j , and i . The dual variables are ux and
+
+x x x x
+
+uxj for the margin constraints, and ik, i, and i for the equality constraints on k,  and , respectively. The Lagrangian is given by
+
+L = k + C
+
+k
+
+ 
+
+j
+
+i +
+
+i j
+
+j - 
+
+uxi yi khk(x) + i - i x x x
+
+i xXi k
+
+- uxj yj khk(xj) + j - i x x x + i 1 - i x
+
+i xXi k i xXi
+
+- - ik
+
+k - k x - i i - i x - ij j -
+
+j ~i i .
+
+xXi x x
+
+x
+
+i,k
+
+xXi x
+
+kk -
+
+i
+
+~i i - x x
+
+xXi i,j
+
+~j j - x x ~x
+
+i xXi k i xXi i xXi j i xXi
+
+Taking derivatives w.r.t. primal variables, leads to the following dual
+
+max s.t.
+
+i i  uxi + yiuxi hk(x) +
+
+i
+
+j
+
+uxj , uxi  C, uxj  ij,
+
+yjuxj hk(xj)  ik,
+
+ij  C ik = 1
+
+i
+
+j i
+
+

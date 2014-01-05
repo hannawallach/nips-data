@@ -1,0 +1,466 @@
+Direct value-approximation for factored MDPs
+Dale Schuurmans and Relu Patrascu
+Department of Computer Science
+University of Waterloo
+fdale,rpatrascg@cs.uwaterloo.ca
+Abstract
+We present a simple approach for computing reasonable policies
+for factored Markov decision processes (MDPs), when the opti-
+mal value function can be approximated by a compact linear form.
+Our method is based on solving a single linear program that ap-
+proximates the best linear t to the optimal value function. By
+applying an e∆cient constraint generation procedure we obtain an
+iterative solution method that tackles concise linear programs. This
+direct linear programming approach experimentally yields a signif-
+icant reduction in computation time over approximate value- and
+policy-iteration methods (sometimes reducing several hours to a
+few seconds). However, the quality of the solutions produced by
+linear programming is weaker|usually about twice the approxi-
+mation error for the same approximating class. Nevertheless, the
+speed advantage allows one to use larger approximation classes to
+achieve similar error in reasonable time.
+1 Introduction
+Markov decision processes (MDPs) form a foundation for control in uncertain and
+stochastic environments and reinforcement learning. Standard methods such as
+value-iteration, policy-iteration and linear programming can be used to produce
+optimal control policies for MDPs that are expressed in explicit form; that is, the
+policy, value function and state transition model are all represented in a tabular
+manner that explicitly enumerates the state space. This renders the approaches
+impractical for all but toy problems. The real goal is to achieve solution methods
+that scale up reasonably in the size of the state description, not the size of the state
+space itself (which is usually either exponential or innite).
+There are two basic premises on which solution methods can scale up: (1) exploiting
+structure in the MDP model itself (i.e. structure in the reward function and the state
+transition model); and (2) exploiting structure in an approximate representation of
+the optimal value function (or policy). Most credible attempts at scaling-up have
+generally had to exploit both types of structure. Even then, it is surprisingly di∆cult
+to formulate an optimization method that can handle large state descriptions and
+yet simultaneously produce value functions or policies with small approximation
+errors, or errors that can be bounded tightly. In this paper we investigate a simple
+approach to determining approximately optimal policies based on a simple direct
+
+linear programming approach. Specically, the idea is to approximate the optimal
+value function by formulating a single linear program and exploiting structure in the
+MDP and the value function approximation to solve this linear program e∆ciently.
+2 Preliminaries
+We consider MDPs with nite state and action spaces and consider the goal of max-
+imizing innite horizon discounted reward. In this paper, states will be represented
+by vectors x of length n, where for simplicity we assume the state variables x 1 ; :::; xn
+are in f0; 1g; hence the total number of states is N = 2 n . We also assume there
+is a small nite set of actions A = fa 1 ; :::; a ` g. An MDP is dened by: (1) a state
+transition model P (x 0 jx; a) which species the probability of the next state x 0 given
+the current state x and action a; (2) a reward function R(x; a) which species the
+immediate reward obtained by taking action a in state x; and (3) a discount factor
+, 0   < 1. The problem is to determine an optimal control policy   : X ! A
+that achieves maximum expected future discounted reward in every state.
+To understand the standard solution methods it is useful to dene some auxiliary
+concepts. For any policy , the value function V  : X ! IR denotes the expected
+future discounted reward achieved by policy  in each state x. It turns out that
+V  satises a xed point relationship between the value of current states and the
+expected values of future states, given by a backup operator V  = B  V  , where
+B  operates on arbitrary functions over the state space according to
+(B  f)( x) = R(x; (x)) + 
+X
+x 0
+P (x 0 jx; (x))f(x 0 )
+Another important backup operator is dened with respect to a xed action a
+(B a f)( x) = R(x; a) + 
+X
+x 0
+P (x 0 jx; a)f(x 0 )
+The action-value function Q  : XA ! IR denotes the expected future discounted
+reward achieved by taking action a in state x and following policy  thereafter;
+which must satisfy Q  (x; a) = B a V  . Given an arbitrary function f over states,
+the greedy policy  gre (f) with respect to f is dened by
+ gre (f)(x) = arg max a
+(B a f) (x)
+Finally, if we let   denote the optimal policy and V  denote its value function,
+we have the relationship V  = B  V  , where (B  f) (x) = max a (B a f) (x). If, in
+addition, we dene Q  (x; a) = B a V  then we also have   (x) =  gre (V  )(x) =
+arg max a Q  (x; a). Given these denitions, the three fundamental methods for cal-
+culating   can be formulated as:
+Policy iteration: Start with an arbitrary policy  (0) . Iterate  (i+1)    gre (V  (i)
+)
+until  (i+1) =  (i) . Return   =  (i+1) .
+Value iteration: Start with an arbitrary function f (0) . Iterate f (i+1)   B  f (i)
+until kf (i+1) f (i) k1 < tol. Return   =  gre (f (i+1) ).
+Linear programming: Calculate V  = arg min f
+P
+x f(x) subject to f(x) 
+(B a f) (x) for all a and x. Return   =  gre (V  ).
+All three methods can be shown to produce optimal policies for the given MDP
+[1, 10] even though they do so in very dierent ways. However, all three approaches
+share the same fundamental limitation that they do not scale up feasibly in n, the
+size of the state descriptions. Instead, all of these approaches work with explicit
+representations of the policies and value functions that are exponential in n.
+
+3 Exploiting structure
+To scale up to large state spaces it is necessary to exploit substantial structure in
+the MDP while also adopting some form of approximation for the optimal value
+function and policy. The two specic structural assumptions we consider in this
+paper are (1) factored MDPs and (2) linear value function approximations. Neither
+of these two assumptions alone is su∆cient to permit e∆cient policy optimization for
+large MDPs. However, combined, the two assumptions allow approximate solutions
+to be obtained for problems involving trillions of states reasonably quickly.
+3.1 Factored MDPs
+In the spirit of [7, 8, 6] we dene a factored MDP to be one that can be rep-
+resented compactly by an additive reward function and a factored state transi-
+tion model. Specically, we assume the reward function decomposes as R(x; a) =
+P m
+r=1 R a;r (x a;r ) where each local reward function R a;r is dened on a small set
+of variables x a;r . We assume the state transition model P (x 0 jx; a) can be repre-
+sented by a set of dynamic Bayesian networks (DBNs) on state variables|one for
+each action|where each DBN denes a compact transition model on a directed
+bipartite graph connecting state variables in consecutive time steps. Let x a;i de-
+note the parents of successor variable x 0
+i in the DBN for action a. To allow e∆-
+cient optimization we assume the parent set x a;i contains a small number of state
+variables from the previous time step. Given this model, the probability of a suc-
+cessor state x 0 given a predecessor state x and action a is given by the product
+P (x 0 jx; a) =
+Q n
+i=1 P (x 0
+i jx a;i ).
+The main benet of this factored representation is that it allows large MDPs to
+be encoded concisely: if the functions R a;r (x a;r ) and P (x 0
+i jx a;i ) depend on a small
+number of variables, they can be represented by small tables and e∆ciently com-
+bined to determine R(x; a) and P (x 0 jx; a). Unfortunately, as pointed out in [7],
+a factored MDP does not by itself yield a feasible method to determining optimal
+policies. The main problem is that, even if P and R are factored, the optimal value
+function generally does not have a compact representation (nor does the optimal
+policy). Therefore, obtaining an exact solution appears to require a return to ex-
+plicit representations. However, it turns out that the factored MDP representation
+interacts very well with linear value function approximations.
+3.2 Linear approximation
+One of the central tenets to scaling up is to approximate the optimal value func-
+tion rather than calculate it exactly. Numerous schemes have been investigated for
+approximating optimal value functions and policies in a compact representational
+framework, including: hierarchical decompositions [5], decision trees and diagrams
+[3, 12], generalized linear functions [1, 13, 4, 7, 8, 6], neural networks [2], and prod-
+ucts of experts [11]. However, the simplest of these is generalized linear functions,
+which is the form we investigate below. In this case, we consider functions of the
+form f(x) =
+P k
+j=1 w j b j (x j ) where b 1 ; :::; b k are a xed set of basis functions, and x j
+denotes the variables on which basis b j depends. Combining linear functions with
+factored MDPs provides many opportunities for feasible approximation.
+The rst main benet of combining linear approximation with factored MDPs is
+that the result of applying the backup operator B a to a linear function results in
+a compact representation for the action-value function. Specically if we dene
+
+g(x; a) = (B a f)(x) then we can rewrite it as
+g(x; a) =
+m
+X
+r=1
+R a;r (x a;r ) +
+k
+X
+j=1
+w j c a;j (x a;j )
+where
+c a;j (x a;j ) = 
+X
+x 0
+j
+P (x 0
+j ja; x a;j )b j (x 0
+j ) and x a;j =
+[
+x 0
+i 2x 0
+j
+x a;i
+That is, x a;i are the parent variables of x 0
+i , and x a;j is the union of the parent
+variables of x 0
+i 2 x 0
+j . Thus, c a;j expresses the fact that in a factored MDP the
+expected future value of one component of the approximation depends only on the
+current state variables x a;j that are direct parents of the variables x 0
+j in b j . If the
+MDP is sparsely connected then the variable sets in g will not be much larger than
+those in f . The ability to represent the state-action value function in a compact
+linear form immediately provides a feasible implementation of the greedy policy for
+f , since  gre (f)(x) = arg max a g(x; a) by denition of  gre , and g(x; a) is e∆ciently
+determinable for each x and a. However, it turns out that this is not enough
+to permit feasible forms of approximate policy- and value-iteration to be easily
+implemented.
+The main problem is that even though B a f has a factored form for xed a, B  f does
+not and (therefore) neither does  gre (f). In fact, even if a policy  were concisely
+represented, B  f would not necessarily have a compact form because  usually
+depends on all the state variables and thus P (x 0 jx; (x)) =
+Q n
+i=1 P (x 0
+i jx (x);i ) be-
+comes a product of terms that depend on all the state variables. Here [8, 6] introduce
+an additional assumption that there is a special \default" action a d for the MDP
+such that all other actions a have a factored transition model P (j; a) that diers
+from P (j; a d ) only on a small number of state variables. This allows the greedy
+policy  gre (f) to have a compact form and moreover allows B gre (f) f to be con-
+cisely represented. With some eort, it then becomes possible to formulate feasible
+versions of approximate policy- and value-iteration [8, 6].
+Approximate policy iteration: Start with default policy  (0) (x) = a d . Iterate
+f (i)   arg min f max x jf(x) (B  (i)
+f)(x)j ,  (i+1)    gre (f (i) ) until  (i+1) =  (i) .
+Approximate value iteration: Start with arbitrary f (0) . Iterate  (i)  
+ gre (f (i) ) , f (i+1)   arg min f max x jf(x) (B  (i)
+f)(x)j until kf (i+1) f (i) k1 < tol.
+The most expensive part of these iterative algorithms is determining
+arg min f max x jf(x) (B  (i)
+f)(x)j which involves solving a linear program minw; 
+subject to   f w (x) (B  fw )(x)   for all x. This linear program is problematic
+because it involves an exponential number of constraints. A central achievement of
+[6] is to show that this system of constraints can be encoded by an equivalent system
+of constraints that has a much more compact form. The idea behind this construc-
+tion is to realize that searching for the max or a min of a linear function with a
+compact basis can be conducted in an organized fashion, and such an organized
+search can be encoded in an equally concise constraint system. This construction
+allows approximate solutions to MDPs with up to n = 40 state variables (1 trillion
+states) to be generated in under 7.5 hours using approximate policy iteration [6]. 1
+1 It turns out that approximate value iteration is less eective because it takes more
+iterations to converge, and in fact can diverge in theory [6, 13].
+
+Our main observation is that if one has to solve linear programs to conduct the
+approximate iterations anyway, then it might be much simpler and more e∆cient
+to approximate the linear programming approach directly.
+4 Approximate linear programming
+Our rst idea is simply to observe that a factored MDP and linear value approxima-
+tion immediately allow one to directly solve the linear programming approximation
+to the optimal value function, which is given by
+min
+f
+X
+x
+f(x) subject to f(x) (B a f)(x)  0 for all x and a
+where f is restricted to a linear form over a xed basis. In fact, it is well known [1, 2]
+that this yields a linear program in the basis weights w. However, what had not
+been previously shown is that given a factored MDP, an equivalent linear program
+of feasible size could be formulated. Given the results of [6] outlined above this is
+now easy to do. First, one can show that the minimization objective can be encoded
+compactly
+X
+x
+f(x) =
+X
+x
+k
+X
+j=1
+w j b j (x j )
+=
+k
+X
+j=1
+w j y j where y j = 2 njx j j
+X
+x j
+b j (x j )
+Here the y j components can be easily precomputed by enumerating assignments
+to the small sets of variables in basis functions. Second, as we have seen, the
+exponentially many constraints have a structured form. Specically f(x) (B a f)(x)
+can be represented as
+f(x) (B a f)(x) =
+k
+X
+j=1
+w j (b j (x j ) c a;j (x a;j ))
+X
+r
+R a;r (x a;r )
+which has a simple basis representation that allows the technique of [6] to be used
+to encode a constraint system that enforces f(x) (B a f)(x)  0 for all x and a
+without enumerating the state space for each action.
+We implemented this approach and tested it on some of the test problems from [6].
+In these problems there is a directed network of computer systems x 1 ; :::; xn where
+each system is either up (x i = 1) or down (x i = 0). Systems can spontaneously
+go down with some probability at each step, but this probability is increased if an
+immediately preceding machine in the network is down. There are n + 1 actions:
+do nothing (the default) and reboot machine i. The reward in a state is simply the
+sum of systems that are up, with a bonus reward of 1 if system 1 (the server) is
+up. I.e., R(x) = 2x 1 +
+P n
+i=2 x i . We considered the network architectures shown in
+Figure 1 and used the transition probabilities P (x 0
+i = 1jx i ; parent(x i ); a = i) = 0:95
+and P (x 0
+i = 1jx i ; parent(x i ); a 6= i) = 0.9 if x i = parent(x i ) = 1; 0.67 if x i = 1 and
+parent(x i ) = 0; and 0:01 if x i = 0. The discount factor was  = 0:95. The rst basis
+functions we considered were just the indicators on each variable x i plus a constant
+basis function (as reported in [6]).
+The results for two network architectures are shown in Figure 1. Our approximate
+linear programming method is labeled ALP and is compared to the approximate
+
+h
+h
+h
+h
+h
+h
+H Hj
+?
+Q
+Qk
+6
+ *
+
++
+server
+n = 12 16 20 24 28 32 36 40
+N = 4e3 6e4 1e6 2e7 3e8 4e9 7e10 1e12
+API[6] 2 7m 30m 50m 1.3h 1.9h 3h 4.5h 7.5h
+APIgen 39s 1.5m 2.3m 4.0m 6.5m 13m 22m 28m
+time ALP 4.5s 23s 1.4m 4.1m 10m 23m 47m 2.4h
+ALPgen 0.7s 1.2s 1.8s 2.6s 3.5s 4.5s 5.9s 7.0s
+ALPgen2 14s 37s 1.2m 2.8m 4.7m 6.4m 12m 17m
+APIgen 420 777 921 1270 1591 2747 4325 4438
+constraints ALP 1131 2023 3171 4575 6235 8151 10K 13K
+ALPgen 38 50 62 74 86 98 110 122
+ALPgen2 166 321 514 914 1223 1433 1951 2310
+API[6] 2 0.30 0.33 0.34 0.35 0.36 0.36 0.37 0.38
+UB Bellman APIgen 0.36 0.34 0.33 0.33 0.32 0.32 0.32 0.31
+/ Rmax ALP(gen) 0.85 0.82 0.80 0.78 0.78 0.77 0.76 0.76
+ALPgen2 0.12 0.14 0.08 0.08 0.10 0.08 0.07 0.07
+h
+h
+h
+h
+h
+h
+h
+6
+6
+^
+^
+
+
+server
+n = 13 16 22 28 34 40
+N = 8e4 6e4 4e6 3e8 2e10 1e12
+API[6] 2 5m 15m 50m 1.3h 2.7h 5h
+APIgen 28s 1.6m 3.9m 12m 23m 33m
+time ALP 0.7s 1.6s 6.0s 20s 56s 2.2m
+ALPgen 0.7s 1.0s 1.5s 2.4s 3.4s 4.7s
+ALPgen2 17s 33s 1.9m 5.4m 9.6m 23m
+APIgen 363 952 1699 3792 6196 7636
+constraints ALP 729 1089 2025 3249 4761 6561
+ALPgen 50 69 90 114 135 162
+ALPgen2 261 381 826 1505 1925 3034
+API[6] 2 0.27 0.29 0.32 0.34 0.35 0.36
+UB Bellman APIgen 0.50 0.46 0.42 0.39 0.38 0.37
+/ Rmax ALP(gen) 0.96 0.82 0.78 0.78 0.77 0.76
+ALPgen2 0.21 0.22 0.15 0.06 0.07 0.03
+Figure 1: Experimental results (timings on a 750MHz PIII processor, except 2 )
+policy iteration strategy API described in [6]. Since we did not have the specic
+probabilities used in [6] and could only estimate the numbers for API from graphs
+presented in the paper, this comparison is only meant to be loosely indicative of
+the general run times of the two methods on such problems. (Perturbing the prob-
+ability values did not signicantly aect our results, but we implemented APIgen
+for comparison.) As in [6] our implementation is based on Matlab, using CPLEX
+to solve linear programs. Our preliminary results appear to support the hypothe-
+sis that direct linear programming can be more e∆cient than approximate policy
+iteration on problems of this type. A further advantage of the linear program-
+ming approach is that it is simpler to program and involves solving only one LP.
+More importantly, the direct LP approach does not require the MDP to have a spe-
+cial default action since the action-value function can be directly extracted using
+ gre (f)(x) = arg max a g(x; a) and g is easily recoverable from f .
+Before discussing drawbacks, we note that it is possible to solve the linear program
+even more e∆ciently by iteratively generating constraints as needed. This is now
+possible because factored MDPs and linear value approximations allow an e∆cient
+search for the maximally violated constraints in the linear program, which provides
+an eective way of generating concise linear programs that can be solved much more
+e∆ciently than those formulated above. Specically, the procedure ALPgen exploits
+the feasible search techniques for minimizing linear functions discussed previously
+to e∆ciently generate a small set of critical constraints, which is iteratively grown
+until the nal solution is identied; see Figure 2.
+2 These numbers are estimated from graphs in [6]. The exact probabilities and computer
+used for the simulations were not reported in that paper, so we cannot assert an exact
+comparison. However, perturbed probabilities have little eect on the performance of the
+methods we tried, and it seems that overall this is a loosely representative comparison of
+the general performance of the various algorithms on these problems.
+
+ALPgen
+Start with f (0) = 0 and constraints = ;
+Loop
+For each a 2 A, compute x a   arg min x f (i) (x) (B a f (i) )(x)
+constraints   constraints
+S fconstraint(x a1 ); :::; constraint(x ak )g
+Solve f (i+1)   min f
+P
+x f(x) subject to constraints
+Until min x f (i) (x) (B a f (i) )(x)  0 tol for all a
+Return g(; a) = B a f for each a, to represent the greedy policy
+Figure 2: ALPgen procedure
+The rationale for this procedure is that the main bottleneck in the previous meth-
+ods is generating the constraints, not solving the linear programs [6]. Since only a
+small number of constraints are active at a solution and these are likely to be the
+most violated near the solution, adding only most violated constraints appears to
+be a useful way to proceed. Indeed, Figure 1 shows that ALPgen produces the same
+approximate solutions as ALP in a tiny fraction of the time. In the most extreme
+case ALPgen produces an approximate solution in 7 seconds while other methods
+take several hours on the same problem. The reason for this speedup is explained
+by the results which show the numbers of constraints generated by each method.
+Further investigation is also required to fully outline the robustness of the con-
+straint generation method. In fact, one cannot guarantee that a greedy constraint
+generation scheme like the one proposed here will always produce a feasible number
+of constraints [9]. Nevertheless, the potential benets of conservatively generating
+constraints as needed seem to be clear. Of course, the main drawback of the direct
+linear programming approach over approximate policy iteration is that ALP incurs
+larger approximation errors than API.
+5 Bounding approximation error
+It turns out that neither API nor ALP are guaranteed to return the best lin-
+ear approximation to the true value function. Nevertheless, it is possible to ef-
+ciently calculate bounds on the approximation errors of these methods, again
+by exploiting the structure of the problem: A well known result [14] asserts that
+max x V  (x) V gre (f) (x)  
+1  max x f(x) (B  f)(x) (where in our case f  V  ).
+This upper bound can in turn be bounded by a quantity that is feasible to calculate:
+max x f(x) (B  f)(x) = max x min a f(x) (B a f)(x)  min a max x f(x) (B a f)(x).
+Thus an upper bound on the error from the optimal value function can be calculated
+by performing an e∆cient search for max x f(x) (B a f)(x) for each a.
+Figure 1 shows that the measurable error quantity, max x f(x) (B a f)(x) (reported
+as UB Bellman) is about a factor of two larger for the linear programming approach
+than for approximate policy iteration on the same basis. In this respect, API ap-
+pears to have an inherent advantage (although in the limit of an exhaustive basis
+both approaches converge to the same optimal value). To get an indication of the
+computational cost required for ALPgen to achieve a similar bound on approxima-
+tion error, we repeated the same experiments with a larger basis set that included all
+four indicators between pairs of connected variables. The results for this model are
+reported as ALPgen2, and Figure 1 shows that, indeed, the bound on approxima-
+tion error is reduced substantially|but at the predictable cost of a sizable increase
+in computation time. However, the run times are still appreciably smaller than the
+policy iteration methods.
+
+Paradoxically, linear programming seems to oer computational advantages over
+policy and value iteration in the context of approximation, even though it is widely
+held to be an inferior solution strategy for explicitly represented MDPs.
+References
+[1] D. Bertsekas. Dynamic Programming and Optimal Control, volume 2. Athena
+Scientic, 1995.
+[2] D. Bertsekas and J. Tsitsiklis. Neuro-Dynamic Programming. Athena Scientic,
+1996.
+[3] C. Boutilier, R. Dearden, and M. Goldszmidt. Stochastic dynamic program-
+ming with factored representations. Articial Intelligence, 2000.
+[4] J. Boyan. Least-squares temporal dierence learning. In Proceedings ICML,
+1999.
+[5] T. Dietterich. Hierarchical reinforcement learning with the MAXQ value func-
+tion decomposition. JAIR, 13:227{303, 2000.
+[6] C. Guestrin, D. Koller, and R. Parr. Max-norm projection for factored MDPs.
+In Proceedings IJCAI, 2001.
+[7] D. Koller and R. Parr. Computing factored value functions for policies in
+structured MDPs. In Proceedings IJCAI, 1999.
+[8] D. Koller and R. Parr. Policy iteration for factored MDPs. In Proceedings
+UAI, 2000.
+[9] R. Martin. Large Scale Linear and Integer Optimization. Kluwer, 1999.
+[10] M. Puterman. Markov Decision Processes: Discrete Dynamic Programming.
+Wiley, 1994.
+[11] B. Sallans and G. Hinton. Using free energies to represent Q-values in a mul-
+tiagent reinforcement learning task. In Proceedings NIPS, 2000.
+[12] R. St-Aubin, J. Hoey, and C. Boutilier. APRICODD: Approximating policy
+construction using decision diagrams. In Proceedings NIPS, 2000.
+[13] B. Van Roy. Learning and value function approximation in complex decision
+processes. PhD thesis, MIT, EECS, 1998.
+[14] R. Williams and L. Baird. Tight performance bounds on greedy policies based
+on imperfect value functions. Technical report, Northeastern University, 1993.
+

@@ -1,0 +1,433 @@
+Vicinal Risk Minimization
+Olivier Chapelle, Jason Weston  , L’ eon Bottou and Vladimir Vapnik
+AT&T Research Labs, 100 Schultz drive, Red Bank, NJ, USA
+ Barnhill BioInformatics.com, Savannah, GA, USA.
+fchapelle,weston,leonb,vladg@research.att.com
+Abstract
+The Vicinal Risk Minimization principle establishes a bridge between
+generative models and methods derived from the Structural Risk Mini­
+mization Principle such as Support Vector Machines or Statistical Reg­
+ularization. We explain how VRM provides a framework which inte­
+grates a number of existing algorithms, such as Parzen windows, Support
+Vector Machines, Ridge Regression, Constrained Logistic Classifiers and
+Tangent­Prop. We then show how the approach implies new algorithm­
+s for solving problems usually associated with generative models. New
+algorithms are described for dealing with pattern recognition problems
+with very different pattern distributions and dealing with unlabeled data.
+Preliminary empirical results are presented.
+1 Introduction
+Structural Risk Minimisation (SRM) in a learning system can be achieved using constraints
+on the parameter vectors, using regularization terms in the cost function, or using Support
+Vector Machines (SVM). All these principles have lead to well established learning algo­
+rithms.
+It is often said, however, that some problems are best addressed by generative models. The
+first problem is of missing data. We may for instance have a few labeled patterns and a
+large number of unlabeled patterns. Intuition suggests that these unlabeled patterns carry
+useful information. The second problem is of discriminating classes with very different
+pattern distributions. This situation arises naturally in anomaly detection systems. This
+also occurs often in recognition systems that reject invalid patterns by defining a garbage
+class for grouping all ambiguous or unrecognizable cases. Although there are successful
+non­generative approaches (Schuurmans and Southey, 2000) (Drucker, Wu and Vapnik,
+1999), the generative framework is undeniably appealing. Recent results (Jaakkola, Meila
+and Jebara, 2000) even define generative models that contain SVM as special cases.
+This paper discusses the Vicinal Risk Minimization (VRM) principle, summarily intro­
+duced in (Vapnik, 1999). This principle was independently hinted at by Tong and Koller
+(Tong and Koller, 2000) with a useful generative interpretation. In particular, they proved
+that SVM are a limiting case of their Restricted Bayesian Classifiers. We extend Tong's
+and Koller's result by showing that VRM subsumes several well known techniques such as
+Ridge Regression (Hoerl and Kennard, 1970), Constrained Logistic Classifier, or Tangent
+Prop (Simard et al., 1992). We then go on to show how VRM naturally leads to simple algo­
+
+rithms that can deal with problems for which one would have formally considered purely
+generative models. We provide algorithms and preliminary empirical results for dealing
+with unlabeled data or recognizing classes with very different pattern distributions.
+2 Vicinal Risk Minimization
+The learning problem can be formulated as the search of the function f 2 F that minimizes
+the expectation of a given loss `(f(x); y).
+R(f) =
+Z
+`(f(x); y) dP (x; y) (1)
+In the classification framework, y takes values 1 and `(f(x); y) is a step function such as
+1 Sign(yf(x)), whereas in the regression framework, y is a real number and commonly
+`(f(x); y) is the mean squared error (f(x) y) 2 .
+The expectation (1) cannot be computed since the distribution P (x; y) is unknown. How­
+ever, given a training set f(x i ; y i )g 1in , it is common to minimize instead the empirical
+risk:
+Remp (f) = 1
+n
+n
+X
+i=1
+`(f(x i ); y i )
+Empirical Risk Minimization (ERM) is therefore equivalent to minimizing the expecta­
+tion of the loss function with respect to an empirical distribution Pemp (x; y) formed by
+assembling delta functions located on each example:
+dPemp (x; y) =
+1
+n
+n
+X
+i=1
+Æ x i
+(x)Æ y i
+(y) (2)
+It is quite natural to consider improved density estimates by replacing the delta functions
+Æ x i
+(x) by some estimate of the density in the vicinity of the point x i , Px i
+(x).
+dP est (x; y) = 1
+n
+n
+X
+i=1
+dP x i
+(x)Æ y i
+(y) (3)
+We can define in this way the vicinal risk of a function as:
+R vic (f) =
+Z
+`(f(x); y) dP est (x; y) =
+1
+n
+n
+X
+i=1
+Z
+`(f(x); y i )dP x i
+(x) (4)
+The Vicinal Risk Minimization principle consists of estimating argmin f2F R(f) by the
+function which minimizes the vicinal risk (4). In general, one can construct the VRM
+functional using any estimate dP est (x; y) of the density dP (x; y), instead of restricting
+our choices to pointwise kernel estimates.
+Spherical gaussian kernel functions N  (x x i ) are otherwise an obvious choice for the
+local density estimate dP x i
+(x). The corresponding density estimate dP est is a Parzen win­
+dows estimate. The parameter  controls the scale of the density estimate. The extreme
+case  = 0 leads to the estimation of the density by delta functions and therefore leads to
+ERM. This must be distinguished from the case  ! 0 because the limit is taken after the
+minimization of the integral, leading to different results as shown in the next section.
+The theoretical analysis of ERM (Vapnik, 1999) shows that the crucial factor is the capacity
+of the class F of functions. Large classes entail the risk of overfitting, whereas small classes
+entail the risk of underfitting. Two factors however are responsible for generalization of
+VRM, namely the quality of the estimate dP est and the size of the class F of functions.
+
+If dP est is a poor approximation to P then VRM can still perform well if F has suitably
+small capacity. ERM indeed uses a very naive estimate of dP and yet can provide good
+results. On the other hand, if F is not chosen with suitably small capacity then VRM can
+still perform well if the estimate dP est is a good approximation to dP . One can even take
+the set of all possible functions (whose capacity is obviously infinite) and still find a good
+solution if the estimate dP est is close enough to dP with an adequate metric. For example,
+if dP est is a Parzen window density estimate, then the Vicinal Risk minimizer is the Parzen
+window classifier. This latter property contrasts nicely with the ERM principle whose
+results strongly depend on the choice of the class of functions. Although we do not have a
+full theoretical understanding of VRM at this time, we expect considerable differences in
+the theoretical analysis of ERM and VRM.
+3 Special Cases
+We now discuss the relationship of VRM to existing methods. There are obvious links
+between VRM and Parzen windows or Nearest Neighbour when the set of functions F is
+unconstrained. Furthermore, many existing algorithms can be viewed as special cases of
+VRM for different choices of F and dP est .
+a) VRM Regression and Ridge Regression --- Consider the case of VRM for regression
+with spherical Parzen windows (using gaussian kernel) with standard deviation  and with
+a family F of linear functions fw;b (x) = w  x + b. We can write the vicinal risk as:
+R vic (f) = 1
+n
+n
+X
+i=1
+Z
+(f(x) y i ) 2
+dPx i
+(x)
+=
+1
+n
+n
+X
+i=1
+Z
+(f(x i + ) y i ) 2 dN  ()
+=
+1
+n
+n
+X
+i=1
+Z
+(f(x i ) y i +w  )
+2 dN  ()
+=
+1
+n
+n
+X
+i=1
+(f(x i ) y i ) 2 +  2 jjwjj 2
+The resulting expression is the empirical risk augmented by a regularization term. The
+particular cost function above is known as the Ridge Regression cost function (Hoerl and
+Kennard, 1970).
+This result can be extended to the case of non linear functions f by performing a Taylor
+expansion of f(x i + ). The corresponding regularization term then combines successive
+derivatives of function f . Useful mathematical arguments can be found in (Leen, 1995).
+b) VRM and Invariant Learning --- Generating synthetic examples is a simple way to
+incorporate selected invariances in a learning system. For instance, we can augment a
+optical character recognition database by applying applying translations or rotations to the
+initial examples. In the limit, this is equivalent to replacing each initial example by a
+distribution whose shape represents the desired invariances. This formulation naturally
+leads to a special case of VRM in which the local density estimates P x i
+(x) are elongated
+in the direction of invariance.
+Tangent­Prop (Simard et al., 1992) is a more sophisticated way to incorporate invariances
+by adding an adequate regularization term to the cost function. Tangent­Prop has been
+formally proved to be equivalent to generating synthetic examples with infinitesimal defor­
+mations (Leen, 1995). This analysis makes Tangent­Prop a special case of VRM. The local
+
+density estimate Px i
+is simply formed by Gaussian kernels with a covariance matrix whose
+eigenvectors describe the tangent direction to the invariant manifold. The eigenvalues then
+represent the respective strengths of the selected invariances.
+The tangent covariance matrix used in the SVM context by (Sch˜olkopf et al., 1998) speci­
+fies invariances globally. It can also been seen as a special case of VRM.
+c) VRM Classifier and Constrained Logistic Classifier --- Consider the case of VRM for
+classification with spherical Parzen windows with standard deviation  and with a family
+F of linear functions fw;b (x) = w  x + b. We can assume without loss of generality that
+jjwjj = 1. We can write the vicinal risk as:
+R vic (w; b) =
+1
+n
+n
+X
+i=1
+Z
+y i Sign(b +w  x) dP x i
+(x)
+=
+1
+n
+n
+X
+i=1
+y i
+Z
+Sign(b +w  x i +w  ) dN  ()
+We can decompose  = ww +  ? where ww represents its component parallel to w and
+? represents its orthogonal component. Since jjwjj = 1, we have w   =  w . After
+integrating over  ? we are left with the following expression:
+R vic (w; b) =
+1
+n
+n
+X
+i=1
+y i
+Z
+Sign(b +w  x i +  w ) dN  ( w )
+The latter integral can be seen as the convolution of the Gaussian N  (x) with the step func­
+tion Sign(x), which is a sigmoid shaped function with asymptotes at 1. Using notation
+'(x) = 2 erf(x) 1, we can write:
+R vic (w; b) =
+1
+n
+n
+X
+i=1
+y i '
+
+w  x i + b
+
+
+By rescaling w and b by a factor 1=, we can write the following equivalent formulation
+of the VRM: 8 > <
+> :
+Arg Min
+w;b
+1
+n
+n
+X
+i=1
+y i '(w  x i + b)
+with constraint jjwjj = 1=
+(5)
+Except for the minor shape difference between sigmoid functions, the above formulation
+describes a Logistic Classifier with a constraint on the weights. This formulation is also
+very close to using a single artificial neuron with a sigmoid transfer function and a weight
+decay.
+The above proof illustrates a general identity. Transforming the empirical probability es­
+timate (2) by convolving it with a kernel function is equivalent to transforming the loss
+function `(f(x); y) by convolving it with the same kernel function. This is summarized in
+the following equality, where ? represents the convolution operator.
+Z
+`(f(x); y) [N  () ? dPemp (; y)] (x) =
+Z
+[`(f(); y) ? N  ()] (x) dPemp (x; y)
+d) VRM Classifier and SVM (Tong and Koller, 2000) --- Consider again the case of
+VRM for classification with spherical Parzen windows with standard deviation  and with
+a family F of linear functions fw;b (x) = w  x + b. The resulting algorithm is in fact a
+Restricted Bayesian Classifier (Tong and Koller, 2000). Assuming that the examples are
+
+separable, Tong and Koller have shown that the resulting decision boundary tends towards
+the hard margin SVM decision boundary when  tends towards zero.
+The proof is based on the following observation: when  ! 0, the vicinal risk (4) is domi­
+nated by the terms corresponding to the examples whose distance to the decision boundary
+is minimal. These examples in fact are the support vectors. On the other hand, choosing
+ > 0 generates a decision boundary which depends on all the examples. The contribu­
+tion of each example decreases exponentially when its distance to the decision boundary
+increases. This is only slightly different from a soft margin SVM whose boundary relies
+on support vectors that can be more distant than those selected by hard margin SVM. The
+difference here is just in the cost functions (sigmoid compared to linear loss).
+e) SVM and Constrained Logistic Classifiers --- The two previous paragraphs show that
+the same particular case of VRM is (a) equivalent to a Logistic Classifier with a constraint
+on the weights, and (b) tends towards the SVM classifier when  ! 0 and when the
+examples are separable. As a consequence, we can state that the Logistic Classifier decision
+boundary tends towards the SVM decision boundary when we relax the constraint on the
+weights.
+In practice we can find the SVM solution with a Logistic Classifier by simply using an
+iterative weight update algorithm such as gradient descent, choosing small initial weights,
+and letting the norm of the weights grow slowly while the iterative algorithm is running.
+Although this algorithm is not exact, it is fast and efficient. This is in fact similar to what
+is usually done with back­propagation neural networks (LeCun et al., 1998). The same
+algorithm can be used for the VRM. In that context early stopping is similar to choosing
+the optimal  using cross­validation.
+4 New Algorithms and Results
+4.1 Adaptive Kernel Widths
+It is known in density estimation theory that the quality of the density estimate can be
+improved using variable kernel widths (Breiman, Meisel and Purcell, 1977). In regions
+of the space where there is little data, it is safer to have a smooth estimate of the density,
+whereas in the regions of the space there is more data one wants to be as accurate as
+possible via sharper kernel estimates. The VRM principle can take advantage of these
+improved density estimates for other problem domains. We consider here the following
+density estimate:
+dP est (x; y) = 1
+n
+X
+i
+Æ y i
+(y) N  i
+(x x i ) dx
+where the specific kernel width  i for each training example x i is computed from the
+training set.
+a) Wisconsin Breast Cancer --- We made a first test of the method on the Wisconsin breast
+cancer dataset 1 which contains 589 examples on 30 dimensions. We compared VRM using
+the set of linear classifiers with various underlying density estimates. The minimization was
+achieved using gradient descent on the vicinal risk. All hyperparameters were determined
+using cross­validation. The following table reports results averaged on 100 runs.
+1 http://horn.first.gmd.de/raetsch/data/breast­cancer.
+
+Training Set Hard SVM Soft SVM
+Best C
+VRM
+Best fixed 
+VRM
+Adaptive  i
+10 11.3% 11.1% 10.8% 9.6%
+20 8.3% 7.5% 6.9% 6.6%
+40 6.3% 5.5% 5.2% 4.8%
+80 5.4% 4.0% 3.9% 3.7%
+The adaptive kernel width  i were computed by multiplying a global factor by the average
+distance of the five closest training examples. The best global factor is determined by cross­
+validation. These results suggest that VRM with adaptive kernel widths can outperform
+state of the art classifiers on small training sets.
+b) MNIST ``1'' versus other digits --- A second test was performed using the MNIST
+handwritten digits 2 . We considered the sub­problem of recognizing the ones versus all
+other digits. The testing set contains 10000 digits (5000 ones and 5000 non­ones). Two
+training set sizes were considered with 250 or 500 ones and an equal number of non­ones.
+Computations were achieved using the algorithm suggested in section (3.e). We simply
+trained a single linear unit with a sigmoid transfer function using stochastic gradient up­
+dates. This is appropriate for implementing an approximate VRM with a single kernel
+width. Adaptive kernel widths are implemented by simply changing the slope of the sig­
+moid for each example. For each example x i , the kernel width  i is computed from the
+training set using the 5/1000th quantile of the distances of all other examples to example
+x i . The sigmoid slopes are then computed by renormalizing the  i in order to make their
+mean equal to 1. Early stopping was achieved with cross­validation.
+Training Set Hard SVM VRM
+Fixed slope
+VRM
+Adaptive slope
+250+250 3.34% 2.79% 2.54%
+500+500 3.11% 2.47% 2.27%
+1000+1000 2.94% 2.08% 1.96%
+The statistical signifiance of these results can be asserted with very high probability by
+comparing the list of errors performed by each system (Bottou and Vapnik, 1992). Again
+these results suggest that VRM with adaptive kernel widths can be very useful with small
+training sets.
+4.2 Unlabeled Data
+In some applications unlabeled data is in abundance whereas labeled data is not. The use
+of unlabeled data falls into the framework of VRM by simply making the same vicinal
+loss for unlabeled points. Given m unlabeled points x 
+1 ; : : : ; x 
+m , one obtains the following
+formulation:
+R vic (f) =
+1
+n
+n
+X
+i=1
+Z
+`(f(x); y i )dPx i
+(x) +
+1
+m
+m
+X
+i=1
+Z
+`(f(x); f(x 
+i ))dPx 
+i
+(x):
+To give an example of the usefulness of our approach consider the following example.
+Two normal distributions on the real line N ( 1:6; 1) and N (1:6; 1) model the patterns of
+two classes with equal probability; 20 labeled points and 100 unlabeled points are drawn.
+The following table compares the true generalization error of VRM with gaussian kernels
+and linear functions. Results are averaged over 100 runs. Two different kernel widths L
+and U were used for kernels associated with labeled or unlabeled examples. Best kernel
+widths were obtained by cross­validation. We also studied the case L ! 0 in order to
+provide a result equivalent to a plain SVM.
+2 http://www.research.att.com/yann/ocr/index.html
+
+L U Labeled Labeled+Unlabeled
+L ! 0 Best U 6.5% 5.6%
+Best L Best U 5.0% 4.3%
+Note that when both L and U tend to zero, this algorithm reverts to a transduction al­
+gorithm due to Vapnik which was previously solved by the more difficult optimization
+procedure of integer programming (Bennet and Demiriz, 1999).
+5 Conclusion
+In conclusion, the Vicinal Risk Minimization VRM principle provides a useful bridge be­
+tween generative models and SRM methods such as SVM or Statistic Regularization. Sev­
+eral well known algorithms are in fact special cases of VRM. The VRM principle also sug­
+gests new algorithms. In this paper we proposed algorithms for dealing with unlabeled data
+and recognizing classes with very different pattern distributions, obtaining initial promising
+results. We hope that this approach can lead to further understanding of existing methods
+and also to suggest new ones.
+References
+Bennet, K. and Demiriz, A. (1999). Semi­supervised support vector machines. In Advances in
+Neural Information Processing Systems 11, pages 368--374. MIT Press.
+Bottou, L. and Vapnik, V. N. (1992). Local learning algorithms, appendix on confidence intervals.
+Neural Computation, 4(6):888--900.
+Breiman, L., Meisel, W., and Purcell, E. (1977). Variable kernel estimates of multivariate densities.
+Technometrics, 19:135--144.
+Drucker, H., Wu, D., and Vapnik, V. (1999). Support vector machines for spam categorization.
+Neural Networks, 10:1048--1054.
+Hoerl, A. and Kennard, R. W. (1970). Ridge regression: Biased estimation for nonorthogonal prob­
+lems. Technometrics, 12(1):55--67.
+Jaakkola, T., Meila, M., and Jebara, T. (2000). Maximum entropy discrimination. In Advances in
+Neural Information Processing Systems 12. MIT Press.
+LeCun, Y., Bottou, L., Orr, G., and Muller, K. (1998). Efficient backprop. In Orr, G. and K., M.,
+editors, Neural Networks: Tricks of the Trade. Springer.
+Leen, T. K. (1995). Invariance and regularization in learning. In Advances in Neural Information
+Processing Systems 7. MIT Press.
+Sch˜olkopf, B., Simard, P., Smola, A., Vapnik, V. (1998). Prior knowledge in support vector kernels.
+In Advances in Neural Information Processing Systems 10. MIT Press.
+Schuurmans, D. and Southey, F. (2000). An adaptive regularization criterion for supervised learn­
+ing. In Proceedings of the Seventeenth International Conference on Machine Learning (ICML­
+2000).
+Simard, P., Victorri, B., Le Cun, Y., and Denker, J. (1992). Tangent prop: a formalism for specify­
+ing selected invariances in adaptive networks. In Advances in Neural Information Processing
+Systems 4, Denver, CO. Morgan Kaufman.
+Tong, S. and Koller, D. (2000). Restricted bayes optimal classifiers. Proceedings of the 17th National
+Conference on Artificial Intelligence (AAAI).
+Vapnik, V. (1999). The Nature of Statistical Learning Theory (Second Edition). Springer Verlag,
+New York.
+

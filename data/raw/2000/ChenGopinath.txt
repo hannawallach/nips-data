@@ -1,0 +1,422 @@
+Gaussianization
+Scott Shaobing Chen
+Renaissance Technologies
+East Setauket, NY 11733
+schen@rentec.com
+Ramesh A. Gopinath
+IBM T.J. Watson Research Center
+Yorktown Heights, NY 10598
+rameshg@us.ibm.com
+Abstract
+High dimensional data modeling is difficult mainly because the so­called
+``curse of dimensionality''. We propose a technique called ``Gaussianiza­
+tion'' for high dimensional density estimation, which alleviates the curse
+of dimensionality by exploiting the independence structures in the data.
+Gaussianization is motivated from recent developments in the statistics
+literature: projection pursuit, independent component analysis and Gaus­
+sian mixture models with semi­tied covariances. We propose an iter­
+ative Gaussianization procedure which converges weakly: at each it­
+eration, the data is first transformed to the least dependent coordinates
+and then each coordinate is marginally Gaussianized by univariate tech­
+niques. Gaussianization offers density estimation sharper than traditional
+kernel methods and radial basis function methods. Gaussianization can
+be viewed as efficient solution of nonlinear independent component anal­
+ysis and high dimensional projection pursuit.
+1 Introduction
+Density Estimation is a fundamental problem in statistics. In the statistics literature, the
+univariate problem is well­understood and well­studied. Techniques such as (variable) ker­
+nel methods, radial basis function methods, Gaussian mixture models, etc, can be applied
+successfully to obtain univariate density estimates. However, the high dimensional problem
+is very challenging, mainly due to the problem of the so­called ``curse of dimensionality''.
+In high dimensional space, data samples are often sparsely distributed: it requires very
+large neighborhoods to achieve sufficient counts, or the number of samples has to grows
+exponentially according to the dimensions in order to achieve sufficient coverage of the
+sampling space. As a result, direct extension of univariate techniques can be highly biased,
+because they are neighborhood­based.
+In this paper, we attempt to overcome the curse of dimensionality by exploiting indepen­
+dence structures in the data. We advocate the notion that
+Independence lifts the curse of dimensionality!
+Indeed, if the dimensions are independent, then there is no curse of dimensionality since
+the high dimensional problem can be reduced to univariate problems along each dimension.
+For natural data sets which do not have independent dimensions, we would like to construct
+transforms such that after the transformation, the dimensions become independent. We pro­
+pose a technique called ``Gaussianization'' which finds and exploits independence structures
+
+in the data for high dimensional density estimation. For a random variable X 2 R D , we
+define its Gaussianization transform to be an invertible and differential transform T (X)
+such that the transformed variable T (X) follows the standard Gaussian distribution:
+T (X)  N(0; I)
+It is clear that density estimates can be derived from Gaussianization transforms. We pro­
+pose an iterative procedure which converges weakly in probability: at each iteration, the
+data is first transformed to the least dependent coordinates and then each coordinate is
+marginally Gaussianized by univariate techniques which are based on univariate density
+estimation. At each iteration, the coordinates become less dependent in terms of the mu­
+tual information, and the transformed data samples become more Gaussian in terms of the
+Kullback­Leibler divergence. In fact, at each iteration, as far as the data is linearly trans­
+formed to less dependent coordinates, the convergence result still holds. Our convergence
+proof of Gaussianization is highly related to Huber's convergence proof of projection pur­
+suit [4].
+Algorithmically, each Gaussianization iteration amounts to performing the linear indepen­
+dent component analysis. Since the assumption of linear independent component analysis
+may not be valid, the resulting linear transform does not necessarily make the coordinate
+independent, however, it does make the coordinates as independent as possible. Therefore
+the engine of our algorithm is the linear independent component analysis. We propose
+an efficient EM algorithm which jointly estimates the linear transform and the marginal
+univariate Gaussianization transform at each iteration. Our parametrization is identical to
+the independence factor analysis proposed by Attias (1999) [1]. However, we apply the
+variational method in the M­step, as in the semi­tied covariance algorithm proposed for
+Gaussian mixture models by Gales (1999) [3].
+2 Existence of Gaussianization
+We first show the existence of Gaussianization transforms. Denote () the probability
+density function of the standard normal N(0; I); denote (; ; ) the probability den­
+sity function of N(; ); denote () the cumulative distribution function (CDF) of the
+standard normal.
+2.1 Univariate Gaussianization
+Univariate Gaussianization exists uniquely and can be derived from univariate density es­
+timation. Let X 2 R 1 be the univariate variable. We assume that the density function of
+X is strictly positive and differentiable. Let F () be the cumulative distribution function of
+X . Then T () is a Gaussianization transform if and only if it satisfies the following partial
+differential equation:
+p(x) = (T (x))j
+@T
+@x
+j :
+It can be easily verified that the above partial differential equation has only two solutions:
+ 1 (F (X))  N(0; 1) (1)
+In practice, the CDF F () is not available; it has to be estimated from the training data.
+We choose to approximate it by Gaussian mixture models: p(x) =
+P I
+i=1  i (x;  i ;  2
+i );
+equivalently we assume the CDF F (x) =
+P I
+i=1  i ( x  i
+ i
+) where the parameters
+f i ;  i ;  i g can be estimated via maximum likelihood using the standard EM algorithm.
+Therefore we can parameterize the Gaussianization transform as
+T (X) =  1 (
+I
+X
+i=1
+ i (
+X  i
+ i
+)) (2)
+
+In practice there is an issue of model selection: we suggest to use model selection tech­
+niques such as the Bayesian information criterion [6] to determine the number of Gaussians
+I . Throughout the paper, we shall assume that univariate density estimation and univariate
+Gaussianization can be solved by univariate Gaussian mixture models.
+2.2 High Dimensional Gaussianization
+However, the existence of high dimensional Gaussianization is non­trivial. We present
+here a theoretical construction. For simplicity, we consider the two dimensional case. Let
+X = (X 1 ; X 2 ) T be the random variable. Gaussianization can be achieved in two steps.
+We first marginally Gaussianize the first coordinate X 1 and fix the second coordinate X 2
+unchanged; the transformed variable will have the following density
+p(x 1 ; x 2 ) = p(x 1 )p(x 2 jx 1 ) = (x 1 )p(x 2 jx 1 ) :
+We then marginally Gaussian each conditional density p(jx 1 ) for each x 1 . Notice that the
+marginal Gaussianization is different for different x 1 :
+T x1 (X 2 ) =  1 (F jx 1
+(X 2 )) :
+Once all the conditional densities are marginally Gaussianized, we achieve joint Gaussian­
+ization
+p(x 1 ; x 2 ) = p(x 1 )p(x 2 jx 1 ) = (x 1 )(x 2 ) :
+The existence of high dimensional Gaussianization can be proved by similar construction.
+The above construction, however, is not practical since the marginal Gaussianization of the
+conditional densities p(X 2 = x 2 jX 1 = x 1 ) requires estimation of the conditional densities
+given all x 1 , which is impossible with finite samples. In the following sections, we shall
+develop an iterative Gaussianization algorithm that is practical and also can be proved to
+converge weakly.
+High­dimensional Gaussianization is unique up to any invertible transforms which preserve
+the measure on R D induced by the standard Gaussian distribution. Examples of such
+transforms are orthogonal linear transforms and certain nontrivial Nonlinear transforms.
+3 Gaussianization with Linear ICA Assumption
+Let (x 1 ;    ; xN ) be the i.i.d. samples from the random variable X 2 R D . We as­
+sume that there exist a linear transform ADD such that the transformed variable Y =
+(Y 1 ;    ; YD ) T = AX has independent components: p(y 1 ;    ; yD ) = p(y 1 )    p(y D ). In
+this case, Gaussianization is reduced to linear ICA: we can first find the linear transfor­
+mation A by linear independent component analysis, and then Gaussianize each individual
+dimension of Y by univariate Gaussianization.
+We parametrize the marginal Gaussianization by univariate Gaussian mixtures (2). This
+amounts to model the coordinates of the transformed variable by univariate Gaussian mix­
+tures: p(y d ) =
+P I d
+i=1  d;i (y d ;  d;i ;  2
+d;i ). We would like to jointly optimize both the
+linear transform A and the marginal Gaussianization parameters (; ; ) via maximum
+likelihood. In fact, this is the same parametrization as in Attias (1999) [1]. We point out
+that modeling the coordinates after the linear transform as non­Gaussian distributions, for
+which we assume univariate Gaussian mixtures are adequate, leads to ICA while as mod­
+eling them as single Gaussians leads to PCA.
+The joint estimation of the parameters can be computed via the EM algorithm. The auxil­
+iary function which has to be maximized in the M­step has the following form:
+Q(A; ; ; ) = N log jdet(A)j+
+N
+X
+n=1
+D
+X
+d=1
+I d
+X
+i=1
+w n;d;i [log  d;i
+1
+2
+log 2 2
+d;i
+(y n;d  d;i ) 2
+2 2
+d;i
+]
+
+where (w n;d;i ) are the posterior counts computed at the E­step. It can be easily shown that
+the priors ( d;i can be easily updated and the means ( d;i can be entirely determined by
+the linear transform A. However, updating the linear transform A and the variances ( d;i )
+does not have closed form solution and has to be solved iteratively by numerical methods.
+Attias (1999) [1] proposed to optimize Q via gradient descent: at each iteration, one fixes
+the linear transform and compute the Gaussian mixture parameters, then fixes the Gaussian
+mixture parameters and update the linear transform via gradient descent using the so­called
+natural gradient.
+We propose an iterative algorithm as in Gales (1999) [3] for the M­step which does not
+involve gradient descent and the nuisance and instability caused by of the step size param­
+eter. At each iteration, we fix the linear transform A and update the variances ( d;i ); we
+then fix ( d;i ) and update each row of A with all the other rows of A fixed: updating each
+row amounts to solving a system of linear equations. Our iterative scheme guarantees that
+the auxiliary function Q to be increased at every iteration. Notice that each iteration in our
+M­step updates the rows of the linear matrix A by solving D linear equations. Although
+our iterative scheme may be slightly more expensive per iteration than standard numerical
+optimization techniques such as Attias' algorithm, in practice it converges after very few
+iterations, as observed in Gales (1999) [3]. In contrast the numerical optimization scheme
+may take an order of magnitude more iterations. In fact, in our experiments, our algorithm
+converges much faster than Attias's algorithm. Furthermore, our algorithm is stable since
+each iteration is guaranteed to increase the likelihood.
+The M­step in both Attias' algorithm and our algorithm can be implemented efficiently
+by storing and accessing the sufficient statistics. Typically in our M­steps, most of the
+improvement on the likelihood comes in the first few iterations. Therefore we can stop
+each M­step after, say one iteration of updating the parameters; even though the auxiliary
+function is not optimized, but it is guaranteed to improve. Therefore we obtained the so­
+called generalized EM algorithm. Attias (1999) [1] reported faster convergence of the
+generalized EM algorithm than the standard EM algorithm.
+4 Iterative Gaussianization
+In this section we develop an iterative algorithm which Gaussianizes arbitrary random vari­
+ables. At each iteration, the data is first transformed to the least dependent coordinates and
+then each coordinate is marginally Gaussianized by univariate techniques which are based
+on univariate density estimation. We shall show that transforming the data into the least
+dependent coordinates can be achieved by linear independent component analysis. We also
+prove the weak convergence result.
+We define the negentropy 1 of a random variable X = (X 1 ;    ; XD ) T as the Kullback­
+Leibler divergence between X and the standard Gaussian distribution. We define the
+marginal negentropy to be JM (X) =
+P D
+d=1 J(X d ). One can show that the negentropy
+can be decomposed as the sum of the marginal negentropy and the mutual information:
+J(X) = JM (X) + I(X). Gaussianization is equivalent to finding an invertible transform
+T () such that the negentropy of the transformed variable vanishes: J(T (X)) = 0 .
+For arbitrary random variable X 2 R D , we propose the following iterative Gaussianization
+algorithm. Let X (0) = X. At each iteration,
+(A) Linearly transform the data: Y (k) = AX (k) .
+1 We are abusing the terminology slightly: normally the negentropy of a random variable is defined
+to be the Kullback­Leibler distance between itself and the Gaussian variable with the same mean and
+covariance.
+
+(B) Nonlinearly transform the data by marginal Gaussianization:
+X (k+1) = 	 ;; (Y (k) )
+where the marginal Gaussianization 	 ;; (), which approximates the ideal
+marginal Gaussianization 	(), can be derived from univariate Gaussian mixtures
+(2):
+X (k+1)
+d =  1 (
+I d
+X
+i=1
+ d;i (
+Y (k)
+d  d;i
+ d;i
+)
+The parameters are chosen by minimizing the negentropy of the transformed variable
+X (k+1) :
+( ^
+A; ^
+; ^ ; ^
+) = min
+A;;;
+J(	 ;; (AX)) : (3)
+Thus, after each iteration, the transformed variable becomes as close as possible to the
+standard Gaussian in the Kullback­Leibler distance.
+First, the problem of minizing the negentropy (3) is equivalent to the maximum likelihood
+problem for Gaussianization with linear ICA assumption in section 3, and thus can be
+solved by the same efficient EM algorithm.
+Second, since the data X (k) might not satisfy the linear ICA assumption, the optimal lin­
+ear transform might not transform X (k) into independent coordinates. However, it does
+transform X (k) into the least dependent coordinates, since
+J(X (k+1) ) = JM (	(AX (k) )) + I(	(AX (k) )) = I(AX (k) ) :
+Further more, if the linear transform A is constrained to be orthogonal, then finding the
+least dependent coordinates is equivalent to finding the marginally most non­Gaussian co­
+ordinates, since
+J(X (k) ) = J(AX (k) ) = JM (AX (k) ) + I(AX (k) )
+(notice that the negentropy is invariant under orthogonal transforms).
+Therefore our iterative algorithm can be viewed as follows. At each iteration, the data is lin­
+early transformed to the least dependent coordinates and then each coordinate is marginally
+Gaussianized. In practice, after the first iteration, the algorithm finds linear transforms
+which are almost orthogonal. Therefore one can also view practically that at each iteration,
+the data is linearly transformed to the most marginally non­Gaussian coordinates and then
+each coordinate is marginally Gaussianized.
+For the sake of simplicity, we assume that we can achieve perfect marginal Gaussianization
+	() by 	 ;; ()), which is derived from univariate Gaussian mixtures. In fact, when the
+number of Gaussians goes to infinity and the number of samples goes to infinity, one can
+show that
+lim 	 ;; = 	:
+Thus it suffices to analyze the ideal iterative Gaussianization
+X (k) = 	(AX (k) )
+where
+A = argmin J(	(AX (k) )) = argmin I(AX (k) ) :
+Following Huber's argument [4], we can show that
+X (k) ! N(0; I)
+in the sense of weak convergence, i.e. the density function of X (k) converges pointwise to
+the density function of standard normal.
+
+-2 0 2
+-2
+-1
+0
+1
+2
+Original Data
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 1
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 2
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 3
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 4
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 5
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 6
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 7
+-4 -2 0 2 4
+-4
+-2
+0
+2
+4
+Iteration 8
+Gaussianization Density Estimation
+0 0.2 0.4 0.6 0.8 1
+0
+0.2
+0.4
+0.6
+0.8
+1
+Gaussian Mixture Density Estimation
+0 0.2 0.4 0.6 0.8 1
+0
+0.2
+0.4
+0.6
+0.8
+1
+Figure 1: Iterative Gaussianization on a synthetic circular data set
+We point out that out iterative algorithm can be relaxed as follows. At each iteration, the
+data can linearly transformed into coordinates which are less dependent, instead of into
+coordinates which are the least dependent:
+I(X (k) I(A k X (k) )  [I(X (k) inf
+A
+I(AX (k) )]
+where the constant  > 0. We can show that this relaxed algorithm still converges weakly.
+5 Examples
+We demonstrate the process of our iterative Gaussianization algorithm through a very dif­
+ficult two dimensional synthetic data set. The true underlying variable is circularly dis­
+tributed: in the polar coordinate system, the angle is uniformly distributed; the radius fol­
+lows a mixture of four non­overlapping Gaussians. We drew 1000 i.i.d. samples from this
+distribution. We ran 8 iterations to Gaussianize the data set. Figure 4 displays the trans­
+formed data set at each iteration. Clearly we see the transformed data gradually becomes
+standard Gaussian.
+Let X (0) = X; assume that the iterative Gaussianization procedure converges after K
+iterations, i.e. X (K)  N(0; I). Since the transforms at each iteration are invertible,
+we can then compute Jacobian and obtain density estimation for X. The Jacobian can be
+computed rapidly due to the chain rule. Figure 4 compares the Gaussianization density
+
+estimate (8 iterations) and Gaussian mixture density estimate (40 Gaussians). Clearly we
+see that the Gaussianization density estimate recovers the four circular structure; however,
+the Gaussian mixture estimate lacks resolution.
+6 Discussion
+Gaussianization is closely connected with the exploratory projection pursuit algorithm pro­
+posed by Friedman (1987) [2]. In fact we argue that our iterative Gaussianization procedure
+can easily constrained as an efficient parametric solution of high dimensional projection
+pursuit. Assume that we are interested in l­dimensional projections where 1  l  D. If
+we constrain that at each iteration the linear transform has to be orthogonal, and only the
+first l coordinates of the transformed variable are marginally Gaussianized, then the itera­
+tive Gaussianization algorithm achieves l dimensional projection pursuit. The bottleneck
+of Friedman's high dimensional projection pursuit is to find the jointly most non­Gaussian
+projection and to jointly Gaussianize that projection. In contrast, our algorithm finds the
+most marginally non­Gaussian projection and marginally Gaussianize that projection; it
+can be computed by an efficient EM algorithm.
+We argue that Gaussianization density estimation indeed alleviates the problem of the curse
+of dimensionality. At each iteration, the effect of the curse of dimensionality is solely on
+finding a linear transform such that the transformed coordinates are less dependent, which
+is a relatively much easier problem than the original problem of high dimensional density
+estimation itself; after the linear transform, the marginal Gaussianization can be derived
+from univariate density estimation, which has nothing to do with the curse of dimension­
+ality. Hwang 1994 [5] performed extensive comparative study among the following three
+popular density estimates: one dim projection pursuit density estimates (a special case of
+our iterative Gaussianization algorithm), adaptive kernel density estimates and radial basis
+function density estimates; he concluded that projection pursuit density estimates outper­
+form in most data set.
+We are currently experimenting with application of Gaussianization density estimation in
+automatic speech and speaker recognition.
+References
+[1] H. Attias, ``Independent factor analysis'', Neural Computation, vol. 11, pp. 803­851,
+1999.
+[2] J.H. Friedman, ``Exploratory projection pursuit'', J. American Statistical Association,
+vol. 82, pp. 249­266, 1987.
+[3] M.J.F. Gales, ``Semi­tied covariance matrices for hidden Markov Models'', IEEE
+Transaction Speech and Audio Processing, vol. 7, pp. 272­281, 1999.
+[4] P.J. Huber, ``Projection pursuit'', Annals of Statistics, vol. 13, pp 435­525, 1985.
+[5] J. Hwang, S. Lay and A. Lippman, ``Nonparametric multivariate density estimation:
+a comparative study'', IEEE Transaction Signal Processing, vol. 42, pp 2795­2810,
+1994.
+[6] G. Schwarz, ``Estimating the dimension of a model'', Annals of Statistics, vol. 6, pp
+461­464, 1978.
+

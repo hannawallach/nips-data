@@ -1,0 +1,290 @@
+Robustness in Markov Decision Problems with Uncertain Transition Matrices
+
+Arnab Nilim Department of EECS 
+
+University of California Berkeley, CA 94720 nilim@eecs.berkeley.edu
+
+Laurent El Ghaoui Department of EECS University of California Berkeley, CA 94720 elghaoui@eecs.berkeley.edu
+
+Abstract Optimal solutions to Markov Decision Problems (MDPs) are very sensitive with respect to the state transition probabilities. In many practical problems, the estimation of those probabilities is far from accurate. Hence, estimation errors are limiting factors in applying MDPs to realworld problems. We propose an algorithm for solving finite-state and finite-action MDPs, where the solution is guaranteed to be robust with respect to estimation errors on the state transition probabilities. Our algorithm involves a statistically accurate yet numerically efficient representation of uncertainty, via Kullback-Leibler divergence bounds. The worst-case complexity of the robust algorithm is the same as the original Bellman recursion. Hence, robustness can be added at practically no extra computing cost. 1 Introduction We consider a finite-state and finite-action Markov decision problem in which the transition probabilities themselves are uncertain, and seek a robust decision for it. Our work is motivated by the fact that in many practical problems, the transition matrices have to be estimated from data. This may be a difficult task and the estimation errors may have a huge impact on the solution, which is often quite sensitive to changes in the transition probabilities [3]. A number of authors have addressed the issue of uncertainty in the transition matrices of an MDP. A Bayesian approach such as described by [9] requires a perfect knowledge of the whole prior distribution on the transition matrix, making it difficult to apply in practice. Other authors have considered the transition matrix to lie in a given set, most typically a polytope: see [8, 10, 5]. Although our approach allows to describe the uncertainty on the transition matrix by a polytope, we may argue against choosing such a model for the uncertainty. First, a general polytope is often not a tractable way to address the robustness problem, as it incurs a significant additional computational effort to handle uncertainty. Perhaps more importantly, polytopic models, especially interval matrices, may be very poor representations of statistical uncertainty and lead to very conservative robust
+
+ Research funded in part by Eurocontrol-014692, DARPA-F33615-01-C-3150, and NSF-ECS-
+
+9983874
+
+ Electrical Engineering and Computer Sciences
+
+
+policies. In [1], the authors consider a problem dual to ours, and provide a general statement according to which the cost of solving their problem is polynomial in problem size, provided the uncertainty on the transition matrices is described by convex sets, without proposing any specific algorithm. This paper is a short version of a longer report [2], which contains all the proofs of the results summarized here. Notation. P > 0 or P  0 refers to the strict or non-strict componentwise inequality for matrices or vectors. For a vector p > 0, log p refers to the componentwise operation. The notation 1 refers to the vector of ones, with size determined from context. The probability simplex in Rn is denoted n = {p  Rn+ : pT 1 = 1}, while n is the set of n×n transition matrices (componentwise non-negative matrices with rows summing to one). We use P to denote the support function of a set P  Rn, with for v  Rn, P(v) := sup{pT v : p  P}. 2 The problem description We consider a finite horizon Markov decision process with finite decision horizon T = {0,1,2,...,N - 1}. At each stage, the system occupies a state i  X, where n = |X| is finite, and a decision maker is allowed to choose an action a deterministically from a finite set of allowable actions A = {a1,...,am} (for notational simplicity we assume that A is not state-dependent). The system starts in a given initial state i0. The states make Markov transitions according to a collection of (possibly time-dependent) transition matrices  := probabilities of transition under action a at stage t. We denote by  = (a0,..., aN ) a
+
+(Pt )a a A,tT , where for every a  A, t  T, the n × n transition matrix Pt contains the a
+
+-1
+
+generic controller policy, where at(i) denotes the controller action when the system is in state i  X at time t  T. Let  = AnN be the corresponding strategy space. Define by ct(i,a) the cost corresponding to state i  X and action a  A at time t  T, and by cN the cost function at the terminal stage. We assume that ct(i,a) is non-negative and finite for every i  X and a  A. For a given set of transition matrices , we define the finite-horizon nominal problem by N(,) := min CN(,), (1) where CN(,) denotes the expected total cost under controller policy  and transitions : CN(,) := E ct(it,at(i)) + cN(iN) . (2)
+
+
+
+N-1
+
+t=0
+
+A special case of interest is when the expected total cost function bears the form (2), where the terminal cost is zero, and ct(i,a) = tc(i,a), with c(i,a) now a constant cost function, which we assume non-negative and finite everywhere, and   (0, 1) is a discount factor. We refer to this cost function as the discounted cost function, and denote by C(,) the limit of the discounted cost (2) as N  . When the transition matrices are exactly known, the corresponding nominal problem can be solved via a dynamic programming algorithm, which has total complexity of nmN flops in the finite-horizon case. In the infinite-horizon case with a discounted cost function, the cost of computing an -suboptimal policy via the Bellman recursion is O(nm log(1/ )); see [7] for more details. 2.1 The robust control problems At first we assume that when for each action a and time t, the corresponding transition matrix Pt is only known to lie in some given subset Pa. Two models for transition ma-
+
+a
+
+trix uncertainty are possible, leading to two possible forms of finite-horizon robust control
+
+
+problems. In a first model, referred to as the stationary uncertainty model, the transition matrices are chosen by nature depending on the controller policy once and for all, and remain fixed thereafter. In a second model, which we refer to as the time-varying uncertainty model, the transition matrices can vary arbitrarily with time, within their prescribed bounds. Each problem leads to a game between the controller and nature, where the controller seeks to minimize the maximum expected cost, with nature being the maximizing player. Let us define our two problems more formally. A policy of nature refers to a specific the set of admissible policies of nature is T := (a Pa)N. Denote by Ts the set of stationary admissible policies of nature:
+
+collection of time-dependent transition matrices  = (Pt )a a A,tT chosen by nature, and
+
+A
+
+Ts = { = (Pt )a a A,tT  T : Pt = Ps for every t,s  T, a  A}. a a
+
+The stationary uncertainty model leads to the problem N(,Ts) := min max CN(,).
+
+ Ts
+
+In contrast, the time-varying uncertainty model leads to a relaxed version of the above: N(,Ts)  N(,T ) := min max CN(,).
+
+ T
+
+(3)
+
+(4)
+
+The first model is attractive for statistical reasons, as it is much easier to develop statistically accurate sets of confidence when the underlying process is time-invariant. Unfortunately, the resulting game (3) seems to be hard to solve. The second model is attractive as one can solve the corresponding game (4) using a variant of the dynamic programming algorithm seen later, but we are left with a difficult task, that of estimating a meaningful set of confidence for the time-varying matrices Pt . In this paper we will use the first model of
+
+a
+
+uncertainty in order to derive statistically meaningful sets of confidence for the transition matrices, based on likelihood or entropy bounds. Then, instead of solving the corresponding difficult control problem (3), we use an approximation that is common in robust control, and solve the time-varying upper bound (4), using the uncertainty sets Pa derived from a stationarity assumption about the transition matrices. We will also consider a variant of the finite-horizon time-varying problem (4), where controller and nature play alternatively, leading to a repeated game
+
+rep(,Q) := min max min max ... min
+
+N a0 0Q a1 1Q aN
+
+-1
+
+where the notation t = (Pt )a
+
+a
+
+A
+
+max CN(,),
+
+N Q
+
+-1
+
+(5)
+
+denotes the collection of transition matrices at a given
+
+time t  T, and Q := a Pa is the corresponding set of confidence.
+
+A
+
+Finally, we will consider an infinite-horizon robust control problem, with the discounted cost function referred to above, and where we restrict control and nature policies to be stationary: (s,Ts) := min max C(,), (6) where s denotes the space of stationary control policies. We define (, T ), (, Ts) and (s, T ) accordingly. In the sequel, for a given control policy    and subset S  T , the notation horizon problem, and (, S) is defined likewise. 2.2 Main results Our main contributions are as follows. First we provide a recursion, the "robust dynamic programming" algorithm, which solves the finite-horizon robust control problem (4). We
+
+s Ts
+
+N(,S) := max S N C (,) denotes the worst-case expected total cost for the finite-
+
+
+provide a simple proof in [2] of the optimality of the recursion, where the main ingredient is to show that perfect duality holds in the game (4). As a corollary of this result, we obtain that the repeated game (5) is equivalent to its non-repeated counterpart (4). Second, we provide similar results for the infinite-horizon problem with discounted cost function, (6). Moreover, we obtain that if we consider a finite-horizon problem with a discounted cost function, then the gap between the optimal value of the stationary uncertainty problem (3) and that of its time-varying counterpart (4) goes to zero as the horizon length goes to infinity, at a rate determined by the discount factor. Finally, we identify several classes of uncertainty models, which result in an algorithm that is both statistically accurate and numerically tractable. We provide precise complexity results that imply that, with the proposed approach, robustness can be handled at practically no extra computing cost. 3 Finite-Horizon Robust MDP We consider the finite-horizon robust control problem defined in section 2.1. For a given state i  X, action a  A, and Pa  Pa, we denote by pai the next-state distribution drawn from Pa corresponding to state i  X; thus pai is the i-th row of matrix Pa. We define Pi as the projection of the set Pa onto the set of pai -variables. By assumption, these
+
+a
+
+sets are included in the probability simplex of Rn, n; no other property is assumed. The following theorem is proved in [2]. Theorem 1 (robust dynamic programming) For the robust control problem (4), perfect duality holds: N(,T ) = min max CN(,) = max min CN(,) := N(,T ).
+
+ T T 
+
+The problem can be solved via the recursion vt(i) = min ct(i,a) + Pi (vt ) , i  X, t  T,
+
+a +1
+
+aA
+
+(7)
+
+where P(v) := sup{pT v : p  P} denotes the support function of a set P, vt(i) is the worst-case optimal value function in state i at stage t. A corresponding optimal control policy  = (a0,..., aN ) is obtained by setting
+
+-1
+
+at(i)  argmin
+
+aA
+
+ct(i,a) + Pi (vt ) , i  X. a +1 (8)
+
+The effect of uncertainty on a given strategy  = (a0,..., aN) can be evaluated by the following recursion
+
+vt (i) = ct(i,at(i)) + Pi (vt ), i  X, which provides the worst-case value function v for the strategy . The above result has a nice consequence for the repeated game (5): Corollary 2 The repeated game (5) is equivalent to the game (4): rep(,Q) = N(,T ), at(i)
+
+N
+
+and the optimal strategies for N(, T ) given in theorem 1 are optimal for rep(, Q) as
+
+N
+
+well.
+
+  +1 (9)
+
+The interpretation of the perfect duality result given in theorem 1, and its consequence given in corollary 2, is that it does not matter wether the controller or nature play first, or if they alternatively; all these games are equivalent.
+
+
+Each step of the robust dynamic programming algorithm involves the solution of an optimization problem, referred to as the "inner problem", of the form
+
+Pi (v) = maxa vTp, a
+
+pPi
+
+(10)
+
+where Pi is the set that describes the uncertainty on i-th row of the transition matrix Pa, and v contains the elements of the value function at some given stage. The complexity of the sets Pi for each i  X and a  A is a key component in the complexity of the robust
+
+a
+
+dynamic programming algorithm. Beyond numerical tractability, an additional criteria for the choice of a specific uncertainty model is of course be that the sets Pa should represent accurate (non-conservative) descriptions of the statistical uncertainty on the transition matrices. Perhaps surprisingly, there are statistical models of uncertainty, such as those described in section 5, that are good on both counts. Precisely, these models result in inner problems (10) that can be solved in worst-case time of O(n log(vmax/)) via a simple bisection algorithm, where n is the size of the state space, vmax is a global upper bound on the value function, and  > 0 specifies the accuracy at which the optimal value of the inner problem (10) is computed. In the finite-horizon case, we can bound vmax by O(N). Now consider the following algorithm, where the uncertainty is described in terms of one of the models described in section 5: Robust Finite Horizon Dynamic Programming Algorithm
+
+a
+
+1. Set > 0. Initialize the value function to its terminal value v^N = cN. 2. Repeat until t = 0: (a) For every state i  X and action a  A, compute, using the bisection algorithm given in [2], a value i such that ^a i - /N  Pi (^t)  i . (c) Replace t by t - 1 and go to 2. 3. For every i  X and t  T, set  = (a0,..., aN ), where at(i) = argmax{ct (i,a) + i }, i  X, a  A. As shown in [2], the above algorithm provides an suboptimal policy  that achieves the exact optimum with prescribed accuracy , with a required number of flops bounded above by O(mnN log(N/ )). This means that robustness is obtained at a relative increase of computational cost of only log(N/ ) with respect to the classical dynamic programming algorithm, which is small for moderate values of N. If N is very large, we can turn instead to the infinite-horizon problem examined in section 4, and similar complexity results hold. 4 Infinite-Horizon MDP In this section, we address a the infinite-horizon robust control problem, with a discounted cost function of the form (2), where the terminal cost is zero, and ct(i,a) = tc(i,a), where c(i,a) is now a constant cost function, which we assume non-negative and finite everywhere, and   (0, 1) is a discount factor. We begin with the infinite-horizon problem involving stationary control and nature policies defined in (6). The following theorem is proved in [2].
+
+^a a v ^a
+
+(b) Update the value function by v^t (i) = mina (c -1 A t-1 (i,a) + i ) , i  X. ^a
+
+-1
+
+-1 ^a
+
+aA
+
+
+Theorem 3 (Robust Bellman recursion) For the infinite-horizon robust control problem (6) with stationary uncertainty on the transition matrices, stationary control policies, and a discounted cost function with discount factor   [0, 1), perfect duality holds: (s,Ts) = max min C(,) := (s,Ts). (11) The optimal value is given by (s, Ts) = v(i0), where i0 is the initial state, and where the value function v satisfies is the optimality conditions
+
+Ts s
+
+v(i) = min c(i,a) + Pi (v) , i  X. a aA (12)
+
+The value function is the unique limit value of the convergent vector sequence defined by
+
+vk (i) = min c(i,a) + Pi (vk) , i  X, k = 1,2,... A stationary, optimal control policy  = (a, a,...) is obtained as a(i)  argmin c(i,a) + Pi (v) , i  X. +1 a aA
+
+a
+
+aA
+
+(13)
+
+(14)
+
+Note that the problem of computing the dual quantity (s, Ts) given in (11), has been addressed in [1], where the authors provide the recursion (13) without proof. Theorem (3) leads to the following corollary, also proved in [2]. Corollary 4 In the infinite-horizon problem, we can without loss of generality assume that the control and nature policies are stationary, that is, (,T ) = (s,Ts) = (s,T ) = (,Ts). (15) Furthermore, in the finite-horizon case, with a discounted cost function, the gap between the optimal values of the finite-horizon problems under stationary and time-varying uncertainty models, N(, T )-N(, Ts), goes to zero as the horizon length N goes to infinity, at a geometric rate . Now consider the following algorithm, where we describe the uncertainty using one of the models of section 5. Robust Infinite Horizon Dynamic Programming Algorithm 1. Set > 0, initialize the value function v^1 > 0 and set k = 1. 2. (a) For all states i and controls a, compute, using the bisection algorithm given in [2], a value i such that ^a ^a vk)  i , where  = (1 - ) /2. (b) For all states i and controls a, compute v^k (i) by, v^k (i) = min (c(i,a) + i ). 3. If
+
+i -   Pi (^ a ^a
+
++1
+
++1 ^a
+
+aA
+
+v^k - v^k < +1
+
+(1 - ) 2
+
+,
+
+go to 4. Otherwise, replace k by k + 1 and go to 2. 4. For each i  X, set an  = (a , a ,...), where a (i) = argmax{c(i,a) + i }, i  X. In [2], we establish that the above algorithm finds an -suboptimal robust policy in at most O(nmlog(1/ )2) flops. Thus, the extra computational cost incurred by robustness in the infinite-horizon case is only O(log(1/ )).
+
+^a
+
+aA
+
+
+5 Kullback-Liebler Divergence Uncertainty Models We now address the inner problem (10) for a specific action a  A and state i  X. Denote by D(p q) denotes the Kullback-Leibler (KL) divergence (relative entropy) from the probability distribution q  n to the probability distribution p  n:
+
+D(p q) := p(j)log
+
+j
+
+p(j). q(j)
+
+The above function provides a natural way to describe errors in (rows of) the transition matrices; examples of models based on this function are given below. Likelihood Models: Our first uncertainty model is derived from a controlled experiment starting from state i = 1, 2,...,n and the count of the number of transitions to different states. We denote by Fa the matrix of empirical frequencies of transition with control a in the experiment; denote by fi its ith row. We have Fa  0 and Fa1 = 1, where 1 denotes
+
+a
+
+the vector of ones. The "plug-in" estimate P^a = Fa is the solution to the maximum likelihood problem max Fa(i,j)log P(i,j) : P  0, P1 = 1. (16)
+
+P
+
+i,j
+
+The optimal log-likelihood is max = a i,j Fa(i,j)log Fa(i,j). A classical description
+
+of uncertainty in a maximum-likelihood setting is via the "likelihood region" [6]
+
+Pa =
+
+  P
+
+ Rn ×n : P  0, P1 = 1,
+
+  Fa(i,j)log P(i,j)  a,
+
+(17)
+
+i,j
+
+where a < max is a pre-specified number, which represents the uncertainty level. In practice, the designer specifies an uncertainty level a based on re-sampling Bmethods, or on a large-sample Gaussian approximation, so as to ensure that the set above achieves a desired level of confidence. With the above model, we note that the inner problem (10) only involves the set
+
+Pi := a pai  Rn : pai  0, pai 1 = 1, T j Fa(i,j)log pai (j)  i , where the paa
+
+rameter i := a -
+
+a
+
+a
+
+Fa(k,j)log Fa(k,j). The set Pi is the projection of
+
+a
+
+k=i j
+
+the set described in (17) on a specific axis of pai -variables. Noting further that the likelihood function can be expressed in terms of KL divergence, the corresponding uncertainty model on the row pai for given i  X, a  A, is given by a set of the form tion of the uncertainty level. Maximum A-Posteriori (MAP) Models: a variation on Likelihood models involves Maximum A Posteriori (MAP) estimates. If there exist a prior information regrading the uncertainty on the i-th row of Pa, which can be described via a Dirichlet distribution [4] with parameter i , the resulting MAP estimation problem takes the form max (fi + i - 1)T log p : pT1 = 1,p  0.
+
+Pi = {p  n : D(fi p)  i }, where i = a a a a j Fa(i,j)log Fa(i,j) - i is a funca
+
+a
+
+a a
+
+p
+
+Thus, the MAP uncertainty model is equivalent to a Likelihood model, with the sample distribution fi replaced by fi + i - 1, where i is the prior corresponding to state i and
+
+a a a a
+
+action a. Relative Entropy Models: Likelihood or MAP models involve the KL divergence from the unknown distribution to a reference distribution. We can also choose to describe uncertainty by exchanging the order of the arguments of the KL divergence. This results in a
+
+
+so-called "relative entropy" model, where the uncertainty on the i-th row of the transition matrix Pa described by a set of the form Pi = {p  n : D(p qi )  i }, where i > 0
+
+a a a a
+
+is fixed, qi > 0 is a given "reference" distribution (for example, the Maximum Likelihood distribution). Equipped with one of the above uncertainty models, we can address the inner problem (10). As shown in [2], the inner problem can be converted by convex duality, to a problem of minimizing a single-variable, convex function. In turn, this one-dimensional convex optimization problem can be solved via a bisection algorithm with a worst-case complexity of O(n log(vmax/)), where  > 0 specifies the accuracy at which the optimal value of the inner problem (10) is computed, and vmax is a global upper bound on the value function. Remark: We can also use models where the uncertainty in the i-th row for the transition matrix Pa is described by a finite set of vectors, Pi = {pa, ,...,pa,K}. In this case the complexity of the corresponding robust dynamic programming algorithm is increased by a relative factor of K with respect to its classical counterpart, which makes the approach attractive when the number of "scenarios" K is moderate. 6 Concluding remarks We proposed a "robust dynamic programming" algorithm for solving finite-state and finiteaction MDPs whose solutions are guaranteed to tolerate arbitrary changes of the transition probability matrices within given sets. We proposed models based on KL divergence, which is a natural way to describe estimation errors. The resulting robust dynamic programming algorithm has almost the same computational cost as the classical dynamic programming algorithm: the relative increase to compute an -suboptimal policy is O(N log(1/ )) in the N-horizon case, and O(log(1/ )) for the infinite-horizon case. References [1] J. Bagnell, A. Ng, and J. Schneider. Solving uncertain Markov decision problems. Technical Report CMU-RI-TR-01-25, Robotics Institute, Carnegie Mellon University, August 2001. [2] L. El-Ghaoui and A. Nilim. Robust solution to Markov decision problems with uncertain transition matrices: proofs and complexity analysis. Technical Report UCB/ERL M04/07, Department of EECS, University of California, Berkeley, January 2004. A related version has been submitted to Operations Research in Dec. 2003. [3] E. Feinberg and A. Shwartz. Handbook of Markov Decision Processes, Methods and Applications. Kluwer's Academic Publishers, Boston, 2002. [4] T. Ferguson. Prior distributions on space of probability measures. The Annal of Statistics, 2(4):615­629, 1974. [5] R. Givan, S. Leach, and T. Dean. Bounded parameter Markov decision processes. In fourth European Conference on Planning, pages 234­246, 1997. [6] E. Lehmann and G. Casella. Theory of point estimation. Springer-Verlag, New York, USA, 1998. [7] M. Putterman. Markov Decision Processes: Discrete Stochastic Dynamic Programming. WileyInterscince, New York, 1994. [8] J. K. Satia and R. L. Lave. Markov decision processes with uncertain transition probabilities. Operations Research, 21(3):728­740, 1973. [9] A. Shapiro and A. J. Kleywegt. Minimax analysis of stochastic problems. Optimization Methods and Software, 2002. to appear. [10] C. C. White and H. K. Eldeib. Markov decision processes with imprecise transition probabilities. Operations Research, 42(4):739­749, 1994.
+
+a 1
+
+i i
+
+a
+
+

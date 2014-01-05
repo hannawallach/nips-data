@@ -1,0 +1,340 @@
+Reinforcement Learning with Function
+Approximation Converges to a Region
+Georey J. Gordon
+ggordon@cs.cmu.edu
+Abstract
+Many algorithms for approximate reinforcement learning are not
+known to converge. In fact, there are counterexamples showing
+that the adjustable weights in some algorithms may oscillate within
+a region rather than converging to a point. This paper shows that,
+for two popular algorithms, such oscillation is the worst that can
+happen: the weights cannot diverge, but instead must converge
+to a bounded region. The algorithms are SARSA(0) and V(0); the
+latter algorithm was used in the well-known TD-Gammon program.
+1 Introduction
+Although there are convergent online algorithms (such as TD() [1]) for learning
+the parameters of a linear approximation to the value function of a Markov process,
+no way is known to extend these convergence proofs to the task of online approxi-
+mation of either the state-value (V  ) or the action-value (Q  ) function of a general
+Markov decision process. In fact, there are known counterexamples to many pro-
+posed algorithms. For example, tted value iteration can diverge even for Markov
+processes [2]; Q-learning with linear function approximators can diverge, even when
+the states are updated according to a xed update policy [3]; and SARSA(0) can
+oscillate between multiple policies with dierent value functions [4].
+Given the similarities between SARSA(0) and Q-learning, and between V(0) and
+value iteration, one might suppose that their convergence properties would be identi-
+cal. That is not the case: while Q-learning can diverge for some exploration strate-
+gies, this paper proves that the iterates for trajectory-based SARSA(0) converge
+with probability 1 to a xed region. Similarly, while value iteration can diverge for
+some exploration strategies, this paper proves that the iterates for trajectory-based
+V(0) converge with probability 1 to a xed region. 1
+The question of the convergence behavior of SARSA() is one of the four open theo-
+retical questions of reinforcement learning that Sutton [5] identies as \particularly
+important, pressing, or opportune." This paper covers SARSA(0), and together
+1 In a \trajectory-based" algorithm, the exploration policy may not change within a
+single episode of learning. The policy may change between episodes, and the value function
+may change within a single episode. (Episodes end when the agent enters a terminal state.
+This paper considers only episodic tasks, but since any discounted task can be transformed
+into an equivalent episodic task, the algorithms apply to non-episodic tasks as well.)
+
+with an earlier paper [4] describes its convergence behavior: it is stable in the sense
+that there exist bounded regions which with probability 1 it eventually enters and
+never leaves, but for some Markov decision processes it may not converge to a single
+point. The proofs extend easily to SARSA() for  > 0.
+Unfortunately the bound given here is not of much use as a practical guarantee: it
+is loose enough that it provides little reason to believe that SARSA(0) and V(0)
+produce useful approximations to the state- and action-value functions. However,
+it is important for several reasons. First, it is the best result available for these two
+algorithms. Second, such a bound is often the rst step towards proving stronger
+results. Finally, in practice it often happens that after some initial exploration
+period, only a few dierent policies are ever greedy; if this is the case, the strategy
+of this paper could be used to prove much tighter bounds.
+Results similar to the ones presented here were developed independently in [6].
+2 The algorithms
+The SARSA(0) algorithm was rst suggested in [7]. The V(0) algorithm was pop-
+ularized by its use in the TD-Gammon backgammon playing program [8]. 2
+Fix a Markov decision process M , with a nite set S of states, a nite set A of
+actions, a terminal state T , an initial distribution S 0 over S, a one-step reward
+function r : S  A ! R, and a transition function Æ : S  A ! S [ fTg. (M
+may also have a discount factor  specifying how to trade future rewards against
+present ones. Here we x  = 1, but our results carry through to  < 1.) Both the
+transition and reward functions may be stochastic, so long as successive samples are
+independent (the Markov property) and the reward has bounded expectation and
+variance. We assume that all states in S are reachable with positive probability.
+We dene a policy  to be a function mapping states to probability distributions
+over actions. Given a policy we can sample a trajectory (a sequence of states,
+actions, and one-step rewards) by the following rule: begin by selecting a state s 0
+according to S 0 . Now choose an action a 0 according to (s 0 ). Now choose a one-
+step reward r 0 according to r(s 0 ; a 0 ). Finally choose a new state s 1 according to
+Æ(s 0 ; a 0 ). If s 1 = T , stop; otherwise repeat. We assume that all policies are proper,
+that is, that the agent reaches T with probability 1 no matter what policy it follows.
+(This assumption is satised trivially if  < 1.)
+The reward for a trajectory is the sum of all of its one-step rewards. Our goal is
+to nd an optimal policy, that is, a policy which on average generates trajectories
+with the highest possible reward. Dene Q  (s; a) to be the best total expected
+reward that we can achieve by starting in state s, performing action a, and acting
+optimally afterwards. Dene V  (s) = max a Q  (s; a). Knowledge of either Q  or the
+combination of V  , Æ, and r is enough to determine an optimal policy.
+The SARSA(0) algorithm maintains an approximation to Q  . We will write Q(s; a)
+for s 2 S and a 2 A to refer to this approximation. We will assume that Q is a
+full-rank linear function of some parameters w. For convenience of notation, we
+will write Q(T ; a) = 0 for all a 2 A, and tack an arbitrary action onto the end of
+all trajectories (which would otherwise end with the terminal state). After seeing
+2 The proof given here does not cover the TD-Gammon program, since TD-Gammon
+uses a nonlinear function approximator to represent its value function. Interestingly,
+though, the proof extends easily to cover games such as backgammon in addition to MDPs.
+It also extends to cover SARSA() and V() for  > 0.
+
+a trajectory fragment s; a; r; s 0 ; a 0 , the SARSA(0) algorithm updates
+Q(s; a)   r +Q(s 0 ; a 0 )
+The notation Q(s; a)   V means that the parameters, w, which represent Q(s; a)
+should be adjusted by gradient descent to reduce the error (Q(s; a) V ) 2 ; that is,
+for some preselected learning rate   0,
+w new = w old + (V Q(s; a)) @
+@w Q(s; a)
+For convenience, we assume that  remains constant within a single trajectory.
+We also make the standard assumption that the sequence of learning rates is xed
+before the start of learning and satises
+P
+t  t = 1 and
+P
+t  2
+t < 1.
+We will consider only the trajectory-based version of SARSA(0). This version
+changes policies only between trajectories. At the beginning of each trajectory,
+it selects the -greedy policy for its current Q function. From state s, the -greedy
+policy chooses the action arg max a Q(s; a) with probability 1 , and otherwise
+selects uniformly at random among all actions. This rule ensures that, no matter
+the sequence of learned Q functions, each state-action pair will be visited innitely
+often. (The use of -greedy policies is not essential. We just need to be able to
+nd a region that contains all of the approximate value functions for every policy
+considered, and a bound on the convergence rate of TD(0).)
+We can compare the SARSA(0) update rule to the one for Q-learning:
+Q(s; a)   r + max
+b
+Q(s; b)
+Often a 0 in the SARSA(0) update rule will be the same as the maximizing b in
+the Q-learning update rule; the dierence only appears when the agent takes an
+exploring action, i.e., one which is not greedy for the current Q function.
+The V(0) algorithm maintains an approximation to V  which we will write V (s) for
+all s 2 S. Again, we will assume V is a full-rank linear function of parameters w,
+and V (T ) is held xed at 0. After seeing a trajectory fragment s; a; r; s 0 , V(0) sets
+V (s)   r + V (s 0 )
+This update ignores a. Often a is chosen according to a greedy or -greedy policy
+for a recent V . However, for our analysis we only need to assume that we consider
+nitely many policies and that the policy remains xed during each trajectory.
+We leave open the question of whether updates to w happen immediately after each
+transition or only at the end of each trajectory. As pointed out in [9], this dierence
+will not aect convergence: the updates within a single trajectory are O(), so they
+cause a change in Q(s; a) or V (s) of O(), which means subsequent updates are
+aected by at most O( 2 ). Since  is decaying to zero, the O( 2 ) terms can be
+neglected. (If we were to change policies during the trajectory, this argument would
+no longer hold, since small changes in Q or V can cause large changes in the policy.)
+3 The result
+Our result is that the weights w in either SARSA(0) or V(0) converge with proba-
+bility 1 to a xed region. The proof of the result is based on the following intuition:
+while SARSA(0) and V(0) might consider many dierent policies over time, on any
+given trajectory they always follow the TD(0) update rule for some policy. The
+TD(0) update is, under general conditions, a 2-norm contraction, and so would
+
+converge to its xed point if it were applied repeatedly; what causes SARSA(0) and
+V(0) not to converge to a point is just that they consider dierent policies (and
+so take steps towards dierent xed points) during dierent trajectories. Crucially,
+under general conditions, all of these xed points are within some bounded region.
+So, we can view the SARSA(0) and V(0) update rules as contraction mappings plus
+a bounded amount of \slop." With this observation, standard convergence theorems
+show that the weight vectors generated by SARSA(0) and V(0) cannot diverge.
+Theorem 1 For any Markov decision process M satisfying our assumptions, there
+is a bounded region R such that the SARSA(0) algorithm, when acting on M , pro-
+duces a series of weight vectors which with probability 1 converges to R. Similarly,
+there is another bounded region R 0 such that the V(0) algorithm acting on M pro-
+duces a series of weight vectors converging with probability 1 to R 0 .
+Proof: Lemma 2, below, shows that both the SARSA(0) and V(0) updates can
+be written in the form
+w t+1 = w t  t (A t w t r t +  t )
+where A t is positive denite,  t is the current learning rate, E( t ) = 0, Var( t ) 
+K(1 + kw t k 2 ), and A t and r t depend only on the currently greedy policy. (A t and
+r t represent, in a manner described in the lemma, the transition probabilities and
+one-step costs which result from following the current policy. Of course, w t , A t ,
+and r t will be dierent depending on whether we are following SARSA(0) or V(0).)
+Since A t is positive denite, the SARSA(0) and V(0) updates are 2-norm contrac-
+tions for small enough  t . So, if we kept the policy xed rather than changing it
+at the beginning of each trajectory, standard results such as Lemma 1 below would
+guarantee convergence. The intuition is that we can dene a nonnegative potential
+function J(w) and show that, on average, the updates tend to decrease J(w) as
+long as  t is small enough and J(w) starts out large enough compared to  t .
+To apply Lemma 1 under the assumption that we keep the policy constant rather
+than changing it every trajectory, write A t = A and r t = r for all t, and write
+w  = A 1 r. Let  be the smallest eigenvalue of A (which must be real and positive
+since A is positive denite). Write s t = Aw t r +  t for the update direction at
+step t. Then if we take J(w) = kw w  k 2 ,
+E(rJ(w t ) T s t jw t ) = 2(w t w  ) T (Aw t r +E( t ))
+= 2(w t w  ) T (Aw t Aw  )
+ 2kw t w  k 2
+= 2J(w t )
+so that s t is a descent direction in the sense required by the lemma. It is easy
+to check the lemma's variance condition. So, Lemma 1 shows that J(w t ) converges
+with probability 1 to 0, which means w t must converge with probability 1 to w  .
+If we pick an arbitrary vector u and dene H(w) = max(0; kw uk C) 2 for a
+suÆciently large constant C, then the same argument reaches the weaker conclusion
+that w t must converge with probability 1 to a sphere of radius C centered at u. To
+see why, note that s t is also a descent direction for H(w): inside the sphere, H = 0
+and rH = 0, so the descent condition is satised trivially. Outside the sphere,
+rH(w) = 2(w u) kw uk C
+kw uk  d(w)(w u)
+rH(w t ) T E(s t jw t ) = d(w t )(w t u) T E(s t jw t )
+
+= d(w t )(w t w  + w  u) T A(w t w  )
+ d(w t )(kw t w  k 2 kw  uk kAk kw t w  k)
+The positive term will be larger than the negative one if kw t w  k is large enough.
+So, if we choose C large enough, the descent condition will be satised. The variance
+condition is again easy to check. Lemma 3 shows that rH is Lipschitz. So, Lemma 1
+shows that H(w t ) converges with probability 1 to 0, which means that w t must
+converge with probability 1 to the sphere of radius C centered at u.
+But now we are done: since there are nitely many policies that SARSA(0) or V(0)
+can consider, we can pick any u and then choose a C large enough that the above
+argument holds for all policies simultaneously. With this choice of C the update for
+any policy decreases H(w t ) on average as long as  t is small enough, so the update
+for SARSA(0) or V(0) does too, and Lemma 1 applies. 2
+The following lemma is Corollary 1 of [10]. In the statement of the lemma, a
+Lipschitz continuous function F is one for which there exists a constant L so that
+kF (u) F (w)k  Lku wk for all u and w. The Lipschitz condition is essentially
+a uniform bound on the derivative of F .
+Lemma 1 Let J be a dierentiable function, bounded below by J  , and let rJ be
+Lipschitz continuous. Suppose the sequence w t satises
+w t+1 = w t  t s t
+for random vectors s t independent of w t+1 ; w t+2 ; : : :. Suppose s t is a descent
+direction for J in the sense that E(s t jw t ) T rJ(w t ) > Æ() > 0 whenever J(w t ) >
+J  + . Suppose also that
+E(ks t k 2 jw t )  K 1 J(w t ) +K 2 E(s t jw t ) T rJ(w t ) +K 3
+and nally that the constants  t satisfy
+ t > 0
+X
+t
+ t = 1
+X
+t
+ 2
+t < 1
+Then J(w t ) ! J  with probability 1.
+Most of the work in proving the next lemma is already present in [1]. The transfor-
+mation from an MDP under a xed policy to a Markov chain is standard.
+Lemma 2 The update made by SARSA(0) or V(0) during a single trajectory can
+be written in the form
+w new = w old (A  w old r  + )
+where the constant matrix A  and constant vector r  depend on the currently greedy
+policy ,  is the current learning rate, and E() = 0. Furthermore, A  is positive
+denite, and there is a constant K such that Var()  K(1 + kwk 2 ).
+Proof: Consider the following Markov process M  : M  has one state for each
+state-action pair in M . If M has a transition which goes from state s under action
+a with reward r to state s 0 with probability p, then M  has a transition from state
+hs; ai with reward r to state hs 0 ; a 0 i for every a 0 ; the probability of this transition
+is p(a 0 js 0 ). We will represent the value function for M  in the same way that we
+represented the Q function for M ; in other words, the representation for V (hs; ai) is
+the same as the representation for Q(s; a). With these denitions, it is easy to see
+that TD(0) acting on M  produces exactly the same sequence of parameter changes
+
+as SARSA(0) acting on M under the xed policy . (And since (ajs) > 0, every
+state of M  will be visited innitely often.)
+Write T  for the transition probability matrix of the above Markov process. That
+is, the entry of T  in row hs; ai and column hs 0 ; a 0 i will be equal to the probability of
+taking a step to hs 0 ; a 0 i given that we start in hs; ai. By denition, T  is substochas-
+tic. That is, it has nonnegative entries, and its row sums are less than or equal to 1.
+Write s for the vector whose hs; aith element is S 0 (s)(ajs), that is, the probability
+that we start in state s and take action a. Write d  = (I T T
+ ) 1 s, where I is the
+identity matrix. As demonstrated in, e.g., [11], d  is the vector of expected visita-
+tion frequencies under ; that is, the element of d  corresponding to state s and
+action a is the expected number of times that the agent will visit state s and select
+action a during a single trajectory following policy . Write D  for the diagonal
+matrix with d  on its diagonal. Write r for the vector of expected rewards; that
+is, the component of r corresponding to state s and action a is E(r(s; a)). Finally
+write X for the Jacobian matrix @Q
+@w .
+With this notation, Sutton [1] showed that the expected TD(0) update is
+E(w new jw old ) = w old X T D  (I T  )Xw old +X T D  r
+(Actually, he only considered the case where all rewards are zero except on transi-
+tions from nonterminal to terminal states, but his argument works equally well for
+the more general case where nonzero rewards are allowed everywhere.) So, we can
+take A  = X T D  (I T  )X and r  = X T D  r to make E() = 0.
+Furthermore, Sutton showed that, as long as the agent reaches the terminal state
+with probability 1 (in other words, as long as  is proper) and as long as every
+state is visited with positive probability (which is true since all states are reachable
+and  has a nonzero probability of choosing every action), the matrix D  (I T  )
+is strictly positive denite. Therefore, so is A  .
+Finally, as can be seen from Sutton's equations on p. 25, there are two sources of
+variance in the update direction: variation in the number of times each transition
+is visited, and variation in the one-step rewards. The visitation frequencies and the
+one-step rewards both have bounded variance, and are independent of one another.
+They enter into the overall update in two ways: there is one set of terms which is
+bilinear in the one-step rewards and the visitation frequencies, and there is another
+set of terms which is bilinear in the visitation frequencies and the weights w. The
+former set of terms has constant variance. Because the policy is xed, w is inde-
+pendent of the visitation frequencies, and so the latter set of terms has variance
+proportional to kwk 2 . So, there is a constant K such that the total variance in 
+can be bounded by K(1 + kwk 2 ).
+A similar but simpler argument applies to V(0). In this case we dene M  to have
+the same states as M , and to have the transition matrix T  whose element s; s 0 is
+the probability of landing in s 0 in M on step t + 1, given that we start in s at step
+t and follow . Write s for the vector of starting probabilities, that is, s x = S 0 (x).
+Now dene X = @V
+@w and d  = (I T T
+ ) 1 s. Since we have assumed that all policies
+are proper and that every policy considered has a positive probability of reaching
+any state, the update matrix A  = X T D  (I T  )X is strictly positive denite. 2
+Lemma 3 The gradient of the function H(w) = max(0; kwk 1) 2 is Lipschitz
+continuous.
+Proof: Inside the unit sphere, H and all of its derivatives are uniformly zero.
+Outside, we have
+rH = wd(w)
+
+where d(w) = kwk1
+kwk , and
+r 2 H = d(w)I +rd(w)w T
+= d(w)I + w
+kwk 2
+1
+kwk w T
+= d(w)I + ww T
+kwk 2
+(1 d(w))
+The norm of the rst term is d(w), the norm of the second is 1 d(w), and since one
+of the terms is a multiple of I the norms add. So, the norm of r 2 H is 0 inside the
+unit sphere and 1 outside. At the boundary of the unit sphere, rH is continuous,
+and its directional derivatives from every direction are bounded by the argument
+above. So, rH is Lipschitz continuous. 2
+Acknowledgements
+Thanks to Andrew Moore and to the anonymous reviewers for helpful comments.
+This work was supported in part by DARPA contract number F30602{97{1{0215,
+and in part by NSF KDI award number DMS{9873442. The opinions and conclu-
+sions are the author's and do not reect those of the US government or its agencies.
+References
+[1] R. S. Sutton. Learning to predict by the methods of temporal dierences.
+Machine Learning, 3(1):9{44, 1988.
+[2] Georey J. Gordon. Stable function approximation in dynamic programming.
+Technical Report CMU-CS-95-103, Carnegie Mellon University, 1995.
+[3] L. C. Baird. Residual algorithms: Reinforcement learning with function ap-
+proximation. In Machine Learning: proceedings of the twelfth international
+conference, San Francisco, CA, 1995. Morgan Kaufmann.
+[4] Georey J. Gordon. Chattering in SARSA(). Internal report, 1996. CMU
+Learning Lab. Available from www.cs.cmu.edu/~ggordon.
+[5] R. S. Sutton. Open theoretical questions in reinforcement learning. In P. Fis-
+cher and H. U. Simon, editors, Computational Learning Theory (Proceedings
+of EuroCOLT'99), pages 11{17, 1999.
+[6] D. P. de Farias and B. Van Roy. On the existence of xed points for approxi-
+mate value iteration and temporal-dierence learning. Journal of Optimization
+Theory and Applications, 105(3), 2000.
+[7] Gavin A. Rummery and Mahesan Niranjan. On-line Q-learning using con-
+nectionist systems. Technical Report 166, Cambridge University Engineering
+Department, 1994.
+[8] G. Tesauro. TD-Gammon, a self-teaching backgammon program, achieves
+master-level play. Neural Computation, 6:215{219, 1994.
+[9] T. Jaakkola, M. I. Jordan, and S. P. Singh. On the convergence of stochastic
+iterative dynamic programming algorithms. Neural Computation, 6:1185{1201,
+1994.
+[10] B. T. Polyak and Ya. Z. Tsypkin. Pseudogradient adaptation and training
+algorithms. Automation and Remote Control, 34(3):377{397, 1973. Translated
+from Avtomatika i Telemekhanika.
+[11] J. G. Kemeny and J. L. Snell. Finite Markov Chains. Van Nostrand|Reinhold,
+New York, 1960.
+

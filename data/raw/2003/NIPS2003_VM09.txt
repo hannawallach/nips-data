@@ -1,0 +1,316 @@
+Learning Non-Rigid 3D Shape from 2D Motion
+
+Lorenzo Torresani Stanford University ltorresa@cs.stanford.edu Aaron Hertzmann University of Toronto hertzman@dgp.toronto.edu
+
+Christoph Bregler New York University chris.bregler@nyu.edu
+
+Abstract This paper presents an algorithm for learning the time-varying shape of a non-rigid 3D object from uncalibrated 2D tracking data. We model shape motion as a rigid component (rotation and translation) combined with a non-rigid deformation. Reconstruction is ill-posed if arbitrary deformations are allowed. We constrain the problem by assuming that the object shape at each time instant is drawn from a Gaussian distribution. Based on this assumption, the algorithm simultaneously estimates 3D shape and motion for each time frame, learns the parameters of the Gaussian, and robustly fills-in missing data points. We then extend the algorithm to model temporal smoothness in object shape, thus allowing it to handle severe cases of missing data. 1 Introduction We can generally think of a non-rigid object's motion as consisting of a rigid component plus a non-rigid deformation. For example, a person's head can move rigidly (e.g. turning left or right) while deforming (due to changing facial expressions). If we view this non-rigid motion from a single camera view, the shape and motion are ambiguous: for any hypothetical rigid motion, a corresponding 3D shape can be devised that fits the image observations. Even if camera calibration and rigid motion are known, a depth ambiguity remains. Despite this apparent ambiguity, humans interpret the shape and motion of non-rigid objects with relative ease; clearly, more assumptions about the nature of the deformations are used by humans. This paper addresses the question: how can we resolve the ambiguity, with as weak assumptions as possible? We argue that, by assuming that the 3D shape is drawn from some non-uniform PDF, we can reconstruct 3D non-rigid shape from 2D motion unambiguously. Moreover, we show that this can be done without assuming that the parameters of the PDF are known in advance. The use of a proper PDF makes the technique robust to noise and overfitting. We demonstrate this approach by modeling the PDF as a Gaussian distribution (more specifically, as a factor analyzer), and describe a novel EM algorithm for simultaneously learning the 3D shapes, the rigid motion, and the parameters of the Gaussian. We also generalize this approach by modeling the shape as a Linear Dynamical System (LDS).
+
+
+Our algorithm can be thought of as a structure-from-motion (SFM) algorithm with a learning component: we assume that a set of labeled point tracks have been extracted from a raw video sequence, and the goal is to estimate 3D shape, camera motion, and a deformation PDF. Our algorithm is well-suited to reconstruction in the case of missing data, such as due to occlusions and other tracking outliers. However, we show significant improvements over previous algorithms even when all tracks are visible. Our work may also be seen as unifying Active Shape Models [1, 2, 5] with SFM, where both are estimated jointly from an image sequence. Our methods are closely related to factor analysis, probabilistic PCA, and linear dynamical systems. Our missing-data technique can be viewed as generalizing previous algorithms for SFM with missing data (e.g. [8, 9]) to the nonrigid case. In work concurrent to our own, Gruber and Weiss [7] also apply EM to SFM; their work focuses on the rigid case with known noise, and applies temporal smoothing to rigid motion parameters rather than shape. 2 Deformation, Shape, and Ambiguities We now formalize the problem of interpreting non-rigid shape and motion. We assume that a scene consists of J scene points sj,t, where j is an index over scene points, and t is an index over image frames. The 2D projections pj,t of these points are imaged under orthographic projection: pj,t = Rt(sj,t + dt) + n (1) where pj,t is the 2D projection of scene point j at time t, dt is a 2 × 1 translation vector, Rt is a 2 × 3 matrix that combines rotation with orthographic projection [12], and n is zero-mean Gaussian noise with variance 2. Collecting the projected points into a 2 × J matrix Pt = [p1,t, ..., pJ,t] and the 3D shape into a 3 × J matrix St = [s1,t, ...sJ,t] gives the equivalent form Pt = Rt(St + Dt) + N (2) where Dt = dt1T contains J copies of the translation matrix dt. Note that rigid motion of the object and rigid motion of the camera are interchangeable. Our goal is to estimate the time-varying shape St and motion (Rt, Dt) from the observed projections Pt. Without any constraints on the 3D shape sj,t, this problem is extremely ambiguous [11]. For example, given a shape St and motion (Rt, Dt) and an arbitrary orthonormal matrix At, we can produce a new shape AtSt and motion (RtA-1, AtDt) that together give identical 2D
+
+t
+
+projections as the original model, even if a different matrix At is applied in every frame. A common way to model non-rigid deformations is to assume that the shape is produced by adding deformations to a shape average S: ¯
+
+K
+
+St = S + ¯ Vkzk,t (3)
+
+k=1
+
+where zk,t are scalar per-frame weights that indicate the contributions of the deformations to each shape; these weights are combined in a vector zt = [z1,t, ..., zK,t]T . Together, S ¯ and Vk are referred to as the shape basis. Equivalently, the space of possible shapes may be described by linear combinations of basis shapes, by selecting K + 1 linearly independent points in the space. This model was first applied to non-rigid SFM by Bregler et al. [4]. However, this model contains ambiguities, since, for some 3D shape and motion, there will still be ways to combine different weights and a different rigid motion to produce the same 3D shape. Since we are performing a 2D projection, an additional depth ambiguity occurs. For example, whenever there exist weights wk such that Rt Vkwk = 0 and Vkwk = 0, these weights define a linear space of distinct 3D shapes (with weights
+
+
+zt,k + wk) that give identical 2D projections. (When the number of basis shapes is small, these ambiguities are rarer and may not make a dramatic impact.) Furthermore, a leastsquares fit may overfit noise, especially with many basis shapes. As the number of basis shapes grows, the problem is more likely to become unconstrained, eventually approaching the totally unconstrained case described above. The ambiguity and overfitting may be resolved by introducing regularization terms that penalize large deformations, and then solving for 3D shape in a least-squares sense. Soatto larization may be too restrictive in many cases and too loose in others. For example, when tracking a face, deformations of the jaw are much more likely than deformations of the nose. Moreover, the weight for this regularization term must be specified by hand1. Alternatively, Brand [3] proposes placing a user-specified Gaussian prior on the deformation basis and a prior on the deformations based on an initial estimate. In order to motivate our approach, we can restate the above techniques as follows. Suppose we assume that shapes St are drawn from a probabilitity distribution p(St|) with known parameters . The non-rigid shape and motion are estimated by maximizing
+
+and Yezzi [11] use a regularization term equivalent to t ||St - S||2. However, this regu¯
+
+p(S, R, D|P, , 2)  p(P|S,R,D,,2)p(S,R,D|,2)
+
+ p(Pt|St, Rt, Dt, 2)p(St|)
+
+t
+
+(4) (5)
+
+assuming uniform priors on Rt, and Dt. The projection likelihood p(Pt|St, Rt, Dt, 2) is a spherical Gaussian (Equation 2). The negative log-posterior - ln p(S, R, D, |P) corresponds to a standard least-squares formulation for SFM, plus a regularization term derconstrained case described above. If we set p(St|) to be a spherical Gaussian with -lnp(St|). If we set p(St|) to be a uniform distribution, then we get the highly un¯ used previously -- the problem is constrained, but by a weak regularization term with a a specified variance (e.g. p(St|) = N (S; 2I)) then we obtain the simple regularization user-specified weight (variance). Our approach. Our approach is to simultaneously estimate the rigid motion and learn the shape PDF. In other words, we estimate R, D, , and 2 to maximize
+
+p(R, D, , 2|P)
+
+=  p(R, D, , S, 2|P)dS p(P|R, D, S, 2)p(S|)dS (6) (7)
+
+The key idea is that we can estimate shape and motion while learning the parameters of the than solving for estimates of shape.) In effect, the regularization terms (i.e. the PDF) are PDF p(S|) over shapes. (Our method marginalizes over the unknown shapes St, rather learned simultaneously with the rest of SFM. This means that the regularization terms need not be set manually, and can thus be much more sophisticated and have many more parameters than previous methods. In practice, we find that this leads to significantly improved reconstructions over user-specified shape PDFs. We demonstrate the approach by modeling the shape PDF as a general Gaussian. We reduce the dimensionality of the Gaussian by representing it as a factor analyzer. In this case, the factors Vk may be interpreted as basis deformations. We later generalize this approach to model shape as an LDS, leading to temporal correlations in the shape PDF. It might seem that, since the parameters of the PDF are not known a priori, the algorithm could estimate wildly varying shapes, and then learn a correspondingly spread-out PDF. without noise or projection, and thus there are no weights to specify in this case
+
+1 In their work, Soatto and Yezzi address a slightly simpler problem where the 3D data is observed
+
+
+However, such a spread-out PDF would assign very low likelihood to the solution and thus be suboptimal; this is a typical case of Bayesian learning naturally balancing the desire to fit the data with the desire for a "simple" model. One way to see this is to consider the terms of - ln p(R, D, |P) in the case of the Gaussian prior PDF: in addition to the datawhere T is the number of frames and  is the covariance of the shape PDF. This term fitting term and the regularization term, there is a "normalization constant" term of T ln ||, directly penalizes spread-out Gaussians. Hence, the optimal solution trades-off between (a) fitting the projection data, (b) fitting the shapes St to the shape PDF (regularizing), and (c) minimizing the variance of the shape PDF as much as possible. The algorithm simultaneously regularizes and learns the regularization. 3 Learning a Gaussian shape distribution
+
+this setting, the factors of the Gaussian can be interpreted as basis deformations -- shape We now describe our algorithm in detail. We model p(St|) as a factor analyzer [6]. In is modeled by Equation 3 -- but the weights zt are now hidden variables, with zero-mean Gaussian priors with unit variance for each: zt  N(0;I) (8) The shape and projection model is then completely specified by Equations 2, 3, and 8. The problem of non-rigid SFM is now to solve for the maximum like-
+
+lihood estimates of Rt, Dt, S, V, and 2, i.e. maximize p(Rt, Dt, S, V, 2|Pt)
+
+t
+
+¯ p(Pt|Rt, Dt, S, V, 2) = t ¯ p(Pt, zt|Rt, Dt, S, V, 2)p(zt)dzt
+
+¯ ¯
+
+
+
+3.1 Vectorized form. For later computations, it is useful to rewrite the model in a vectorized form. First, define ft to be the vector of point tracks ft = vec(Pt) = [x1,t, y1,t, ..., xJ,t, yJ,t]T . Note that ft is the same variable as Pt, but written as a vector rather than a matrix2. Expanding ft we have
+
+ft
+
+= = =
+
+vec(Pt) = vec(RtSt + RtDt + Nt)
+
+K
+
+vec(RtVk)zk,t + vec(RtS) + vec(RtDt) + vec(Nt) ¯ Mtzt + ¯t + Tt + vec(Nt) f
+
+k=1
+
+(9) (10) (11)
+
+where Mt = [vec(RtV1), ..., vec(RtVK)], zt = [z1,t, ..., zK,t]T , ft = vec(RtS) and Tt = vec(RtDt) = [(Rtdt)T , ..., (Rtdt)T ]T = [tTt , ..., tTt ]T . Note that the marginal distribution over shape -- as well as its projection -- is Gaussian:
+
+p(ft|)
+
+= =
+
+p(ft|zt, )p(zt|)dzt N(ft|Tt +¯t;MtMTt + 2I) f
+
+(12) (13)
+
+¯ ¯
+
+where  encapsulates the model parameters S, Vk, Rt, Dt and 2. ¯ Let H = [vec(S), vec(V1), ..., vec(VK)] and ~zt = [1, zTt ]T . We can also rewrite the ~ ¯ ~ vec(ABC) = (CT  A)vec(B). The symbol  denotes Kronecker product. shape equation as vec(RtSt) = (I  Rt)vec(St) = (I  Rt)H~zt, by using the identity
+
+2 The vec operator stacks the columns of a matrix into a vector, e.g. vec a0 a1 a2 a3 =
+
+[a0, a1, a2, a3]T . The operator is linear: vec(A + B) = vec(A) + vec(B), vec(A) = vec(A) for any matrices A and B and scalar .
+
+
+3.2 Generalized EM algorithm. Given a set of point tracks P (equivalently, f), we can estimate the motion and deformation model using EM; the algorithm is similar to EM for factor analysis [6]. The E-step. We estimate the distribution over zt given the current motion and shape estimates, for each frame t. Defining q(zt) to be the distribution to be estimated in frame t, it can be computed as
+
+q(zt)  = = = p(zt|ft, )
+
+N(zt|(ft -¯t - Tt);I - Mt) MTt (MtMTt + 2I)-1 f
+
+(14) (15) (16)
+
+The matrix inversion lemma may be used to accelerate the computation of . We define the expectations µt  Eq[zt] and t  Eq[ztzTt ] and compute them as:
+
+µt t = = (ft - ¯t - Tt) f I - Mt + µtµTt (17) (18)
+
+We also define µt = E[~zt] = [1, µTt ]T and  = E[~zt~zTt ] = ~ ~ 1 µt µTt t .
+
+The M-step. We estimate the motion parameters by minimizing
+
+Q(P, )
+
+= = Eq
+
+(z1),...,q(zT )
+
+Eq (zt)
+
+[||ft - vec(RtSt) - Tt)||2/(22)] + 2JT log 22 (20) [- log p(P|)] (19)
+
+t
+
+This function is quadratic in the shape parameters (S, Vk), in the rigid motion parameters ¯ (Rt, Tt) and in the gaussian noise variance parameter 2. To update each of these parameters we compute the corresponding partial derivative of the expected log likelihood, set it to zero and solve it. The parameter update rules are: · Shape basis:
+
+-1
+
+vec(H)  ~ · Noise variance:
+
+2 
+
+1 2JT
+
+t
+
+(t  (I  RTt Rt)) ~ vec (I  Rt)T (ft - Tt)µt ~T
+
+t t
+
+(21)
+
+(||ft -¯t - Tt||2 - 2(ft -¯t - Tt)T Mtµt + tr(Mt Mtt)) (22) f f T
+
+· Translation:
+
+1 Tt  (1  I)J (ftj - Rt(Sj + ¯ Vkjµtk)) (23)
+
+j k
+
+· Rotation:
+
+Rt  argRmin ||Rt
+
+t
+
+(HjtHj ) - ~ ~ ~ T ((ftj - tt)µTt Hj )|| ~ ~ T (24)
+
+j j
+
+where H = [H1 , ..., HJ ]T and ft = [ft , ..., ftJ]. 1 ~ ~ T ~ T
+
+
+Since the system of equations in Equation 21 is large and sparse, we solve it using conjugate gradient. In Equation 24, we enforce orthonormality of rotations by parameterizing Rt with exponential coordinates. We linearize the equation with respect to the exponential coordinates, and solve the resulting quadratic. If any of the point tracks are missing, they are also filled in during the M-step. Let ft
+
+
+
+denote the elements of a frame of tracking data that are not observed; they are estimated as
+
+ft   ft + Mtµt + Tt  ¯ (25)
+
+where () indicates rows that correspond to the missing data. In our M-step, we apply each of these updates once, although they could also be alternated. Once EM has converged, the maximum likelihood shapes may be computed as St = S +
+
+Vkµt,k. k
+
+¯
+
+4 Learning dynamics Many real deformations contain some temporal smoothness. We model temporal behavior of deformations using a Linear Dynamical System (LDS). In this model, Equation 8 is replaced with
+
+z0 zt  N(0;I) = zt-1 + n,
+
+n  N (0; Q)
+
+(26) (27)
+
+certain estimates of , this model corresponds to an assumption of continuously or slowly where  is an arbitrary unknown K ×K matrix, and Q is a K ×K covariance matrix. For changing shape. Since our model is a special form of Shumway and Stoffer's algorithm for LDS learning with EM [10], it is straightforward to adapt it to our needs. In the Estep, we apply Shumway and Stoffer's E-step to estimate µt, t, and E[ztzTt-1], based on Pt, S, Mt, , Q, and 2. In the M-step, we apply the same shape and motion updates as ¯ in the previous section; additionally, we update  and Q in the same way as in Shumway and Stoffer's algorithm. In other words, this reconstruction algorithm learns 3D shape with temporal smoothing, while learning the temporal smoothness term. 5 Experiments We compared our algorithm with the iterative SFM algorithm presented by Torresani et al. [13], which we will refer to as ILSQ (iterative least-squares) in the following discussion3. ILSQ optimizes Equations 2 and 3 by alternating optimization of each of the unknowns (rotation, basis shapes, and coefficients). We also improved the algorithm by updating the translations as well. When some data is missing, ILSQ optimizes with respect to the available data. For both algorithms, the rigid motion is initialized by Tomasi-Kanade [12], and random initialization of the shape basis and coefficients. For the algorithm presented in section 3, we adopted an annealing scheme that forces 2 to remain large in the initial steps of the optimization. We refer to our new algorithms as EM-Gaussian and EM-LDS. We tested the algorithms on a synthetic animation of a deforming shark in Figure 1. The motion consists of rigid rotation plus deformations generated by K = 2 basis shapes. The average reconstruction errors in Z for ILSQ and EM-Gaussian are respectively 7.10% and 2.50% on this sequence after 100 parameter updates.4 By enforcing temporal smoothness
+
+3 4 In our experience, ILSQ always performs better than the algorithm of Bregler et al. [4]. All errors are computed in percentage points: the average distance of the reconstructed point to
+
+the correct point divided by the size of the shape.
+
+
+60 60 60 60 60 60
+
+60
+
+40 40 40 40 40 40
+
+40
+
+20 20
+
+racksT
+
+20 20 20 20
+
+20
+
+y y y y y y y
+
+0 0 0 0 0 0 0
+
+2D
+
+-20 -20 -20 -20 -20 -20 -20
+
+-40 -40 -40 -40
+
+-40 -40 -40
+
+-100 -50
+
+0 x 50 100 -100 -50 0 x 50 100 -80 -60 -40 -20 0 20 40 60 80 100 -100 -50 -30 -20 -10 0 10 20 30 40 50
+
+x x
+
+0 x 50 100 -60 -40 -20 0 20 40 60 -40 -30
+
+x
+
+-20 x -10 0
+
+100 100 100 100 100 100 100
+
+50 50 50 50 50 50 50
+
+z z z z z z z 0 0 0 0 0 0 0
+
+-50 -50 -50 -50 -50 -50 -50
+
+-100 -100 -100 -100 -100 -100 -100
+
+ILSQ -100 -50 0 x 50 100 -100 -50 0 x 50 100 -80 -60 -40 -20 0 20 40 60 80 100 -20 0 20 40 -100 -50 x x 0 x 50 100 -60 -40 -20 0 20 40 60 -40 x -20 x 0
+
+100 100 100 100 100 100 100
+
+50 50 50 50 50 50 50
+
+z z z z z z z 0 0 0 0 0 0 0
+
+-50 -50 -50 -50 -50 -50 -50
+
+-100 -100 -100 -100 -100 -100 -100
+
+EM-Gaussian -100 -50 0 x 50 100 -100 -50 0 x 50 100 -80 -60 -40 -20 0 20 40 60 80 100 -20 0 20 40 -100 -50 x x 0 x 50 100 -60 -40 -20 0 20 40 60 -40 x -20 x 0
+
+100 100 100 100 100 100 100
+
+50 50 50 50 50 50 50
+
+z z z z z z z 0 0 0 0 0 0 0
+
+-50 -50 -50 -50 -50 -50 -50
+
+-100 -100 -100 -100 -100 -100 -100
+
+EM-LDS -100 -50 0 x 50 100 -100 -50 0 x 50 100 -80 -60 -40 -20 0 20 40 60 80 100 -20 0 20 40 -100 -50 x x 0 x 50 100 -60 -40 -20 0 20 40 60 -40 x -20 x 0
+
+t=20 t=50 t=80 t=115 t=148 t=175 t=200
+
+Figure 1: Reconstructions of the shark sequence using the three algorithms. Each algorithm was given 2D tracks as inputs; reconstructions are shown here from a different viewpoint than the inputs to the algorithm. Ground-truth features are shown as blue dots; reconstructions are red circles. Note that, although ILSQ gets approximately the correct shape in most cases, it misses details, whereas EM gives very accurate results most of the time. Some of the deformation errors of EM-Gaussian (e.g. for t=148) are corrected by EM-LDS through temporal smoothing.
+
+EM-LDS was able to correct some of the deformation errors of EM-Gaussian. The average Z error for EM-LDS on the shark sequence after 100 EM iterations is 1.24%. Videos of the shark reconstructions and the Matlab software used for these experiments are available from http://movement.stanford.edu/learning-nr-shape/ . In highly-constrained cases -- low-rank motion, no image noise, and no missing data -- ILSQ achieved reasonably good results. However, EM-Gaussian gave better results in nearly every case, and dramatically better results in underconstrained cases. Figure 2(a) and (b) show experimental results on another set of artificial data consisting of random basis shapes. Figure 2(a) shows the results of reconstruction with missing data; the ILSQ results degrade much faster as the percentage of missing data increases. Figure 2(b) shows the effect of changing the complexity of the model, while leaving the complexity of the data fixed. ILSQ yields poor results when the model complexity does not closely match the data complexity, but EM-Gaussian yields reasonable results regardless. 6 Discussion and future work We have described an approach to non-rigid structure-from-motion with a probabilistic deformation model, and demonstrated its usefulness in the case of a Gaussian deformation model. We expect that more sophisticated distributions can be used to model more complex non-rigid shapes in video. More general graphical models with other correlations (such as from audio data) could be built from this method. Our method is also applicable to
+
+
+3
+
+EM-Gaussian ILSQ
+
+2.5
+
+2
+
+error 1.5 z
+
+%
+
+1
+
+0.5
+
+0 0 10 20 30 40 50
+
+10 9 8 7 6 error 5 4 3 2 1 0 1
+
+EM-Gaussian ILSQ
+
+z
+
+%
+
+2 3 4 5 6
+
+% missing data
+
+(a)
+
+K
+
+(b)
+
+Figure 2: Error comparison between ILSQ and EM-Gaussian on random basis shapes. (a) Increasing missing data. As the percentage of missing feature tracks per frame increases, ILSQ degenerates much more rapidly than EM-Gaussian. (b) ILSQ gives poor results when the model complexity does not match the actual data complexity, whereas EM-Gaussian is relatively robust to this.
+
+separating rigid from non-rigid motion in fully-observed data, as in Soatto and Yezzi's work [11]. Our models could easily be generalized to perspective projection, although the optimization may be more difficult. Acknowledgements. Thanks to Hrishikesh Deshpande for assisting with an early version of this project, and to Stefano Soatto for discussing deformation ambiguities. Portions of this work were performed while LT was visiting New York University, AH was at University of Washington, and while CB was at Stanford University. LT and CB were supported by ONR grant N00014-01-1-0890 under the MURI program. AH was supported in part by UW Animation Research Labs, NSF grant IIS-0113007, the Connaught Fund, and an NSERC Discovery Grant. References [1] A. Blake and M. Isard. Active Contours. Springer-Verlag, 1998. [2] V. Blanz and T. Vetter. A Morphable Model for the Synthesis of 3D Faces. In Proceedings of SIGGRAPH 99, Computer Graphics Proceedings, pages 187­194, Aug. 1999. [3] M. Brand. Morphable 3D models from video. In Proc. CVPR 2001, 2001. [4] C. Bregler, A. Hertzmann, and H. Biermann. Recovering Non-Rigid 3D Shape from Image Streams. In Proc. CVPR 2000, 2000. [5] T. F. Cootes and C. J. Taylor. Statistical models of appearance for medical image analysis and computer vision. In Proc. SPIE Medical Imaging, 2001. [6] Z. Ghahramani and G. E. Hinton. The EM Algorithm for Mixtures of Factor Analyzers. Technical Report CRG-TR-96-1, University of Toronto, 1996. [7] A. Gruber and Y. Weiss. Factorization with Uncertainty and Missing Data: Exploiting Temporal Coherence. In Proc. NIPS 2003, 2003. In these proceedings. [8] D. W. Jacobs. Linear Fitting with Missing Data for Structure-From-Motion. Computer Vision and Image Understanding, 82:57­82, 2001. [9] H. Shum, K. Ikeuchi, and R. Reddy. Principal Component Analysis with Missing Data and Its Applications to Polyhedral Object Modeling. IEEE Trans. PAMI, 17(9):854­867, 1995. [10] R. H. Shumway and D. S. Stoffer. An approach to time series smoothing and forecasting using the em algorithm. J. Time Series Analysis, 3(4):253­264, 1982. [11] S. Soatto and A. J. Yezzi. Deformotion: Deforming Motion, Shape Averages, and the Joint Registration and Segmentation of Images. In Proc. ECCV 2002, May 2002. [12] C. Tomasi and T. Kanade. Shape and motion from image streams under orthography: A factorization method. Int. J. of Computer Vision, 9(2):137­154, 1992. [13] L. Torresani, D. Yang, G. Alexander, and C. Bregler. Tracking and Modeling Non-Rigid Objects with Rank Constraints. In Proc. CVPR, 2001.
+
+

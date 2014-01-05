@@ -1,0 +1,486 @@
+Relative Density Nets: A New Way to
+Combine Backpropagation with HMM's
+Andrew D. Brown
+Department of Computer Science
+University of Toronto
+Toronto, Canada M5S 3G4
+andy@cs.utoronto.ca
+Georey E. Hinton
+Gatsby Unit, UCL
+London, UK WC1N 3AR
+hinton@gatsby.ucl.ac.uk
+Abstract
+Logistic units in the rst hidden layer of a feedforward neural net-
+work compute the relative probability of a data point under two
+Gaussians. This leads us to consider substituting other density
+models. We present an architecture for performing discriminative
+learning of Hidden Markov Models using a network of many small
+HMM's. Experiments on speech data show it to be superior to the
+standard method of discriminatively training HMM's.
+1 Introduction
+A standard way of performing classication using a generative model is to divide the
+training cases into their respective classes and then train a set of class conditional
+models. This unsupervised approach to classication is appealing for two reasons. It
+is possible to reduce overtting, because the model learns the class-conditional input
+densities P (xjc) rather than the input-conditional class probabilities P (cjx). Also,
+provided that the model density is a good match to the underlying data density
+then the decision provided by a probabilistic model is Bayes optimal. The problem
+with this unsupervised approach to using probabilistic models for classication is
+that, for reasons of computational e∆ciency and analytical convenience, very simple
+generative models are typically used and the optimality of the procedure no longer
+holds. For this reason it is usually advantageous to train a classier discriminatively.
+In this paper we will look specically at the problem of learning HMM's for classify-
+ing speech sequences. It is an application area where the assumption that the HMM
+is the correct generative model for the data is inaccurate and discriminative methods
+of training have been successful. The rst section will give an overview of current
+methods of discriminatively training HMM classiers. We will then introduce a new
+type of multi-layer backpropagation network which takes better advantage of the
+HMM's for discrimination. Finally, we present some simulations comparing the two
+methods.
+
+Classes
+HMM's
+1 1
+1
+Sequence
+Figure 1: An Alphanet with one HMM per class. Each computes a score for the
+sequence and this feeds into a softmax output layer.
+2 Alphanets and Discriminative Learning
+The unsupervised way of using an HMM for classifying a collection of sequences is to
+use the Baum-Welch algorithm [1] to t one HMM per class. Then new sequences
+are classied by computing the probability of a sequence under each model and
+assigning it to the one with the highest probability. Speech recognition is one of the
+commonest applications of HMM's, but unfortunately an HMM is a poor model of
+the speech production process. For this reason speech researchers have looked at the
+possibility of improving the performance of an HMM classier by using information
+from negative examples | examples drawn from classes other than the one which
+the HMM was meant to model. One way of doing this is to compute the mutual
+information between the class label and the data under the HMM density, and
+maximize that objective function [2].
+It was later shown that this procedure could be viewed as a type of neural network
+(see Figure 1) in which the inputs to the network are the log-probability scores
+L(x 1:T jH) of the sequence under hidden Markov model H [3]. In such a model
+there is one HMM per class, and the output is a softmax non-linearity:
+P (c k jx 1:T ; H 1 ; : : : ; HK ) = y k = exp(L(x 1:T jH k ))
+P K
+j=1 exp(L(x 1:T jH j ))
+(1)
+Training this model by maximizing the log probability of correct classication leads
+to a classier which will perform better than an equivalent HMM model trained
+solely in a unsupervised manner. Such an architecture has been termed an \Al-
+phanet" because it may be implemented as a recurrent neural network which mimics
+the forward pass of the forward-backward algorithm. 1
+3 Backpropagation Networks as Density Comparators
+A multi-layer feedforward network is usually thought of as a exible non-linear
+regression model, but if it uses the logistic function non-linearity in the hidden
+layer, there is an interesting interpretation of the operation performed by each
+hidden unit. Given a mixture of two Gaussians where we know the component
+priors P (G) and the component densities P (xjG) then the posterior probability that
+Gaussian, G 0 , generated an observation x, is a logistic function whose argument is
+the negative log-odds of the two classes [4]. This can clearly be seen by rearranging
+1 The results of the forward pass are the probabilities of the hidden states conditioned
+on the past observations, or \alphas" in standard HMM terminology.
+
+the expression for the posterior:
+P (G 0 jx) = P (xjG 0 )P (G 0 )
+P (xjG 0 )P (G 0 ) + P (xjG 1 )P (G 1 )
+= 1
+1 + exp
+n
+log P (xjG0 )
+P (xjG1 ) log P (G0 )
+P (G1 )
+o (2)
+If the class conditional densities in question are multivariate Gaussians
+P (xjG k ) = j2j 1
+2 exp
+ 1
+2 (x  k )
+T
+ 1 (x  k )
+
+(3)
+with equal covariance matrices, , then the posterior class probability may be
+written in this familiar form:
+P (G 0 jx) = 1
+1 + expf(x T w + b)
+(4)
+where,
+w =  1 ( 0  1 ) (5)
+b = ( 1 +  0 ) T ( 1  0 ) + log P (G 0 )
+P (G 1 ) (6)
+Thus, the multi-layer perceptron can be viewed as computing pairwise posteriors
+between Gaussians in the input space, and then combining these in the output layer
+to compute a decision.
+4 A New Kind of Discriminative Net
+This view of a feedforward network suggests variations in which other kinds of
+density models are used in place of Gaussians in the input space. In particular,
+instead of performing pairwise comparisons between Gaussians, the units in the
+rst hidden layer can perform pairwise comparisons between the densities of an
+input sequence under M dierent HMM's. For a given sequence the log-probability
+of a sequence under each HMM is computed and the dierence in log-probability
+is used as input to the logistic hidden unit. 2 This is equivalent to computing the
+posterior responsibilities of a mixture of two HMM's with equal prior probabilities.
+In order to maximally leverage the information captured by the HMM's we use M
+2
+
+hidden units so that all possible pairs are included. The output of a hidden unit h
+is given by
+h (mn) = (L(x 1:T jHm ) L(x 1:T jHn )) (7)
+where we have used (mn) as an index over the set, M
+2
+
+, of all unordered pairs of
+the HMM's. The results of this hidden layer computation are then combined using
+a fully connected layer of free weights, W , and nally passed through a softmax
+function to make the nal decision.
+a k =
+X
+(mn)2( M
+2
+)
+w (m;n)k h (mn) (8)
+P (c k jx 1:T ; H 1 ; : : : ; HM ) = p k = exp(a k )
+P K
+k 0 =1 exp(a k 0 )
+(9)
+2 We take the time averaged log-probability so that the scale of the inputs is independent
+of the length of the sequence.
+
+Classes
++1
+-1
+HMM's
+Sequence
+Density
+Comparator
+Units
++1
+-1 +1
+-1
+Figure 2: A multi-layer density net with HMM's in the input layer. The hidden
+layer units perform all pairwise comparisons between the HMM's.
+where we have used () as shorthand for the logistic function, and p k is the value
+of the kth output unit. The resulting architecture is shown in gure 2. Because
+each unit in the hidden layer takes as input the dierence in log-probability of two
+HMM's, this can be thought of as a xed layer of weights connecting each hidden
+unit to a pair of HMM's with weights of 1.
+In contrast to the Alphanet, which allocates one HMM to model each class, this net-
+work does not require a one-to-one alignment between models and classes and it gets
+maximum discriminative benet from the HMM's by comparing all pairs. Another
+benet of this architecture is that it allows us to use more HMM's than there are
+classes. The unsupervised approach to training HMM classiers is problematic be-
+cause it depends on the assumption that a single HMM is a good model of the data
+and, in the case of speech, this is a poor assumption. Training the classier discrim-
+inatively alleviated this drawback and the multi-layer classier goes even further in
+this direction by allowing many HMM's to be used to learn the decision boundaries
+between the classes. The intuition here is that many small HMM's can be a far
+more e∆cient way to characterize sequences than one big HMM. When many small
+HMM's cooperate to generate sequences, the mutual information between dierent
+parts of generated sequences scales linearly with the number of HMM's and only
+logarithmically with the number of hidden nodes in each HMM [5].
+5 Derivative Updates for a Relative Density Network
+The learning algorithm for an RDN is just the backpropagation algorithm applied
+to the network architecture as dened in equations 7,8 and 9. The output layer is
+a distribution over class memberships of data point x 1:T , and this is parameterized
+as a softmax function. We minimize the cross-entropy loss function:
+` =
+K
+X
+k=1
+t k log p k (10)
+where p k is the value of the kth output unit and t k is an indicator variable which is
+equal to 1 if k is the true class. Taking derivatives of this expression with respect
+to the inputs of the output units yields
+@`
+@a k
+= t k p k (11)
+
+@`
+@w (mn);k
+= @`
+@a k
+@a k
+@w (mn);k
+= (t k p k )h (mn) (12)
+The derivative of the output of the (mn)th hidden unit with respect to the output
+of ith HMM, L i , is
+@h (mn)
+@L i
+= (Lm Ln )(1 (Lm Ln ))(∆ im ∆ in ) (13)
+where (∆ im ∆ in ) is an indicator which equals +1 if i = m, 1 if i = n and zero
+otherwise. This derivative can be chained with the the derivatives backpropagated
+from the output to the hidden layer.
+For the nal step of the backpropagation procedure we need the derivative of the
+log-likelihood of each HMM with respect to its parameters. In the experiments we
+use HMM's with a single, axis-aligned, Gaussian output density per state. We use
+the following notation for the parameters:
+ A: a ij is the transition probability from state i to state j
+ :  i is the initial state prior
+  i : mean vector for state i
+ v i : vector of variances for state i
+ H: set of HMM parameters fA; ; ; vg
+We also use the variable s t to represent the state of the HMM at time t. We make
+use of the property of all latent variable density models that the derivative of the
+log-likelihood is equal to the expected derivative of the joint log-likelihood under
+the posterior distribution. For an HMM this means that:
+@L(x 1:T jH)
+@H i
+=
+X
+s 1:T
+P (s 1:T jx 1:T ; H)
+@
+@H i
+log P (x 1:T ; s 1:T jH) (14)
+The joint likelihood of an HMM is:
+hlog P (x 1:T ; s 1:T jH)i =
+=
+X
+i
+h∆ s1 ;i i log  i +
+T
+X
+t=2
+X
+i;j
+h∆ s t ;j ∆ s t 1 ;i i log a ij +
+T
+X
+t=1
+X
+i
+h∆ s t ;i i
+"
+1
+2
+D
+X
+d=1
+log v i;d
+1
+2
+D
+X
+d=1
+(x t;d  i;d ) 2 =v i;d
+#
++ const (15)
+where hi denotes expectations under the posterior distribution and h∆ s t ;i i and
+h∆ s t ;j ∆ s t 1 ;i i are the expected state occupancies and transitions under this dis-
+tribution. All the necessary expectations are computed by the forward back-
+ward algorithm. We could take derivatives with respect to this functional di-
+rectly, but that would require doing constrained gradient descent on the prob-
+abilities and the variances. Instead, we reparameterize the model using a
+softmax basis for probability vectors and an exponential basis for the vari-
+ance parameters. This choice of basis allows us to do unconstrained op-
+timization in the new basis. The new parameters are dened as follows:
+a ij = exp( (a)
+ij )
+P
+j 0 exp( (a)
+ij 0 )
+;  i = exp( ()
+i )
+P
+i 0 exp( ()
+i )
+; v i;d = exp( (v)
+i;d )
+This results in the following derivatives:
+@L(x 1:T jH)
+@ (a)
+ij
+=
+T
+X
+t=2
+
+h∆ s t ;j ∆ s t 1 ;i i h∆ s t 1 ;i ia ij
+
+(16)
+
+@L(x 1:T jH)
+@ ()
+i
+= h∆ s1 ;i i  i (17)
+@L(x 1:T jH)
+@ i;d
+=
+T
+X
+t=1
+h∆ s t ;i i(x t;d  i;d )=v i;d (18)
+@L(x 1:T jH)
+@ (v)
+i;d
+= 1
+2
+T
+X
+t=1
+h∆ s t ;i i
+
+(x t;d  i;d ) 2 =v i;d 1
+
+(19)
+When chained with the error signal backpropagated from the output, these deriva-
+tives give us the direction in which to move the parameters of each HMM in order
+to increase the log probability of the correct classication of the sequence.
+6 Experiments
+To evaluate the relative merits of the RDN, we compared it against an Alphanet
+on a speaker identication task. The data was taken from the CSLU 'Speaker
+Recognition' corpus. It consisted of 12 speakers uttering phrases consisting of 6
+dierent sequences of connected digits recorded multiple times (48) over the course
+of 12 recording sessions. The data was pre-emphasized and Fourier transformed
+in 32ms frames at a frame rate of 10ms. It was then ltered using 24 bandpass,
+mel-frequency scaled lters. The log magnitude lter response was then used as the
+feature vector for the HMM's. This pre-processing reduced the data dimensionality
+while retaining its spectral structure.
+While mel-cepstral coe∆cients are typically recommended for use with axis-aligned
+Gaussians, they destroy the spectral structure of the data, and we would like to
+allow for the possibility that of the many HMM's some of them will specialize on
+particular sub-bands of the frequency domain. They can do this by treating the
+variance as a measure of the importance of a particular frequency band | using
+large variances for unimportant bands, and small ones for bands to which they pay
+particular attention.
+We compared the RDN with an Alphanet and three other models which were im-
+plemented as controls. The rst of these was a network with a similar architecture
+to the RDN (as shown in gure 2), except that instead of xed connections of 1,
+the hidden units have a set of adaptable weights to all M of the HMM's. We refer
+to this network as a comparative density net (CDN). A second control experiment
+used an architecture similar to a CDN without the hidden layer, i.e. there is a single
+layer of adaptable weights directly connecting the HMM's with the softmax output
+units. We label this architecture a CDN-1. The CDN-1 diers from the Alphanet
+in that each softmax output unit has adaptable connections to the HMM's and we
+can vary the number of HMM's, whereas the Alphanet has just one HMM per class
+directly connected to each softmax output unit. Finally, we implemented a version
+of a network similar to an Alphanet, but using a mixture of Gaussians as the in-
+put density model. The point of this comparison was to see if the HMM actually
+achieves a benet from modelling the temporal aspects of the speaker recognition
+task.
+In each experiment an RDN constructed out of a set of, M , 4-state HMM's was
+compared to the four other networks all matched to have the same number of free
+parameters, except for the MoGnet. In the case of the MoGnet, we used the same
+number of Gaussian mixture models as HMM's in the Alphanet, each with the
+same number of hidden states. Thus, it has fewer parameters, because it is lacking
+the transition probabilities of the HMM. We ran the experiment four times with
+
+a)
+RDN Alphanet MoGnet CDN CDN-1
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+Classification
+Rate
+Architecture
+b)
+RDN Alphanet MoGnet CDN CDN-1
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+Classification
+Rate
+Architecture
+c)
+RDN Alphanet MoGnet CDN CDN-1
+0.6
+0.8
+1
+Classification
+Rate
+Architecture
+d)
+RDN Alphanet MoGnet CDN CDN-1
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Classification
+Rate
+Architecture
+Figure 3: Results of the experiments for an RDN with (a) 12, (b) 16, (c) 20 and
+(d) 24 HMM's.
+values of M of 12, 16, 20 and 24. For the Alphanet and MoGnet we varied the
+number of states in the HMM's and the Gaussian mixtures, respectively. For the
+CDN model we used the same number of 4-state HMM's as the RDN and varied
+the number of units in the hidden layer of the network. Since the CDN-1 network
+has no hidden units, we used the same number of HMM's as the RDN and varied
+the number of states in the HMM. The experiments were repeated 10 times with
+dierent training-test set splits. All the models were trained using 90 iterations of
+a conjugate gradient optimization procedure [6].
+7 Results
+The boxplot in gure 3 shows the results of the classication performance on the
+10 runs in each of the 4 experiments. Comparing the Alphanet and the RDN we
+see that the RDN consistently outperforms the Alphanet. In all four experiments
+the dierence in their performance under a paired t-test was signicant at the level
+p < 0:01. This indicates that given a classication network with a xed number of
+parameters, there is an advantage to using many small HMM's and using all the
+pairwise information about an observed sequence, as opposed to using a network
+with a single large HMM per class.
+In the third experiment involving the MoGnet we see that its performance is com-
+parable to that of the Alphanet. This suggests that the HMM's ability to model the
+temporal structure of the data is not really necessary for the speaker classication
+task as we have set it up. 3 Nevertheless, the performance of both the Alphanet and
+3 If we had done text-dependent speaker identication, instead of multiple digit phrases
+
+the MoGnet is less than the RDN.
+Unfortunately the CDN and CDN-1 networks perform much worse than we ex-
+pected. While we expected these models to perform similarly to the RDN, it seems
+that the optimization procedure takes much longer with these models. This is prob-
+ably because the small initial weights from the HMM's to the next layer severely
+attenuate the backpropagated error derivatives that are used to train the HMM's.
+As a result the CDN networks do not converge properly in the time allowed.
+8 Conclusions
+We have introduced relative density networks, and shown that this method of dis-
+criminatively learning many small density models in place of a single density model
+per class has benets in classication performance. In addition, there may be a
+small speed benet to using many smaller HMM's compared to a few big ones.
+Computing the probability of a sequence under an HMM is order O(TK 2 ), where T
+is the length of the sequence and K is the number of hidden states in the network.
+Thus, smaller HMM's can be evaluated faster. However, this is somewhat counter-
+balanced by the quadratic growth in the size of the hidden layer as M increases.
+Acknowledgments
+We would like to thank John Bridle, Chris Williams, Radford Neal, Sam Roweis,
+Zoubin Ghahramani, and the anonymous reviewers for helpful comments.
+References
+[1] L. E. Baum, T. Petrie, G. Soules, and N. Weiss, \A maximization technique
+occurring in the statistical analysis of probabilistic functions of Markov chains,"
+The Annals of Mathematical Statistics, vol. 41, no. 1, pp. 164{171, 1970.
+[2] L. R. Bahl, P. F. Brown, P. V. de Souza, and R. L. Mercer, \Maximum mu-
+tual information of hidden Markov model parameters for speech recognition,"
+in Proceeding of the IEEE International Conference on Acoustics, Speech and
+Signal Processing, pp. 49{53, 1986.
+[3] J. Bridle, \Training stochastic model recognition algorithms as networks can
+lead to maximum mutual information estimation of parameters," in Advances in
+Neural Information Processing Systems (D. Touretzky, ed.), vol. 2, (San Mateo,
+CA), pp. 211{217, Morgan Kaufmann, 1990.
+[4] M. I. Jordan, \Why the logistic function? A tutorial discussion on probabilities
+and neural networks," Tech. Rep. Computational Cognitive Science, Technical
+Report 9503, Massachusetts Institute of Technology, August 1995.
+[5] A. D. Brown and G. E. Hinton, \Products of hidden Markov models," in Proceed-
+ings of Articial Intelligence and Statistics 2001 (T. Jaakkola and T. Richard-
+son, eds.), pp. 3{11, Morgan Kaufmann, 2001.
+[6] C. E. Rasmussen, Evaluation of Gaussian Processes and other Methods for Non-
+Linear Regression. PhD thesis, University of Toronto, 1996. Matlab conjugate
+gradient code available from http://www.gatsby.ucl.ac.uk/edward/code/.
+then this might have made a dierence.
+

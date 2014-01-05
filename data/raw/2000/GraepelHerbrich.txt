@@ -1,0 +1,488 @@
+The Kernel Gibbs Sampler
+Thore Graepel
+Statistics Research Group
+Computer Science Department
+Technical University of Berlin
+Berlin, Germany
+guru@cs.tu-berlin.de
+Ralf Herbrich
+Statistics Research Group
+Computer Science Department
+Technical University of Berlin
+Berlin, Germany
+ralfh@cs.tu-berlin.de
+Abstract
+We present an algorithm that samples the hypothesis space of ker-
+nel classiers. Given a uniform prior over normalised weight vectors
+and a likelihood based on a model of label noise leads to a piece-
+wise constant posterior that can be sampled by the kernel Gibbs
+sampler (KGS). The KGS is a Markov Chain Monte Carlo method
+that chooses a random direction in parameter space and samples
+from the resulting piecewise constant density along the line chosen.
+The KGS can be used as an analytical tool for the exploration of
+Bayesian transduction, Bayes point machines, active learning, and
+evidence-based model selection on small data sets that are contam-
+inated with label noise. For a simple toy example we demonstrate
+experimentally how a Bayes point machine based on the KGS out-
+performs an SVM that is incapable of taking into account label
+noise.
+1 Introduction
+Two great ideas have dominated recent developments in machine learning: the ap-
+plication of kernel methods and the popularisation of Bayesian inference. Focusing
+on the task of classication, various connections between the two areas exist: ker-
+nels have long been a part of Bayesian inference in the disguise of covariance func-
+tions that characterise priors over functions [9]. Also, attempts have been made
+to re-derive the support vector machine (SVM) [1]  possibly the most prominent
+representative of kernel methods  as a maximum a-posteriori estimator (MAP)
+in a Bayesian framework [8]. While this work suggests good strategies for evidence-
+based model selection the MAP estimator is not truly Bayesian in spirit because it is
+not based on the concept of model averaging which is crucial to Bayesian reasoning.
+As a consequence, the MAP estimator is generally not as robust as a real Bayesian
+estimator. While this drawback is inconsequential in a noise-free setting or in a situ-
+ation dominated by feature noise, it may have severe consequences when the data is
+contaminated by label noise that may lead to a multi-modal posterior distribution.
+In order to make use of the full Bayesian posterior distribution it is necessary to
+generate samples from this distribution. This contribution is concerned with the
+generation of samples from the Bayesian posterior over the hypothesis space of lin-
+
+ear classiers in arbitrary kernel spaces in the case of label noise. In contrast to [8]
+we consider normalised weight vectors, kwk K = 1, because the classication given
+by a linear classier only depends on the spatial direction of the weight vector w
+and not on its length. This point of view leads to a hypothesis space isomorphic to
+the surface of an n-dimensional sphere which  in the absence of prior information
+ is naturally equipped with a uniform prior over directions. Incorporating the
+label noise model into the likelihood then leads to a piecewise constant posterior on
+the surface of the sphere. The kernel Gibbs sampler (KGS) is designed to sample
+from this type of posterior by iteratively choosing a random direction and sam-
+pling on the resulting piecewise constant one-dimensional density in the fashion of
+a hit-and-run algorithm [7].
+The resulting samples can be used in various ways: i) In Bayesian transduction [3]
+the decision about the labels of new test points can be inferred by a majority decision
+of the sampled classiers. ii) The posterior mean  the Bayes point machine
+(BPM) solution [4]  can be calculated as an approximation to transduction. iii)
+The binary entropy of candidate training points can be calculated to determine
+their information content for active learning [2]. iv) The model evidence [5] can be
+evaluated for the purpose of model selection. We would like to point out, however,
+that the KGS is limited in practice to a sample size of m  100 and should thus be
+thought of as an analytical tool to advance our understanding of the interaction of
+kernel methods and Bayesian reasoning.
+The paper is structured as follows: in Section 2 we introduce the learning scenario
+and explain our Bayesian approach to linear classiers in kernel spaces. The kernel
+Gibbs sampler is explained in detail in Section 3. Dierent applications of the KGS
+are discussed in Section 4 followed by an experimental demonstration of the BPM
+solution based on using the KGS under label noise conditions. We denote ntuples
+by italic bold letters (e.g. x), vectors by roman bold letters (e.g. x), random vari-
+ables by sans serif font (e.g. X), and vector spaces by calligraphic capitalised letters
+(e.g. X ). The symbols P; E and I denote a probability measure, the expectation of
+a random variable and the indicator function, respectively.
+2 Bayesian Learning in Kernel spaces
+We consider learning given a sequence x = (x 1 ; : : : ; xm ) 2 X m and y =
+(y 1 ; : : : ym ) 2 f 1; +1g m drawn iid from a xed distribution PXY = P Z over the
+space X f 1; +1g = Z of input-output pairs. The hypotheses are linear classiers
+x 7! hw;  (x)i K =: hw; xi K in some xed feature space K  ` n
+2 where we assume
+that a mapping  : X ! K is chosen a priori 1 . Since all we need for learning is the
+real-valued output hw; x i i K of the classier w at the m training points in x 1 ; : : : ; xm
+we can assume that w can be expressed as (see [9])
+w =
+m
+X
+i=1
+ i x i : (1)
+Thus, it suces to learn the m expansion coecients  2 R m rather than the n
+components of w 2 K. This is particularly useful if the dimensionality dim (K) = n
+of the feature space K is much greater (or possibly innite) than the number m
+of training points. From (1) we see that all that is needed is the inner product
+function k (x; x 0 ) = h (x) ;  (x 0 )i K also known as the kernel (see [9] for a detailed
+introduction to the theory of kernels).
+1 For the sake of convenience, we sometimes abbreviate  (x) by x. This, however,
+should not be confused with ntuple x denoting the training objects.
+
+latitude
+2
+4
+6
+longitude
+1
+2
+3
+log
+posterior
+-0.8
+-0.6
+-0.4
+-0.2
+latitude
+2
+4
+6
+longitude
+1
+2
+3
+log
+posterior
+-0.7
+-0.6
+-0.5
+-0.4
+-0.3
+(a) (b)
+Figure 1: Illustration of the (log) posterior distribution on the surface of a 3
+dimensional sphere
+ w 2 R 3 j kwk K = 1
+	 resulting from a label noise model with
+a label ip rate of q = 0:20 (a) m = 10, (b) m = 1 000. The log posterior is plotted
+over the longitude and latitude, and for small sample size it is multi-modal due
+to the label noise. The classier w  labelling the data (before label noise) was at
+
+2 ; 
+ .
+In a Bayesian spirit we consider a prior PW over possible weight vectors w 2 W
+of unit length, i.e. W = fv 2 K j kvk K = 1g. Given an iid training set z = (x; y)
+and a likelihood model P YjX=x;W=w we obtain the posterior PWjZ m =z using Bayes'
+formula
+PWjZ m =z (w) =
+P Y m jX m =x;W=w (y) PW (w)
+EW
+
+P Y m jX m =x;W=w (y)
+ ; (2)
+By the iid assumption and the independence of the denominator from w we obtain
+PWjZ m =z (w) /
+m
+Y
+i=1
+P YjX=x i ;W=w (y i )
+| {z }
+L[w;z]
+PW (w) :
+In the absence of specic prior knowledge symmetry suggests to take PW uniform
+on W . Furthermore, we choose the likelihood model
+P YjX=x;W=w (y) =
+
+q if y hw; xi K  0
+1 q otherwise ;
+where q species the assumed level of label noise. Please note the dierence to the
+commonly assumed model of feature noise which essentially assumes noise in the
+(mapped) input vectors x instead of the labels y and constitutes the basis of the
+soft-margin SVM [1]. Thus the likelihood L [w; z] of the weight vector w is given
+by
+L [w; z] = q mRemp [w;z] (1 q) m(1 Remp [w;z]) ; (3)
+where the training error Remp [w; z] is dened as
+Remp [w; z] =
+1
+m
+m
+X
+i=1
+I y i hw;x i i K 0 :
+
+v
+ 1
+w
+ 
+ 4
+cos( 
+)w sin( 
+)v
+ 2
+y 1 x 1
+y 2 x 2
+Two data points y 1 x 1 and y 2 x 2 divide
+the space of normalised weight vec-
+tors w into four equivalence classes
+with dierent posterior density indi-
+cated by the gray shading. In each
+iteration, starting from w j 1 a ran-
+dom direction v with v?w j 1 is gen-
+erated. We sample from the piecewise
+constant density on the great circle
+determined by the plane dened by
+w j 1 and v. In order to obtain   ,
+we calculate the 2m angles  i where
+the training samples intersect with
+the circle and keep track of the num-
+ber m  e i of training errors for each
+region i.
+Figure 2: Schematic view of the kernel Gibbs sampling procedure.
+Clearly, the posterior PWjZ m =z is piecewise constant for all w with equal training
+error Remp [w; z] (see Figure 1).
+3 The Kernel Gibbs Sampler
+In order to sample from PWjZ m =z on W we suggest a Markov Chain sampling
+method. For a given value of q, the sampling scheme can be decomposed into the
+following steps (see Figure 2):
+1. Choose an arbitrary starting point w 0 2 W and set j = 0.
+2. Choose a direction v 2 W in the tangent space
+ e v 2 W
+  he v; w j i K = 0
+	
+.
+3. Calculate all m hit points b i 2 W from w in direction v with the hyperplane
+having normal y i x i . Before normalisation, this is achieved by [4]
+b i = w j
+hw j ; x i i K
+hv; x i i K
+v :
+4. Calculate the 2m angular distances  i from the current position w j
+8i 2 f1; : : : ; mg :  2i 1 = sign (hv; b i i K ) arccos hw j ; b i i K
+
+;
+8i 2 f1; : : : ; mg :  2i = ( 2i 1 + ) mod (2) :
+5. Sort the  i in ascending order, i.e.  : f1; : : : ; 2mg ! f1; : : : ; 2mg such
+that
+8i 2 f2; : : : ; 2mg :  (i 1)   (i) :
+6. Calculate the training errors e i of the 2m intervals
+
+ (i 1) ;  (i)
+
+by eval-
+uating
+e i = Remp
+
+cos
+  (i+1)  (i)
+2
+
+w j sin
+  (i+1)  (i)
+2
+
+v; z
+
+:
+Here, we used the shorthand notation  (2m+1) =  (1) .
+
+7. Sample an angle   using the piecewise uniform distribution and (3).
+8. Calculate a new sample w j+1 by w j+1 = cos (  ) w j sin (  ) v.
+9. Set j   j + 1 and go back to step 2.
+Since the algorithm is carried out in feature space K we can use
+w =
+m
+X
+i=1
+ i x i ; v =
+m
+X
+i=1
+ i x i ; b =
+m
+X
+i=1
+ i x i :
+For the inner products and norms it follows that, e.g.
+hw; vi K =  0 G; kwk 2
+K =  0 G ;
+where the mm matrix G is known as the Gram matrix and is given by
+G ij = hx i ; x j i K = k (x i ; x j ) :
+As a consequence the above algorithm can be implemented in arbitrary kernel spaces
+only making use of k.
+4 Applications of the Kernel Gibbs Sampler
+The kernel Gibbs sampler provides samples from the full posterior distribution over
+the hypothesis space of linear classiers in kernel space for the case of label noise.
+These samples can be used for various tasks related to learning. In the following
+we will present a selection of these tasks.
+Bayesian Transduction Given a sample from the posterior distribution over
+hypotheses, a good strategy for prediction is to let the sampled classiers vote
+on each new test data point. This mode of prediction is closest to the Bayesian
+spirit and has been shown for the zero-noise case to yield excellent generalisation
+performance [3]. Also the fraction of votes for the majority decision is an excellent
+indicator for the reliability of the nal estimate: Rejection of those test points with
+the closest decision results in a great reduction of the generalisation error on the
+remaining test points x. Given the posterior PWjZ m =z the transductive decision is
+BT z (x) = sign EWjZ m =z [sign (hW; xi K )]
+
+: (4)
+In practice, this estimator is approximated by replacing the expectation EWjZ m =z
+by a sum over the sampled weight vectors w j .
+Bayes Point Machines For classication, Bayesian Transduction requires the
+whole collection of sampled weight vectors w in memory. Since this may be imprac-
+tical for large data sets we would like to derive a single classier w from the Bayesian
+posterior. An excellent approximation of the transductive decision BT z (x) by a sin-
+gle classier is obtained by exchanging the expectation with the inner sign-function
+in (4). Then the classier h bp is given by
+h bp (x) =
+sign
+ EWjZ m =z [W] ; x
+
+K
+
+= sign hw bp ; xi K
+
+; (5)
+where the classier w bp is referred to as the Bayes point and has been shown to
+yield generalisation performance superior to the well-known support vector solution
+wSVM , which  in turn  can be looked upon as an approximation to w bp in the
+noise-free case [4]. Again, w bp is estimated by replacing the expectation by the
+mean over samples w j . Note that there exists no SVM equivalence wSVM to the
+Bayes point w bp in the case of label noise  a fact to be elaborated on in the
+experimental part in Section 5.
+
+Y
+-2 -1
+0
+-2
+-1
+0
+1
+2
+3
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+Y
+-2 -1
+0
+-2
+-1
+0
+1
+2
+3
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+Y
+-2 -1
+0
+-2
+-1
+0
+1
+2
+3
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+q = 0:0 q = 0:1 q = 0:2
+Figure 3: A set of 50 samples w j of the posterior PWjZ m =z for various noise levels
+q. Shown are the resulting decision boundaries in data space X .
+Active Learning The Bayesian posterior can also be employed to determine the
+usefulness of candidate training points  a task that can be considered as a dual
+counterpart to Bayesian Transduction. This is particularly useful when the label y
+of a training point x is more expensive to obtain than the training point x itself. It
+was shown in the context of Query by Committee [2] that the binary entropy
+S (x; z) = p + log 2 p + + p log 2 p
+with p  = PWjZ m =z ( hW;xi K > 0) is an indicator of the information content of
+a data point x with regard to the learning task. Samples w j from the Bayesian
+posterior PWjZ m =z make it possible to estimate S for a given candidate training
+points x and the current training set z to decide on the basis of S if it is worthwhile
+to query the corresponding label y.
+Evidence Estimation for Model Selection Bayesian model selection is often
+based on a quantity called the evidence [5] of the model (given by the denominator
+of (2))
+EW
+ P Y m jX m =x;W=w (y)
+
+:
+In the PAC-Bayesian framework this quantity has been demonstrated to be respon-
+sible for the generalisation performance of a model [6]. It turns out that in the
+zero-noise case the margin (the quantity maximised by the SVM) is a measure of
+the evidence of the model used [4]. In the case of label noise the KGS serves to
+estimate this quantity.
+5 Experiments
+In a rst experiment we used a surrogate dataset of m = 76 data points x in
+X = R 2 and the kernel k (x; x 0 ) = exp( 1
+2 kx x 0 k 2
+X ). Using the KGS we sampled
+50 dierent classiers with weight vectors w j for various noise levels q and plotted
+the resulting decision boundaries
+
+x 2 R 2
+  hw j ; xi K = 0
+	
+in Figure 3 (circles and
+crosses depict dierent classes). As can be seen form these plots, increasing the
+noise level q leads to more diverse classiers on the training set z.
+In a second experiment we investigated the generalisation performance of the Bayes
+point machine (see (5)) in the case of label noise. In R 3 we generated 100 random
+training and test sets of size m train = 100 and m test = 1000, respectively. For each
+normalised point x 2 R 3 the longitude and latitude were sampled from a Beta(5; 5)
+and Beta(0:1; 0:1) distribution, respectively. The classes y were obtained by ran-
+domly ipping the classes assigned by the classier w  at 
+2 ; 
+ (see also Figure
+1) with a true label ip rate of q  = 5%. In Figure 4 we plotted the estimated
+generalisation error for a BPM (trained using 100 samples w j from the KGS) and
+
+0.02 0.04 0.06 0.08 0.10
+0.05
+0.06
+0.07
+0.08
+noise l
+10
+generalisation
+error
+Generalisation errors of BPMs (circled
+error-bars) and soft-margin SVMs (tri-
+angled error-bars) vs. assumed noise
+level q and margin slack penalisation
+, respectively. The dataset consisted
+of m = 100 observations with a label
+noise of 5% (dotted line) and we used
+k (x; x 0 ) = hx; x 0 i X +  I x=x 0 . Note that
+the abscissa is jointly used for q and .
+Figure 4: Comparison of BPMs and SVMs on data contaminated by label noise.
+quadratic soft-margin SVM at dierent label noise levels q and margin slack penali-
+sation , respectively. Clearly, the BPM with the correct noise model outperformed
+the SVM irrespective of the chosen level of regularisation. Interestingly, the BPM
+appears to be quite robust w.r.t. the choice of the label noise parameter q.
+6 Conclusion and Future Research
+The kernel Gibbs sampler provides an analytical tool for the exploration of various
+Bayesian aspects of learning in kernel spaces. It provides a well-founded way for
+dealing with label noise but suers from its computational complexity which  so
+far  makes it inapplicable for large scale applications. Therefore it will be an
+interesting topic for future research to invent new sampling schemes that may be
+able to trade accuracy for speed and would thus be applicable to large data sets.
+Acknowledgements This work was partially done while RH and TG were vis-
+iting Robert C. Williamson at the ANU Canberra. Thanks, Bob, for your great
+hospitality!
+References
+[1] C. Cortes and V. Vapnik. Support Vector Networks. Machine Learning, 20:273297, 1995.
+[2] Y. Freund, H. S. Seung, E. Shamir, and N. Tishby. Selective sampling using the query by committee
+algorithm. Machine Learning, 28:133168, 1997.
+[3] T. Graepel, R. Herbrich, and K. Obermayer. Bayesian Transduction. In Advances in Neural Infor-
+mation System Processing 12, pages 456462, 2000.
+[4] R. Herbrich, T. Graepel, and C. Campbell. Bayesian learning in reproducing kernel Hilbert spaces.
+Technical report, Technical University of Berlin, 1999. TR 99-11.
+[5] D. MacKay. The evidence framework applied to classication networks. Neural Computation,
+4(5):720736, 1992.
+[6] D. A. McAllester. Some PAC Bayesian theorems. In Proceedings of the Eleventh Annual Conference
+on Computational Learning Theory, pages 230234, Madison, Wisconsin, 1998.
+[7] R. M. Neal. Probabilistic inference using Markov chain Monte Carlo methods. Technical report,
+Dept. of Computer Science, University of Toronto, 1993. CRG-TR-93-1.
+[8] P. Sollich. Probabilistic methods for Support Vector Machines. In Advances in Neural Information
+Processing Systems 12, pages 349355, San Mateo, CA, 2000. Morgan Kaufmann.
+[9] G. Wahba. Support Vector Machines, Reproducing Kernel Hilbert Spaces and the randomized GACV.
+Technical report, Department of Statistics, University of Wisconsin, Madison, 1997. TRNO984.
+

@@ -1,0 +1,452 @@
+On the concentration of expectation and approximate inference in layered networks
+
+XuanLong Nguyen University of California Berkeley, CA 94720 xuanlong@cs.berkeley.edu Michael I. Jordan University of California Berkeley, CA 94720 jordan@cs.berkeley.edu
+
+Abstract We present an analysis of concentration-of-expectation phenomena in layered Bayesian networks that use generalized linear models as the local conditional probabilities. This framework encompasses a wide variety of probability distributions, including both discrete and continuous random variables. We utilize ideas from large deviation analysis and the delta method to devise and evaluate a class of approximate inference algorithms for layered Bayesian networks that have superior asymptotic error bounds and very fast computation time.
+
+1 Introduction The methodology of variational inference has developed rapidly in recent years, with increasingly rich classes of approximation being considered (see, e.g., Yedidia, et al., 2001, Jordan et al., 1998). While such methods are intuitively reasonable and often perform well in practice, it is unfortunately not possible, except in very special cases, to provide error bounds for these inference algorithms. Thus the user has little a priori guidance in choosing an inference algorithm, and little a posteriori reassurance that the approximate marginals produced by an algorithm are good approximations. The situation is somewhat better for sampling algorithms, but there the reassurance is only asymptotic. A line of research initiated by Kearns and Saul (1998) aimed at providing such error bounds for certain classes of directed graphs. Analyzing the setting of two-layer networks, binary nodes with large fan-in, noisy-OR or logistic conditional probabilities, and parameters that scale as O(1/N), where N are the number of nodes in each layer, they used a simple large deviation analysis to design an approximate inference algorithm that provided error bounds. In later work they extended their algorithm to multi-layer networks (Kearns and Saul, 1999). The error bound provided by this approach was O( ln N/N ). Ng and Jordan where k is the order of a Taylor expansion employed by their technique. Their approach was, however, restricted to two-layer graphs. Layered graphs are problematic for many inference algorithms, including belief propagation and generalized belief propagation algorithms. These algorithms convert directed graphs to undirected graphs by moralization, which creates infeasibly large cliques when there are nodes with large fan-in. Thus the work initiated by Kearns and Saul is notable not only for its ability to provide error bounds, but also because it provides one of the few
+
+(2000) pursued this line of work, obtaining an improved error bound of O(1/N( k+1)/2 )
+
+
+practical algorithms for general layered graphs. It is essential to develop algorithms that scale in this setting--e.g., a recent application at Google studied layered graphs involving more than a million nodes (Harik and Shazeer, personal communication). In this paper, we design and analyze approximate inference algorithms for general multilayered Bayesian networks with generalized linear models as the local conditional probability distributions. Generalized linear models including noisy-OR and logistic functions in the binary case, but go significantly further, allowing random variables from any distribution in the exponential family. We show that in such layered graphical models, the concentration of expectations of any fixed number of nodes propagate from one layer to another according to a topological sort of the nodes. This concentration phenomenon can be exploited to devise efficient approximate inference algorithms that provide error bounds. Specifically, in a multi-layer network with N nodes in each layer and random variables in bound and O(Nk) time complexity. We perform a large number of simulations to confirm this error bound and compare with Kearns and Saul's algorithm, which has not been empirically evaluated before. The paper is organized as follows. In Section 2, we study the concentration of expectation in generalized linear models. Section 3 introduces the use of delta method for approximating the expectations. Section 4 describes an approximate inference algorithm in a general directed graphical model, which is evaluated empirically in Section 5. Finally, Section 6 concludes the paper. 2 Generalized linear models Consider a generalized linear model (GLIM; see McCullagh and Nelder, 1983, for details) consisting of N covariates (inputs) X1,... ,XN and a response (output) variable Y . A GLIM makes three assumptions regarding the form of the conditional probability distribution P(Y |X): (1) The inputs X1,... ,XN enter the model via a linear combination response function; and (3) the output Y is characterized by an exponential family distribution (cf. Brown, 1986) with natural parameter  and conditional mean µ. The conditional probability takes the following form:
+
+some exponential family of distribution, our algorithm has an O((lnN)3/N)( k+1)/2 ) error
+
+ = N i=1 iXi; (2) the conditional mean µ is represented as a function f(), known as the
+
+P,(Y |X) = h(y, ) exp y - A() ,  (1)
+
+where  is a scale parameter, h is a function reflecting the underlying measure, and A() is the log partition function. In this section, for ease of exposition, we shall assume that the response function f is a be clear, however, our analysis is applicable to a general setting in which f is only required to have bounded derivatives on compact sets. It is a well-known property of exponential family distributions that
+
+canonical response function, which simply means that  =  = N i=1 iXi. As will soon
+
+N
+
+E(Y |X) Var(Y|X) = = µ = A () = f() = f A () = f (). iXi
+
+i=1
+
+The exponential family includes the Bernoulli, multinomial, and Gaussian distributions, but many other useful distributions as well, including the Poisson, gamma and Dirichlet. We will be studying GLIMs defined on layered graphical models, and thus X1,... ,XN are themselves taken to be random variables in the exponential family. We also make the key
+
+
+assumption that all parameters obey the bound |i|  /N for some constant , although this assumption shall be relaxed later on.
+
+Under these assumptions, we can show that the linear combination  =
+
+N i=1
+
+iXi is
+
+tightly concentrated around its mean with very high probability. Kearns and Saul (1998) have proved this for binary random variables using large deviation analysis. This type of analysis can be used to prove general results for (bounded and unbounded) random variables in any standard exponential family.1 Lemma 1 Assume that X1,...,XN are independent random variables in a standard exponential family distribution. Furthermore, EXi  [pi - i,pi + i]. Then there are
+
+absolute constants C and  such that, for any >
+
+N
+
+P (| - ipi| > )  C exp - 
+
+i=1
+
+N i=1
+
+|i|i:
+
+( - (
+
+N i=1 N
+
+i=1 N
+
+|i|i)2 /3
+
+ C exp{-N1 /3  -2 /3 ( -
+
+i ) |i|i)2 2 1/3
+
+/3 }
+
+i=1
+
+We will study architectures that are strictly layered; that is, we require that there are no edges directly linking the parents of any node. In this setting the parents of each node are conditionally independent given all ancestor nodes (in the previous layers) in the graph. This will allow us to use Lemma 1 and iterated conditional expectation formulas to analyze concentration phenomena in these models. The next lemma shows that under certain assumptions about the response function f, the tight concentration of  also entails the concentration of E(Y |X) and Var(Y|X). Lemma 2 Assume that the means of X1,...,XN are bounded within some fixed
+
+interval [pmin,pmax] and f has bounded derivatives on compact sets.
+
+[ [f (
+
+N i=1
+
+ipi - ,
+
+N i=1
+
+ipi + =
+
+N i=1
+
+ipi) - O( ), f(
+
+N i=1
+
+N i=1
+
+] with high probability, then: E(Y |X) ipi) + O( )], and Var(Y|X) = f ()  [f (
+
+If  f()  
+
+N i=1 ipi) -
+
+O( ), f ( ipi) + O( )] with high probability.
+
+Lemmas 1 and 2 provide a mean-field-like basis for propagating the concentration of expectations from the input layer X1,... ,XN to the output layer Y . Specifically, if E(Xi)
+
+are approximated by pi (i = 1,... ,N), then E(Y ) can be approximated by f( 3 Higher order expansion (the delta method)
+
+N i=1
+
+ipi).
+
+While Lemmas 1 and 2 already provide a procedure for approximating E(Y ), one can use higher-order (Taylor) expansion to obtain a significantly more accurate approximation. This approach, known in the statistics literature as the delta method, has been used in slightly different contexts for inference problems in the work of Plefka (1982), Barber and van der Laar (1999), and Ng and Jordan (2000). In our present setting, we will show that estimates based on Taylor expansion up to order k can be obtained by propagating the expectation of the product of up to k nodes from one layer to an offspring layer. The delta method is based on the same assumptions as in Lemma 2; that is, the means of X1,... ,XN are assumed to be bounded within some fixed interval [pmin,pmax], and bounded within fixed interval [pmin,pmax]. By Lemma 1, with high probability  = at www.cs.berkeley.edu/xuanlong.
+
+the response function f has bounded derivatives on compact sets. We have N i=1 ipi
+
+1 The proofs of this and all other theorems can be found in a longer version of this paper, available
+
+
+N i=1
+
+ipi + , for some small . Using Taylor's expansion up to second order, we have
+
+that with high probability: E(Y ) = ExE(Y |X) = Exf() = f +
+
+N N
+
+iEXi - ( ipi)f +
+
+i=1 i=1
+
+1 2! ( ij(E(Xi - pi)(Xj - pj))f + O( 3 ),
+
+where f and its derivatives are evaluated at
+
+i,j N i=1
+
+ipi. This gives us a method of approxi-
+
+mating E(Y ) by recursion: Assuming that one can approximate all needed expectations of
+
+variables in the parent layer X with error O(
+
+E(Y ) with the error O(
+
+3
+
+3
+
+), one can also obtain an approximation of
+
+). Clearly, the error can be improved to O(
+
+k+1
+
+) by using Taylor
+
+expansion to some order k (provided that the response function f() = A () has bounded derivatives up to that order). In this case, the expectation of the product of up to k elements in the input layer, e.g., E(X1 - p1)... (Xk - pk), needs to be computed. The variance of Y (as well as other higher-order expectations) can also be approximated in
+
+the same way: Var(Y)
+
+= = Ex(Var(Y|X)) + Varx(E(Y|X)) Exf () + Exf()2 - (E(Y ))2
+
+where each component can be approximated using the delta method. 4 Approximate inference for layered Bayesian networks In this section, we shall harness the concentration of expectation phenomenon to design and analyze a family of approximate inference algorithms for multi-layer Bayesian networks that use GLIMs as local conditional probabilities. The recipe is clear by now. First, organize the graph into layers that respect the topological ordering of the graph. The algorithm is comprised of two stages: (1) Propagate the concentrated conditional expectations from ancestor layers to offspring layers. This results in a rough approximation of the expectation of individual nodes in the graph; (2) Apply the delta method to obtain more a refined marginal expectation of the needed statistics, also starting from ancestor layers to offspring layers. Consider a multi-layer network that has L layers, each of which has N random variables. We refer to the ith variable in layer l by Xi, where {Xi }i=1 is the input layer, and {Xi }N is the output layer. The expectations E(Xi ) of the first layer are given. For each 2  l  L,
+
+l 1 N L
+
+i=1
+
+1
+
+denote the parameter linking Xi and its parent Xj let ij
+
+l-1 l l
+
+contributions from parents to a node Xi: i = |ij|  /N for some constant .
+
+l
+
+We first consider the problem of estimating expectations of nodes in the output layer. x1, ...., Xm = xm], for given observed values (x1, ..., xm), where m < N. We subsequently consider a more general inference problem involving marginal and conditional probabilities of nodes residing in different layers in the graph. 4.1 Algorithm stage 1: Propagating the concentrated expectation of single nodes We establish a rough approximation of the expectations of all single nodes of the graph, starting from the input layer l = 1 to the output layer l = L in an inductive manner. For l = 1, let 1i = i = 0 and p1i = EXi for all i = 1, . . . , N. For l > 1, let µli = (2)
+
+For binary networks, this amounts to estimating marginal probabilities, say, P[X1 L =
+
+L
+
+1 1 N l-1 l-1 j=1
+
+ij pj
+
+. Define the weighted sum of
+
+l-1
+
+Xj , where we assume that l N j=1
+
+l-1 l-1
+
+ij
+
+
+N
+
+l i l-1 |ij |lj -1 = +  ( ln N )3/N
+
+N
+
+(3)
+
+j=1
+
+C exp{-N 1
+
+1 2 1 2
+
+i l = /3  -2 /3 ( l i l-1 |ij - |lj -1 2/3 ) } (4)
+
+i=1
+
+pli =
+
+li =
+
+sup f (x) + inf f (x)
+
+xAli
+
+xAli
+
+(5)
+
+sup f (x) - inf f (x)
+
+xAli
+
+xAli
+
+where Ali = [µi - ,µli + l l i l i ]. (6)
+
+In the above updates, constants  and C arise from Lemma 1,  is an arbitrary constant that is greater than 1/. The following proposition, whose proof makes use of Lemma 1 combined with union bounds, provides the error bounds for our algorithm.
+
+Proposition 3 With probability at least L l=1
+
+(1 -
+
+N i=1 i) = (1 - CN 1
+
+l - L-1 ) , for
+
+any 1  i  N,1  l  L we have: E[Xi|X1
+
+li] and i  [µli - , µli + l l i l i
+
+]. Furthermore,
+
+l i
+
+l l-1
+
+, . . . , XN
+
+l-1 ] = f (i)  [pli - li, pli + l
+
+= O( (ln N )3/N ) for all i, l.
+
+For layered networks with only bounded and Gaussian variables, Lemma 1 can be tightened, and this results in an error bound of O( (ln N )2/N ). For layered networks with only bounded variables, the error bound can be tightened to O( ln N/N ). In addition, if we drop the conditions that all parameters ij are bounded by /N, Proposition 3 still goes
+
+through by replacing  by N N j=1
+
+l l-1
+
+(ij )2 in updating equations for l i and i for all i l
+
+and l. The asymptotic error bound O( (ln N )3/N ) no longer holds, but it can be shown
+
+that there are absolute constants c1 and c2 such that for all i,l:
+
+l i  (c1||
+
+l-1
+
+(ij
+
+l-1 || + c2 (ln N )3)||i
+
+N i=1 ( l 2 ) .
+
+i
+
+l-1 ||
+
+where ||i l-1 ||  N j=1 )2 and || ||  l
+
+4.2 Algorithm stage 2: Approximating expectations by recursive delta method The next step is to apply the delta method presented in Section 3 in a recursive manner. Write:
+
+m
+
+E[X1 ...Xm] = EXL- E[X1 . . . Xm|XL-1] = EXL- f(i ) = EXL- F (1 , ..., m) L L L L 1 1 1
+
+i=1
+
+where F(1 ,...,m) := L L m i=1 f(i ). L
+
+L L
+
+Let i = i - µli. So, with probability (1 - CN1
+
+O(
+
+l l - L-1 ) we have |i|  l l i =
+
+(ln N )3/N ) for all l = 1, . . . , L and i = 1, . . . , N . Applying the delta method
+
+by expanding F around the vector µ = (µL,...,µL ) up to order k gives an approxima-
+
+1 m
+
+tion, which is denoted by MF(k), that depends on expectations of nodes in the previous layer. Continuing this approximation recursively on the previous layers, we obtain an ap-
+
+proximate algorithm that has an error bound O(((lnN)3/N)(
+
+Section 3) with probability at least (1 - CN1 - L-1
+
+)
+
+k+1)/2 ) (see the derivation in
+
+and an error bound O(1) with the
+
+remaining probability. We conclude that, Theorem 4 The absolute error of the MF(k) approximation is O(((lnN)3/N)(
+
+k+1)/2 ).
+
+For networks with bounded variables, the error bound can be tightened to
+
+O((ln N/N)( k+1)/2 ).
+
+
+It is straightforward to check that MF(k) takes O(Nmax
+
+asymptotic error bound O(((ln N)3/N)( k+1)/2
+
+{k,2} ) computational time. The
+
+) is guaranteed for the aproximation of
+
+expectations of a fixed number m of nodes in the output layer. In principle, this implies that m has to be small compared to N for the approximation to be useful. For binary networks, for instance, the marginal probabilities of m nodes could be as small as
+
+O(1/2m), so we need O(1/2m) to be greater than O((ln N/N)(
+
+m < ln
+
+1 c
+
++
+
+(k+1) 2
+
+k+1)/2 ). This implies that
+
+(ln N - ln ln N ) for some constant c. However, we shall see that our
+
+approximation is still useful for large m as long as the quantity it tries to approximate is not too small. For two-layer networks, an algorithm by Ng and Jordan (2000) yields a better error rate of to networks with only 2 layers. Barber and Sollich (1999) were also motivated by the Central Limit Theorem's effect to approximate i by a multivariate Gaussian distribution,
+
+O(1/N ( k+1)/2 ) by exploiting the Central Limit Theorem. However, this result is restricted
+
+l
+
+resulting in a similar exploitation of correlation between pairs of nodes in the parent layer as in our MF(2) approximation. Also related to Barber and Sollich's algorithm of using an approximating family of distribution is the assumed-density filtering approach (e.g., Minka, 2001). These approaches, however, do not provide an error bound guarantee. 4.3 Computing conditional expectations of nodes in different layers For simplicity, in this subsection we shall consider binary layered networks. First, we are interested in the marginal probability of a fixed number of nodes in different layers. This can be expressed in terms of product of conditional probabilities of nodes in the same layer given values of nodes in the previous layer. As shown in the previous subsection, each of these conditional probabilities can be approximated with an error bound error bound. Next, we consider approximating the probability of several nodes in the input layer conditioned on some nodes observed in the output layer L, i.e., P(X1 = x11,... ,Xm = pared to N. In a multi-layer network, when even one node in the output layer is observed, all nodes in the graph becomes dependent. Furthermore, the conditional probabilities of all nodes in the graph are generally not concentrated. Nevertheless, we can still approximate the conditional probability by approximating two marginal probabilities P (X1 = x1i , . . . , Xm = x1m, X1 = xL, . . . , Xn = xL) and P (X1 = xL, . . . , Xn = xL) separately and taking the ratio. This boils down to the problem of computing the marginal probabilities of nodes residing in different layers of the graph. As discussed in the previous paragraph, since each marginal probabilities can be approximated with an asymptotic error bound holds for the conditional probabilities of fixed number of nodes. In the next section, we shall present empirical results that show that this approximation is still quite good even when a large number of nodes are conditioned on.
+
+O((ln N/N)( k+1)/2 ) as N  , and the product can also be approximated with the same
+
+1 1
+
+= xL) for some fixed numbers m and n that are small comn x1m|X1 L = xL, . . . , Xn 1 L
+
+1 1 L L L L 1 n 1 n
+
+bound O((lnN/N)( k+1)/2 ) as N   (for binary networks), the same asymptotic error
+
+5 Simulation results In our experiments, we consider a large number of randomly generated multi-layer Bayesian networks with L = 3, L = 4 or L = 5 layers, and with the number of nodes in each layer ranging from 10 to 100. The number of parents of each node is chosen uniformly at random in [2,N]. We use the noisy-OR function for the local conditional probabilities; this choice has the advantage that we can obtain exact marginal probabilities for single nodes by exploiting the special structure of noisy-OR function (Heckerman,
+
+
+-3
+
+x 10 -3 x 10 0.45 3
+
+7
+
+tau = 2
+
+0.4
+
+K-S and MF(1) MF(2) tau = 4
+
+0.25
+
+K-S and MF(1) MF(2)
+
+6
+
+0.35 5
+
+2
+
+0.2 0.3
+
+error error 4
+
+0.25 absolute 0.2 absolute
+
+3
+
+0.15 1
+
+2
+
+0.15 1
+
+0.1
+
+0.1 0
+
+50 N 100 0 0 0 50 N 100 50 N 100 0 0 50 N 100
+
+(a) (b)
+
+Figure 1: The figures show the average error in the marginal probabilities of nodes in the output layer. The x-axis is the number of nodes in each layer (N = 10, . . . , 100). The three curves (solid, dashed, dashdot) correspond to the different numbers of layers L = 3, 4, 5, respectively. Plot (a) corresponds to the case  = 2 and plot (b) corresponds to  = 4. In each pair of plots, the leftmost plot shows MF(1) and Kearns and Saul's algorithm (K-S) (with the latter being distinguished by black
+
+3 arrows), and the rightmost plot is MF(2). Note the scale on the y-axis for the rightmost plot is 10- .
+
+k Network 1 Network 2 Network 3
+
+1 0.0001 0.0007 0.0003 0.0018 0.0002 0.0008 2 0.0041 0.0609 0.0040 0.0508 0.0031 0.0406 3 0.0052 0.0912 0.0148 0.1431 0.0082 0.1150 4 0.0085 0.1925 0.0331 0.3518 0.0501 0.6858 5 0.0162 0.1862 0.0981 0.7605 0.1095 1.2392 6 0.0360 0.3885 0.1629 0.7790 0.0890 0.6115 7 0.0738 0.6262 0.1408 0.7118 0.0957 0.5703 8 0.1562 1.6478 0.1391 0.9435 0.1022 0.7840
+
+Table 1: The experiments were performed on 24-node networks (3 layers with N = 8 nodes in each layer). For each network, the first line shows the absolute error of our approximation of conditional probabilities of nodes in the input layer given values of the first k nodes in the output layer, the second line shows the absolute error of the log likelihood of the k nodes. The numbers were obtained by averaging over k random instances of the k nodes. 1989). All parameters ij are uniformly distributed in [0,/N], with  = 2 and  = 4. Figure 1 shows the error rates for computing the expectation of a single node in the output layer of the graph. The results for each N are obtained by averaging over many graphical models with the same value of N. Our approximate algorithm, which is denoted by MF(2), runs fast: The running time for the largest network (with L = 5,N = 100) is approximately one minute. We compare our algorithm (with  fixed to be 2/) with that of Kearns and Saul (K-S). The MF(1) estimates are slightly worse that of the K-S algorithm, but they have the same
+
+2
+
+error curve O(lnN/N)1
+
+O(ln N/N)3 /2
+
+/2 . The MF(2) estimates, whose error curves were proven to be
+
+, are better than both by orders of magnitude. The figure also shows that the
+
+error increases when we increase the size of the parameters (increase ). Next, we consider the inference problem of computing conditional probabilities of the input layer given that the first k nodes are observed in the output layer. We perform our experiments on several randomly generated three-layer networks with N = 8. This size allows us to be able to compute the conditional probabilities exactly.2 For each value of
+
+2 The amount of time spent on exact computation for each network is about 3 days, while our
+
+approximation routines take a few minutes.
+
+
+k, we generate k2 samples of the observed nodes generated uniformly at random from the network and then compute the average of errors of conditional probability approximations. We observe that while the error of conditional probabilities is higher than those of marginal probabilities (see Table 1 and Figure 1), the error remains small despite the relatively large number of observed nodes k compared to N. 6 Conclusions We have presented a detailed analysis of concentration-of-expectation phenomena in layered Bayesian networks which use generalized linear models as local conditional probabilities. Our analysis encompasses a wide variety of probability distributions, including both discrete and continuous random variables. We also performed a large number of simulations in multi-layer network models, showing that our approach not only provides a useful theoretical analysis of concentration phenomena, but it also provides a fast and accurate inference algorithm for densely-connected multi-layer graphical models. In the setting of Bayesian networks in which nodes have large in-degree, there are few viable options for probabilistic inference. Not only are junction tree algorithms infeasible, but (loopy) belief propagation algorithms are infeasible as well, because of the need to moralize. The mean-field algorithms that we have presented here are thus worthy of attention as one of the few viable methods for such graphs. As we have shown, the framework allows us to systematically trade time for accuracy with such algorithms, by accounting for interactions between neighboring nodes via the delta method. Acknowledgement. We would like to thank Andrew Ng and Martin Wainwright for very useful discussions and feedback regarding this work. References D. Barber and P. van de Laar, Variational cumulant expansions for intractable distributions. Journal of Artificial Intelligence Research, 10, 435-455, 1999. L. Brown, Fundamentals of Statistical Exponential Families with Applications in Statistical Decision Theory, Institute of Mathematical Statistics, Hayward, CA, 1986. P. McCullagh and J.A. Nelder, Generalized Linear Models, Chapman and Hall, London, 1983. T. Minka, Expectation propagation for approximate Bayesian inference, In Proc. UAI, 2001. D. Heckerman, A tractable inference algorithm for diagnosing multiple diseases, In Proc. UAI, 1989. M.I. Jordan, Z. Ghahramani, T.S. Jaakkola and L.K. Saul, An introduction to variational methods for graphical models, In Learning in Graphical Models, Cambridge, MIT Press, 1998. M.J. Kearns and L.K. Saul, Large deviation methods for approximate probabilistic inference, with rates of convergence, In Proc. UAI, 1998. M.J. Kearns and L.K. Saul, Inference in multi-layer networks via large deviation bounds, NIPS 11, 1999. A.Y. Ng and M.I. Jordan, Approximate inference algorithms for two-layer Baysian networks, NIPS 12, 2000. D. Barber and P. Sollich, Gaussian fields for approximate inference in layered sigmoid belief networks, NIPS 11, 1999. T. Plefka, Convergence condition of the TAP equation for the infinite-ranged Ising spin glass model, J. Phys. A: Math. Gen., 15(6), 1982. J.S. Yedidia, W.T. Freeman, and Y. Weiss. Generalized belief propagation. NIPS 13, 2001.
+
+

@@ -1,0 +1,522 @@
+Robust Reinforcement Learning
+Jun Morimoto
+Graduate School of Information Science
+Nara Institute of Science and Technology;
+Kawato Dynamic Brain Project, JST
+2­2 Hikaridai Seika­cho Soraku­gun
+Kyoto 619­0288 JAPAN
+xmorimo@erato.atr.co.jp
+Kenji Doya
+ATR International;
+CREST, JST
+2­2 Hikaridai Seika­cho Soraku­gun
+Kyoto 619­0288 JAPAN
+doya@isd.atr.co.jp
+Abstract
+This paper proposes a new reinforcement learning (RL) paradigm
+that explicitly takes into account input disturbance as well as mod­
+eling errors. The use of environmental models in RL is quite pop­
+ular for both off­line learning by simulations and for on­line ac­
+tion planning. However, the difference between the model and the
+real environment can lead to unpredictable, often unwanted results.
+Based on the theory of H1 control, we consider a differential game
+in which a `disturbing' agent (disturber) tries to make the worst
+possible disturbance while a `control' agent (actor) tries to make
+the best control input. The problem is formulated as finding a min­
+max solution of a value function that takes into account the norm
+of the output deviation and the norm of the disturbance. We derive
+on­line learning algorithms for estimating the value function and
+for calculating the worst disturbance and the best control in refer­
+ence to the value function. We tested the paradigm, which we call
+``Robust Reinforcement Learning (RRL),'' in the task of inverted
+pendulum. In the linear domain, the policy and the value func­
+tion learned by the on­line algorithms coincided with those derived
+analytically by the linear H1 theory. For a fully nonlinear swing­
+up task, the control by RRL achieved robust performance against
+changes in the pendulum weight and friction while a standard RL
+control could not deal with such environmental changes.
+1 Introduction
+In this study, we propose a new reinforcement learning paradigm that we call
+``Robust Reinforcement Learning (RRL).'' Plain, model­free reinforcement learning
+(RL) is desperately slow to be applied to on­line learning of real­world problems.
+Thus the use of environmental models have been quite common both for on­line ac­
+tion planning [3] and for off­line learning by simulation [4]. However, no model can
+
+be perfect and modeling errors can cause unpredictable results, sometimes worse
+than with no model at all. In fact, robustness against model uncertainty has been
+the main subject of research in control community for the last twenty years and the
+result is formalized as the ``H 1 '' control theory [6].
+In general, a modeling error causes a deviation of the real system state from the
+state predicted by the model. This can be re­interpreted as a disturbance to the
+model. However, the problem is that the disturbance due to a modeling error
+can have a strong correlation and thus standard Gaussian assumption may not
+be valid. The basic strategy to achieve robustness is to keep the sensitivity fl of
+the feedback control loop against a disturbance input small enough so that any
+disturbance due to the modeling error can be suppressed if the gain of mapping
+from the state error to the disturbance is bounded by 1=fl. In the H1 paradigm,
+those `disturbance­to­error' and 'error­to­disturbance' gains are measured by a max
+norms of the functional mappings in order to assure stability for any modes of
+disturbance.
+In the following, we briefly introduce the H1paradigm and show that design of a
+robust controller can be achieved by finding a min­max solution of a value func­
+tion, which is formulated as Hamilton­Jacobi­Isaacs (HJI) equation. We then derive
+on­line algorithms for estimating the value functions and for simultaneously deriv­
+ing the worst disturbance and the best control that, respectively, maximizes and
+minimizes the value function.
+We test the validity of the algorithms first in a linear inverted pendulum task. It
+is verified that the value function as well as the disturbance and control policies
+derived by the on­line algorithm coincides with the solution of Riccati equations
+given by H1 theory. We then compare the performance of the robust RL algorithm
+with a standard model­based RL in a nonlinear task of pendulum swing­up [3]. It
+is shown that robust RL controller can accommodate changes in the weight and the
+friction of the pendulum, which a standard RL controller cannot cope with.
+2 H1 Control
+K(s)
+G(s)
+w(s) z(s)
+u(s) y(s)
+(a)
+G
+K
+y
+u
+w z
+(b)
+Figure 1: (a)Generalized Plant and Controller, (b)Small Gain Theorem
+The standard H1 control [6] deals with a system shown in Fig.1(a), where G is the
+plant, K is the controller, u is the control input, y is the measurement available to
+the controller (in the following, we assume all the states are observable, i.e. y = x),
+w is unknown disturbance, and z is the error output that is desired to be kept small.
+In general, the controller K is designed to stabilize the closed loop system based on
+a model of the plant G. However, when there is a discrepancy between the model
+and the actual plant dynamics, the feedback loop could be unstable. The effect of
+modeling error can be equivalently represented as a disturbance w generated by an
+
+unknown mapping 1 of the plant output z, as shown in Fig.1(b).
+The goal of H1 control problem is to design a controller K that brings the error z
+to zero while minimizing the H1norm of the closed loop transfer function from the
+disturbance w to the output z
+jjT zw jj 1 = sup
+w
+jjzjj 2
+jjwjj 2
+= sup
+!
+¯ oe(T zw (j!)): (1)
+Here jj ffl jj 2 denotes L 2 norm and ¯
+oe denotes maximum singular value. The small
+gain theorem assures that if jjT zw jj 1 Ÿ fl, then the system shown in Fig. 1(b) will
+be stable for any stable mapping 1 : z 7! w with jj1jj 1 ! 1
+fl .
+2.1 Min­max Solution to H1Problem
+We consider a dynamical system —
+x = f(x; u; w). H1 control problem is equivalent
+to finding a control output u that satisfies a constraint
+V =
+Z 1
+0
+(z T (t)z(t) 0 fl 2 w T (t)w(t))dt Ÿ 0 (2)
+against all possible disturbance w with x(0) = 0, because it implies
+jjT zw jj 1 2 = sup
+w
+jjzjj 2
+2
+jjwjj 2
+2
+Ÿ fl 2 : (3)
+We can consider this problem as differential game[5] in which the best control output
+u that minimizes V is sought while the worst disturbance w that maximizes V is
+chosen. Thus an optimal value function V 3 is defined as
+V 3 = min
+u
+max
+w
+Z 1
+0
+(z T (t)z(t) 0 fl 2 w T (t)w(t))dt: (4)
+The condition for the optimal value function is given by
+0 = min
+u
+max
+w
+[z T z 0 fl 2 w T w + @V 3
+@x
+f(x; u; w)] (5)
+which is known as Hamilton­Jacobi­Isaacs (HJI) equation. From (5), we can derive
+the optimal control output u op and the worst disturbance w op by solving
+@z T z
+@u
++ @V
+@x
+@f(x; u; w)
+@u
+= 0 and @z T z
+@w
+0 fl 2 w T + @V
+@x
+@f(x; u; w)
+@w
+= 0: (6)
+3 Robust Reinforcement Learning
+Here we consider a continuous­time formulation of reinforcement learning [3]
+with the system dynamics —
+x = f(x; u) and the reward r(x; u). The basic
+goal is to find a policy u = g(x) that maximizes the cumulative future reward
+R 1
+t e 0 s0t
+ø r(x(s); u(s))ds for any given state x(t), where ø is a time constant of
+evaluation. However, a particular policy that was optimized for a certain envi­
+ronment may perform badly when the environmental setting changes. In order to
+
+assure robust performance under changing environment or unknown disturbance,
+we introduce the notion of worst disturbance in H1 control to the reinforcement
+learning paradigm.
+In this framework, we consider an augmented reward
+q(t) = r(x(t); u(t)) + s(w(t)); (7)
+where s(w(t)) is an additional reward for withstanding a disturbing input, for ex­
+ample, s(w) = fl 2 w T w. The augmented value function is then defined as
+V (x(t)) =
+Z 1
+t
+e 0 s0t
+ø q(x(s); u(s); w(s))ds: (8)
+The optimal value function is given by the solution of a variant of HJI equation
+1
+ø
+V 3 (x) = max
+u
+min
+w
+[r(x; u) + s(w) + @V 3
+@x
+f(x; u; w)]: (9)
+Note that we can not find appropriate policies (i.e. the solutions of the HJI equation)
+if we choose too small fl. In the robust reinforcement learning (RRL) paradigm,
+the value function is update by using the temporal difference (TD) error [3]
+ffi(t) = q(t) 0 1
+ø V (t) + —
+V (t), while the best action and the worst disturbance are
+generated by maximizing and minimizing, respectively, the right hand side of HJI
+equation (9). We use a function approximator to implement the value function
+V (x(t); v), where v is a parameter vector. As in the standard continuous­time RL,
+we define eligibility trace for a parameter v i as e i (s) =
+R s
+0
+e 0 s0t
+Ÿ
+@V (t)
+@v i
+dt and up­
+date rule as —
+e i (t) = 0 1
+Ÿ e i (t) + @V (t)
+@v i
+, where Ÿ is the time constant of the eligibility
+trace[3]. We can then derive learning rule for value function approximator [3] as
+—
+v i = jffi(t)e i (t), where j denotes the learning rate. Note that we do not assume
+f(x = 0) = 0 because the error output z is generalized as the reward r(x; u) in
+RRL framework.
+3.1 Actor­disturber­critic
+We propose actor­disturber­critic architecture by which we can implement robust
+RL in a model­free fashion as the actor­critic architecture[1]. We define the policies
+of the actor and the disturber implemented as u(t) = A u (x(t); v u ) + n u (t) and
+w(t) = Aw (x(t); v w )+nw (t), respectively, where A u (x(t); v u ) and Aw (x(t); v w ) are
+function approximators with parameter vectors, v u and v w , and n u (t) and nw (t)
+are noise terms for exploration. The parameters of the actor and the disturber are
+updated by
+—
+v u
+i = j u ffi(t)n u (t) @A u (x(t); v u )
+@v u
+i
+and —
+v w
+i = 0j w ffi(t)n w (t) @Aw (x(t); v w )
+@v w
+i
+; (10)
+where j u and j w denote the learning rates.
+3.2 Robust Policy by Value Gradient
+Now we assume that an input­Affine model of the system dynamics and quadratic
+models of the costs for the inputs are available as
+—
+x = f(x) + g 1 (x)w + g 2 (x)u
+r(x; u) = Q(x) 0 u T R(x)u; s(w) = fl 2 w T w:
+
+In this case, we can derive the best action and the worst disturbance in reference
+to the value function V as
+u op = 1
+2 R(x) 01 g T
+2
+(x)( @V
+@x
+) T and w op = 0 1
+2fl 2
+g T
+1
+(x)( @V
+@x
+) T : (11)
+We can use the policy (11) using the value gradient @V
+@x derived from the value
+function approximator.
+3.3 Linear Quadratic Case
+Here we consider a case in which a linear dynamic model and quadratic reward
+models are available as
+—
+x = Ax +B 1
+w +B 2
+u
+r(x; u) = 0x T Qx 0 u T Ru; s(w) = fl 2 w T w:
+In this case, the value function is given by a quadratic form V = 0x T Px, where P
+is the solution of a Riccati equation
+A T P + PA + P ( 1
+fl 2
+B 1 B T
+1
+0 B 2 R 01 B T
+2
+)P +Q = 1
+ø
+P: (12)
+Thus we can derive the best action and the worst disturbance as
+u op = R 01 B T
+2 Px and w op = 0 1
+fl 2
+B T
+1 Px: (13)
+4 Simulation
+We tested the robust RL algorithm in a task of swinging up a pendulum. The
+dynamics of the pendulum is given by ml 2 ¨ ` = 0¯ —
+` + mgl sin ` + T , where ` is the
+angle from the upright position , T is input torque, ¯ = 0:01 is the coefficient of
+friction, m = 1:0[kg] is the weight of the pendulum, l = 1:0[m] is the length of
+the pendulum, and g = 9:8[m=s 2 ] is the gravity acceleration. The state vector is
+defined as x = (`; —
+`) T .
+4.1 Linear Case
+We first considered a linear problem in order to test if the value function and
+the policy learned by robust RL coincides with the analytic solution of H1 control
+problem. Thus we use a locally linearized dynamics near the unstable equilibrium
+point x = (0; 0) T . The matrices for the linear model are given by
+A =
+`
+0 1
+g
+l 0 ¯
+ml 2
+'
+; B 1 =
+`
+0
+1;
+'
+; B 2 =
+`
+0
+1
+ml 2 ;
+'
+; Q =
+`
+1 0
+0 0
+'
+; R = 1: (14)
+The reward function is given by q(t) = 0x T Qx 0 u 2 + fl 2 w 2 , where robustness
+criteria fl = 2:0.
+The value function, V = 0x T Px, is parameterized by a symmetric matrix P. For
+on­line estimation of P, we define vectors ~ x = (x 2
+1
+; 2x 1 x 2 ; x 2
+2
+) T , p = (p 11 ; p 12 ; p 22 ) T
+and reformulate V as V = 0p T ~ x. Each element of p is updated using recursive
+least squares method[2]. Note that we used pre­designed stabilizing controller as
+the initial setting of RRL controller for stable learning[2].
+
+4.1.1 Learning of the value function
+Here we used the policy by value gradient shown in section 3.2. Figure 2(a) shows
+that each element of the vector p converged to the solution of the Ricatti equation
+(12).
+4.1.2 Actor­disturber­critic
+Here we used robust RL implemented by the actor­disturber­critic shown in section
+3.1. In the linear case, the actor and the disturber are represented as the linear
+controllers, A u (x; v u ) = v u x and Aw (x; v w ) = v w x, respectively. The actor and
+the disturber were almost converged to the policy in (13) which derived from the
+Ricatti equation (12) (Fig. 2(b)).
+0 50 100 150 200 250 300
+0
+20
+40
+60
+80
+100
+Trials
+V
+p 11
+p 12
+p 22
+(a) Elements of p
+0 50 100 150 200 250 300
+-30
+-25
+-20
+-15
+-10
+-5
+0
+5
+10
+Trials
+Gain
+v 1
+u
+v 2
+u
+v 1
+w
+v 2
+w
+(b) Elements of v
+Figure 2: Time course of (a)elements of vector p = (p 11 ; p 12 ; p 22 ) and (b)elements
+of gain vector of the actor v u = (v u
+1
+; v u
+2
+) and the disturber v w = (v w
+1
+; v w
+2
+). The
+dash­dotted lines show the solution of the Ricatti equation.
+4.2 Applying Robust RL to a Non­linear Dynamics
+We consider non­linear dynamical system (11), where
+f(x) =
+` —
+`
+g
+l sin ` 0 ¯
+ml 2
+—
+`
+'
+; g 1
+(x) =
+`
+0
+1
+'
+; g 2
+(x) =
+`
+0
+1
+ml 2
+'
+Q(x) = cos(`) 0 1; R(x) = 0:04: (15)
+From considering (7) and (15), the reward function is given by q(t) = cos(`) 0 1 0
+0:04u 2 + fl 2 w 2 , where robustness criteria fl = 0:22. For approximating the value
+function, we used Normalized Gaussian Network (NGnet)[3]. Note that the input
+gain g(x) was also learned[3].
+Fig.3 shows the value functions acquired by robust RL and standard model­based
+RL[3]. The value function acquired by robust RL has a shaper ridge (Fig.3(a))
+attracts swing up trajectories than that learned with standard RL.
+In Fig.4, we compared the robustness between the robust RL and the standard RL.
+Both robust RL controller and the standard RL controller learned to swing up and
+hold a pendulum with the weight m = 1:0[m] and the coefficient of friction ¯ = 0:01
+(Fig.4(a)) .
+The robust RL controller could successfully swing up pendulums with different
+weight m = 3:0[kg] and the coefficient of friction ¯ = 0:3 (Fig.4(b)). This result
+showed robustness of the robust RL controller. The standard RL controller could
+achieve the task in fewer swings for m = 1:0[kg] and ¯ = 0:01 (Fig.4(a)). However,
+the standard RL controller could not swing up the pendulum with different weight
+and friction (Fig.4(b)).
+
+th
+om
+­180 ­128 ­75 ­22 30 82 135
+­480
+­340
+­200
+­60
+80
+220
+360
+V
+­3.354
+­1.473
++0.407
+(a) Robust RL
+th
+om
+­180 ­128 ­75 ­22 30 82 135
+­480
+­340
+­200
+­60
+80
+220
+360
+V
+­2.001
+­1.001
++0.000
+(b) Standard RL
+Figure 3: Shape of the value function after 1000 learning trials with m = 1:0[kg],
+l = 1:0[m], and ¯ = 0:01.
+0 1 2 3 4 5 6
+-0.5
+0
+0.5
+1
+1.5
+2
+2.5
+q
+[rad/p]
+Time [sec]
+Robust
+Standard
+(a) m = 1:0; ¯ = 0:01
+0 5 10 15 20
+-0.5
+0
+0.5
+1
+1.5
+2
+q
+[rad/p]
+Time [sec]
+Robust
+Standard
+(b) m = 3:0; ¯ = 0:3
+Figure 4: Swing up trajectories with pendulum with different weight and friction.
+The dash­dotted lines show upright position.
+5 Conclusions
+In this study, we proposed new RL paradigm called ``Robust Reinforcement Learn­
+ing (RRL).'' We showed that RRL can learn analytic solution of the H1 controller
+in the linearized inverted pendulum dynamics and also showed that RRL can deal
+with modeling error which standard RL can not deal with in the non­linear inverted
+pendulum swing­up simulation example. We will apply RRL to more complex task
+like learning stand­up behavior[4].
+References
+[1] A. G. Barto, R. S. Sutton, and C. W. Anderson. Neuronlike adaptive elements that
+can solve difficult learning control problems. IEEE Transactions on Systems, Man,
+and Cybernetics, 13:834--846, 1983.
+[2] S. J. Bradtke. Reinforcement learning Applied to Linear Quadratic Regulation. In
+S. J. Hanson, J. D. Cowan, and C. L. Giles, editors, Advances in Neural Information
+Processing Systems 5, pages 295--302. Morgan Kaufmann, San Mateo, CA, 1993.
+[3] K. Doya. Reinforcement Learning in Continuous Time and Space. Neural Computation,
+12(1):219--245, 2000.
+[4] J. Morimoto and K. Doya. Acquisition of stand­up behavior by a real robot using hier­
+archical reinforcement learning. In Proceedings of Seventeenth International Conference
+on Machine Learning, pages 623--630, San Francisco, CA, 2000. Morgan Kaufmann.
+[5] S. Weiland. Linear Quadratic Games, H1 , and the Riccati Equation. In Proceedings of
+the Workshop on the Riccati Equation in Control, Systems, and Signals, pages 156--159.
+1989.
+[6] K. Zhou, J. C. Doyle, and K. Glover. Robust Optimal Control. PRENTICE HALL,
+New Jersey, 1996.
+

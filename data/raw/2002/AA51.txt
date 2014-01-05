@@ -1,0 +1,392 @@
+Handling Missing Data with Variational Bayesian Learning of ICA
+
+Kwokleung Chan, Te-Won Lee and Terrence Sejnowski The Salk Institute, Computational Neurobiology Laboratory, 10010 N. Torrey Pines Road, La Jolla,, CA 92037, USA {kwchan,tewon,terry}@salk.edu
+
+Abstract Missing data is common in real-world datasets and is a problem for many estimation techniques. We have developed a variational Bayesian method to perform Independent Component Analysis (ICA) on high-dimensional data containing missing entries. Missing data are handled naturally in the Bayesian framework by integrating the generative density model. Modeling the distributions of the independent sources with mixture of Gaussians allows sources to be estimated with different kurtosis and skewness. The variational Bayesian method automatically determines the dimensionality of the data and yields an accurate density model for the observed data without overfitting problems. This allows direct probability estimation of missing values in the high dimensional space and avoids dimension reduction preprocessing which is not feasible with missing data. 1 Introduction Data density estimation is an important step in many machine learning problems. Often we are faced with data containing incomplete entries. The data may be missing due to measurement or recording failure. Another frequent cause is difficulty in collecting complete data. For example, it could be expensive and time consuming to perform some biomedical tests. Data scarcity is not uncommon and it would be very undesirable to discard those data points with missing entries when we already have a small dataset. Traditionally, missing data are filled in by mean imputation or regression imputation during preprocessing. This could introduce biases into the data cloud density and adversely affect subsequent analysis. A more principled way would be to use probability density estimates of the missing entries instead of point estimates. A well known example of this approach is the use of Expectation-Maximization (EM) algorithm in fitting incomplete data with a single Gaussian density [5]. Independent Component Analysis (ICA) [4] tries to locate independent axes within the data cloud and was developed for blind source separation. It has been applied to speech separation and analyzing fMRI and EEG data. ICA is also used to model data density, describing data as linear mixture of independent features and finding projections that may uncover interesting structure in the data. Maximum likelihood learning of ICA with incomplete data has been studied by [6], in the limited case of a square mixing matrix and predefined source densities. Many real-world datasets have intrinsic dimensionality smaller then that of the observed
+
+
+data. With missing data, principal component analysis cannot be used to perform dimension reduction as preprocessing for ICA. Instead, the variational Bayesian method applied to ICA can handle small datasets with high observed dimension [1, 2]. The Bayesian method prevents overfitting and performs automatic dimension reduction. In this paper, we extend the variational Bayesian ICA method to problems with missing data. The probability density estimate of the missing entries can be used to fill in the missing values. This also allows the density model to be refined and made more accurate. 2 Model and Theory 2.1 ICA generative model with missing data Consider a data set of T data points in an N-dimensional space: X = {xt  RN}, t = {1, ··· , T }. Assume a noisy ICA generative model for the data: P (xt|) = N(xt|Ast + ,)P(st|s)dst (1) where A is the mixing matrix,  is the observation mean and -1 is the diagonal noise variance. The hidden source st is assumed to have L dimensions. Each component of st is modeled by a mixture of K Gaussians to allow for source densities of various kurtosis and skewness,
+
+L K
+
+P (st|s) = lkl N (st(l)|lkl , lkl)
+
+l kl
+
+Split each data point into a missing part and an observed part: xt = (xot
+
+(2) , xm ). In this
+
+t
+
+paper, we only consider the random missing case [3], i.e. the probability for the missing entries xm is independent of the value of xm, but could depend on the value of xot. The
+
+t t
+
+likelihood of the dataset is then defined to be L(;X) = P (xt |) ,
+
+o
+
+t
+
+P (xt |) = o P (xt|) dxt m o N(xt|[Ast + ]ot,[]ot)P(st|s)dst
+
+(3)
+
+= (4)
+
+Here we have introduced the notation [·]ot, which means taking only the observed dimensions (corresponding to the tth data point) of whatever is inside the square brackets. Since eqn. (4) is similar to eqn. (1), the variational Bayesian ICA [1, 2] can be extended naturally to handled missing data, but only if care is taken in discounting missing entries in the learning rules. 2.2 Variational Bayesian method In a full Bayesian treatment, the posterior distribution of the parameters  is obtained by
+
+P (|X) = P (X|)P () P (X) = t P (xot |)P () P (X) (5)
+
+where P(X) is the marginal likelihood of the data and given as:
+
+o P (xt |)P () d P (X) = (6)
+
+t
+
+The ICA model for P(X) is defined with the following priors on the parameters P(),
+
+P (Anl) = N (Anl|0, l) P (l) = G(l|ao(l), bo(l)) P (n) = N (n|µo(n), o(n)) P (l) = D(l|do(l)) P (lkl ) = N (lkl |µo(lkl ), o(lkl )) P (lkl ) = G(lkl |ao(lkl ), bo(lkl )) P (n) = G(n|ao(n), bo(n))
+
+(7) (8)
+
+
+where N(·), G(·) and D(·) are the normal, gamma and Dirichlet distributions.ao(·), bo(·), do(·), µo(·), and o(·) are prechosen hyperparameters for the priors. Under the variational Bayesian treatment, instead of performing the integration in eqn. (6) to solve for P(|X) directly, we approximate it by Q() and opt to minimize the KullbackLeibler distance between them:
+
+-KL(Q()|P(|X)) = Q() log P (|X) Q() d
+
+o log P (xt |) + log = Q() P () Q() d - log P (X)
+
+(9)
+
+t
+
+Since -KL(Q()|P(|X))  0, we get a lower bound for the log marginal likelihood of the data,
+
+o log P (xt |) d + log P (X)  Q() Q() log
+
+t
+
+P () Q() d , (10)
+
+which can also be obtained by applying the Jensen's inequality to eqn. (6). Q() is then solved by functional maximization of the lower bound. A separable approximate posterior Q() will be assumed: Q() = Q()Q() × Q(A)Q() × Q(l) Q(lkl )Q(lkl ) . (11)
+
+l kl
+
+The second term in eqn. (10), which is the negative Kullback-Leibler divergence between approximate posterior Q() and prior P(), can be expanded as,
+
+Q() log P () Q() d = Q(l) log
+
+P (lkl ) Q(lkl )
+
+P (l) Q(l) dl
+
+l
+
++ Q(lkl ) log dlkl + Q(lkl ) log P (lkl ) Q(lkl ) dlkl
+
+l kl
+
++
+
+l kl
+
+dA d +
+
+Q(A)Q() log +
+
+P (A|) Q(A) Q() log P () Q() d
+
+Q() log P () Q() d + Q() log P () Q() d (12)
+
+2.3 Special treatment for missing data Thus far the analysis follows almost exactly that of the variational Bayesian ICA on complete data, except that P(xt|) is replaced by P(xot |) in eqn. (6) and consequently the missing entries are discounted in the learning rules. However, it would be useful to obtain Q(xm|xot ), i.e., the approximate distribution on the missing entries, which is given by
+
+t
+
+Q(xt |xt ) = m o Q() N(xt |[Ast + ]m,[]t )Q(st)dst d. t m m (13)
+
+As noted in [6], elements of st given xot are dependent. More importantly, under the ICA model, Q(st) is unlikely to be a single Gaussian. This is evident from figure 1 which shows the probability density functions of the data x and hidden variable s. The inserts show the sample data in the two spaces. Here the hidden sources assume density of P(sl)  exp(-|sl|0.7). They are mixed noiselessly to give P (x) in the left graph. The cut in the left graph represents P(x1|x2 = -0.5), which transforms into a highly correlated and non-Gaussian P(s|x2 = -0.5).
+
+
+1.4 1.2 1 0.8 0.6 0.4 0.2 0 1
+
+0.5
+
+1.6 1.4 1.2 1 0.8 0.6 0.4 0.2 0 1
+
+0 0.5 1 1
+
+0.5 0.5 0
+
+-0.5 0 0
+
+-0.5 -0.5 -0.5
+
+x2 -1 -1 -1
+
+s2 -1 x1 s1
+
+Figure 1: Pdfs for the data x (left) and hidden sources s (right). Inserts show the sample data in the two spaces. The "cuts" show P(x1|x2 = -0.5) and P(s|x2 = -0.5). Unless we are interested only in the first and second order statistics of Q(xm|xot ), we
+
+t
+
+should try to capture as much structure as possible of P(st|xot) in Q(st). In this paper, we take a slightly different route from [1, 2] when performing variational Bayesian learning. First, we break down P(st) (eqn. 2) into a mixture of KL Gaussians in the L dimensional s space.
+
+P (st) = =
+
+· · [1k1 × · · ×LkL × N (st(1)|1k1 1k1 ) × · · ×N (st(L)|LkLLkL)]
+
+k1 kL
+
+kN (st|k, k) (14)
+
+k
+
+Here we have defined k to be a vector index. The "kth" Gaussian is centered at k, of inverse covariance k, in the source s space,
+
+k = 1k1 × ··· × LkL k = diag (1k1 , ··· LkL) k = (1k1 , ··· , lkl , ··· , LkL ) k = (k1, ··· , kl, ··· , kL) , kl = 1, ··· , K (15)
+
+Log likelihood for xot is then expanded using the Jensen's inequality,
+
+log P (xt |) = log
+
+o o k k P (xt |st, ) N (st|k, k) dst
+
+o
+
+P (xt |st, )N (st|k, k) dst +  Q(kt) log
+
+k
+
+Q(kt) log k Q(kt) (16)
+
+k
+
+Here Q(kt) is a short form for Q(kt = k). kt is a discrete hidden variable and Q(kt = k) is the probability that the tth data point belongs to the kth Gaussian. Recognizing that st is just a dummy variable, we introduce Q(skt), apply the Jensen's inequality again and get
+
+log P (xt |) 
+
+o o k Q(kt) Q(skt) log P (xt |skt, ) dskt
+
++ Q(skt) log N(skt|k,k) Q(skt) dskt + Q(kt) log k Q(kt) (17)
+
+k
+
+Substituting log P(xot |) back into eqn. (10), the variational Bayesian method can be continued as usual. We have drawn in figure 2 a simplified graphical representation for the generative model of variational ICA. xt is the observed variable, kt and st are hidden variables and the rest are model parameters, where kt indicates which of the KL expanded Gaussians generated st.
+
+
+  
+
+A
+
+x
+
+k s
+
+t
+
+t t
+
+  
+
+Figure 2: A simplified directed graph for the generative model of variational ICA. xt is the observed variable, kt and st are hidden variables and the rest are model parameters. The kt indicates which of the KL expanded Gaussians generated st. 3 Learning Rules Combining eqns. (10,12 and 17) we perform functional maximization on the lower bound of the log marginal likelihood, log P(X), w.r.t. Q() (eqn. 11), Q(kt) and Q(skt) (eqn. 17) and obtain the following learning rules for the sufficient statistics of Q() and Q(skt): (n) = o(n) + n ont
+
+t
+
+o(n)µo(n) + n
+
+(18) ont Q(kt) (xnt - An s
+
+· kt ) t
+
+µ(n) = k
+
+(n)
+
+a(n) = ao(n) + b(n) = bo(n) + 1 2 1 2
+
+ont
+
+t
+
+(19)
+
+ont Q(kt) (xnt - An s · kt - n)2
+
+t k
+
+(An ) = diag ( 1 , ··· L ) + n · ont Q(kt) sktskt
+
+t k
+
+Q(kt) skt
+
+(20)
+
+µ(An ) = · n ont(xnt - n )
+
+N 2
+
+(An )-1 ·
+
+t
+
+a(l) = ao(l) +
+
+k
+
+b(l) = bo(l) + Q(kt)
+
+kl=k
+
+Q(kt)
+
+d(lk) = do(lk) + (lkl ) = o(lkl ) + lkl
+
+1 2 A2nl (21)
+
+n
+
+(22) t
+
+t kl=k
+
+(23)
+
+o(lkl )µo(lkl ) + lkl t kl=k Q(kt) skt(l)
+
+µ(lkl ) =
+
+a(lkl ) = ao(lkl ) +
+
+b(lkl ) = bo(lkl ) +
+
+1 2 1 2
+
+(lkl ) Q(kt) Q(kt) (skt(l) - lkl )2
+
+t kl=k (24)
+
+t kl=k
+
+Q(skt) = N (skt|µ(skt), (skt))
+
+(skt) = diag ( 1 k1
+
+k1 (skt)µ(skt) = 1 k1 1
+
+, ··· L kL
+
+L kL
+
+) + A diag (o1t1, ··· oNtN ) A (25)
+
+, ··· L kL + A diag (o1t1, ··· oNtN ) (xt - )
+
+
+0.9
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0 -4 -3 -2 -1 0 1 2
+
+Figure 3: The approximation of Q(xm|xot ) from the full missing ICA (solid line) and t
+
+the polynomial missing ICA (dashed line). Shaded area is the exact posterior P(xm|xot )
+
+t
+
+corresponding to the noiseless mixture in fig. 1 with observed x2=­2. Dotted lines are contribution from the individual Q(xm|xot, k).
+
+kt
+
+In the above equations, · denotes the expectation over the posterior distributions Q(·). such that the lth element of their indices k has the value of k, and ont is a binary indicator variable for whether or not xnt is observed. For a model of equal noise variance among all the observation dimensions, the summation in the learning rules for Q() would be over both t and n. Note that there exists scale and translational degeneracy in the model, as given by eqn. (1) and (2). After each update of Q(l), Q(lkl) and Q(lkl), it is better to rescale P(st(l)) to have zero mean and unit variance. Q(skt), Q(A), Q(), Q() and Q() have to be adjusted correspondingly. Finally, Q(kt) is given by, log Q(kt) = log P (xt |skt, )+log N (skt|k, k)-log Q(skt)+log k -log zt (26)
+
+An is the nth row of the mixing matrix A, · means picking out those Gaussians kl=k
+
+o
+
+where zt is a normalization constant. The lower bound E(X, Q()|H) for the log marginal likelihood
+
+E(X,Q()|H) = log zt + Q() log
+
+t
+
+P () Q() d (27)
+
+can be monitored during learning and used for comparison of different solutions or models. 4 Filling in missing entries The approximate distribution Q(xm|xot) can be obtained by a summation of Q(xm|xot, k):
+
+t kt
+
+m m m o m
+
+Q(kt) (xt - xkt)Q(xkt|xt , k) dxkt , Q() N(xkt|[Askt + ]m,[]m)Q(skt)dskt d
+
+m t t
+
+Q(xt |xt ) = m o (28)
+
+k
+
+Q(xkt|xt , k) = m o (29)
+
+Estimation of Q(xm|xot ) using the above equations is demonstrated in fig. 3. The shaded t
+
+area is the exact posterior P(xm|xot) for the noiseless mixing in fig. 1 with observed x2=­2
+
+t
+
+and the solid line is the approximation by eqn. 28­29. We have modified the variational ICA of [1] by discounting missing entries in the learning rules. The dashed line is the approximation of Q(xm|xot ) from this modified method. The treatment of fully expanding
+
+t
+
+the KL hidden source Gaussians discussed in section 2.3 is called "full missing ICA", and the modified method is "polynomial missing ICA". The "full missing ICA" gives a more accurate fit for P(xm|xot ) and a better estimate for xm|xot .
+
+t t
+
+
+-1500 a) b) e)
+
+-1600 bound
+
+lower -1700
+
+c) d) likelihood -1800
+
+marginal -1900
+
+log
+
+full missing ICA polynomial missing ICA 5 6
+
+-2000 1 2 3 4 7
+
+Number of dimensions
+
+Figure 4: a)-d) Source density modeling by variational missing ICA of the synthetic data. Histograms: recovered sources distribution; dashed lines: original probability densities; solid line: mixture of Gaussians modeled probability densities; dotted lines: individual Gaussian contribution. e) E(X, Q()|H) as a function of hidden source dimensions.
+
+5 Experiment 5.1 Synthetic Data In the first experiment, 200 data points were generated by mixing 4 sources randomly in a 7 dimensional space. The generalized Gaussian, gamma and beta distributions were used to represent source densities of various skewness and kurtosis (fig. 4 a)-d)). Noise at ­26 dB level was added to the data and missing entries were created with a probability of 0.3. In fig. 4 a)-d), we plotted the histograms of the recovered sources and the probability density functions (pdf) of the 4 sources. The dashed line is the exact pdf used to generate the data and solid line is the modeled pdf by mixture of two 1-D Gaussians (eqn. 2). Fig. 4 e) plots the lower bound of log marginal likelihood (eqn. 27) for models assuming different numbers of intrinsic dimensions. As expected, the Bayesian treatment allows us to the infer the intrinsic dimension of the data cloud. In the figure, we also plot the E(X, Q()|H) from the polynomial missing ICA. It is clear that the full missing ICA gave a better fit to the data density. Furthermore, the polynomial missing ICA converges slower per epoch of learning, suffers from many more local minima and problems get worse with higher missing rate. 5.2 Mixing Images This experiment demonstrates the ability of the proposed method to fill in missing values while performing demixing. The 1st column in fig. 5 shows the 2 original 380-by-380 pixels images. They were linearly mixed into 3 images and ­20 dB noise was added. 20% missing entries were introduced randomly. The denoised mixtures and recovered sources are in the 3rd and 4th columns of fig. 5. 0.8% of the pixels were missing from all 3 mixed images and could not be recovered. 38.4% of the pixels were missing from only 1 mixed image and could be filled in with low uncertainty. 9.6% of the pixels were missing from any two of the mixed images. Estimation of their values incurred high uncertainty. From fig. 5, we can see that the source images were well separated and the mixed images were nicely denoised. The denoised mixed images in this example were only meant to visually illustrate the method. However, if (x1, x2, x3) represent cholesterol, blood sugar and uric acid level, for example, it would be possible to fill in the third when only two are available. 6 Conclusion In this paper, we derived the learning rules for variational Bayesian ICA with missing data. The complexity of the method is exponential in L. However, this exponential growth in
+
+
+  +
+
+Figure 5: A demonstration of recovering missing values. The original images are in the 1st column. 20% of the pixels in the mixed images (2nd column) are missing, while only 0.8% are missing from the denoised mixed (3rd column) and separated images (4th column).
+
+complexity is manageable and worthwhile for small data sets containing missing entries in a high dimensional space. The proposed method shows promise in analyzing and identifying projections of datasets that have a very limited number of expensive data points yet contain missing entries due to data scarcity. We have applied the variational missing ICA to a primates brain volumetric dataset containing 44 examples in 57 dimensions. Very encouraging results were obtained and will be reported in another paper. References [1] Kwokleung Chan, Te-Won Lee, and Terrence J. Sejnowski. Variational learning of clusters of undercomplete nonsymmetric independent components. Journal of Machine Learning Research, 3:99­114, 2002. [2] Rizwan A. Choudrey and Stephen J. Roberts. Flexible Bayesian independent component analysis for blind source separation. In 3rd International Conference on Independent Component Analysis and Blind Signal Separation, pages 90­95, San Diego, Dec. 09-12 2001. [3] Z. Ghahramani and M. Jordan. Learning from incomplete data. Technical Report CBCL Paper No. 108, Center for Biological and Computational Learning, Massachusetts Institute of Technology, 1994. [4] Aapo Hyvarinen, Juha Karhunen, and Erkki Oja. Independent Component Analysis. J. Wiley, New York, 2001. [5] R. J. A. Little and D. B. Rubin. Statistical Analysis with Missing Data. Wiley, New York, 1987. [6] Max Welling and Markus Weber. Independent component analysis of incomplete data. In 1999 6th Joint Symposium on Neural Compuatation Proceedings, volume 9, pages 162­168. UCSD, May. 22 1999.
+
+

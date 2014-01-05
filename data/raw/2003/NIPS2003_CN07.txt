@@ -1,0 +1,1044 @@
+Autonomous helicopter flight via Reinforcement Learning
+
+Andrew Y. Ng Stanford University Stanford, CA 94305
+
+H. Jin Kim, Michael I. Jordan, and Shankar Sastry University of California Berkeley, CA 94720 Abstract
+
+Autonomous helicopter flight represents a challenging control problem, with complex, noisy, dynamics. In this paper, we describe a successful application of reinforcement learning to autonomous helicopter flight. We first fit a stochastic, nonlinear model of the helicopter dynamics. We then use the model to learn to hover in place, and to fly a number of maneuvers taken from an RC helicopter competition. 1 Introduction Helicopters represent a challenging control problem with high-dimensional, complex, asymmetric, noisy, non-linear, dynamics, and are widely regarded as significantly more difficult to control than fixed-wing aircraft. [7] Consider, for instance, the problem of designing a helicopterthat hoversin place. We beginwith a single, horizontally-orientedmain rotor attached to the helicopter via the rotor shaft. Suppose the main rotor rotates clockwise (viewed from above), blowing air downwards and hence generating upward thrust. By applying clockwise torque to the main rotor to make it rotate, our helicopter experiences an anti-torque that tends to cause the main chassis to spin anti-clockwise. Thus, in the invention of the helicopter, it was necessary to add a tail rotor, which blows air sideways/rightwards to generate an appropriate moment to counteract the spin. But, this sideways force now causes the helicopter to drift leftwards. So, for a helicopter to hover in place, it must actually be tilted slightly to the right, so that the main rotor's thrust is directed downwards and slightly to the left, to counteract this tendency to drift sideways. The history of helicopters is rife with such tales of ingenious solutions to problems caused by solutions to other problems, and of complex, nonintuitive dynamics that make helicopters challenging to control. In this paper, we describe the successful application of reinforcement learning to designing a controller for autonomous helicopter flight. Due to space constraints, our description of this work is necessarily brief; a detailed treatment is provided in [9]. For a discussion of related work on autonomous flight, also see [9, 12]. 2 Autonomous Helicopter The helicopter used in this work was a Yamaha R-50 helicopter, which is approximately 3.6m long, carries up to a 20kg payload, and is shown in Figure 1a. A detailed description of the design and construction of its instrumentation is in [12]. The helicopter carries an Inertial Navigation System (INS) consisting of 3 accelerometers and 3 rate gyroscopes installed in exactly orthogonal x,y,z directions, and a differential GPS system, which with the assistance of a ground station, gives position estimates with a resolution of 2cm. An onboard navigation computer runs a Kalman filter which integrates the sensor information from the GPS, INS, and a digital compass, and reports (at 50Hz) 12 numbers corresponding
+
+to the estimates of the helicopter's position (
+
+ ¢¡¤£¥¡§¦
+
+velocity (    ) and angular velocities (¨ ©   ).
+
+ ¢¡ £¡ ¦   ¡ ¡
+
+), orientation (roll ¨ , pitch © , yaw  ),
+
+
+(a) (b)
+
+Figure 1: (a) Autonomous helicopter. (b) Helicopter hovering under control of learned policy. Most Helicopters are controlled via a 4-dimensional action space: trols. The rotor plane is the plane in which the helicopter's rotors rotate. By tilting this plane either forwards/backwards or sideways, these controls cause the : The (main rotor) collectivepitch control. As the helicoptermain-rotor'sblades sweep through the air, they generate an amount of upward thrust that (generally) increases with the angle at which the rotor blades are tilted. By varying the tilt : The tail rotor collective pitch control. Using a mechanism similar to the main rotor collective pitch control, this controls the tail rotor's thrust. Using the position estimates given by the Kalman filter, our task is to pick good control actions every 50th of a second. 3 Model identification To fit a model of the helicopter's dynamics, we began by asking a human pilot to fly the helicopter for several minutes, and recorded the 12-dimensional helicopter state and 4dimensionalhelicopter controlinputs as it was flown. In what follows, we used 339 seconds of flight data for model fitting, and another 140 seconds of data for hold-out testing. There are many natural symmetries in helicopter flight. For instance, a helicopter at (0,0,0) facing east behaves in a way related only by a translation and rotation to one at (10,10,50) facing north, if we command each to accelerate forwards. We would like to encode these symmetries directly into the model rather force an algorithm to learn them from scratch.
+
+ ¢¡¤£ ¥¡§¦¡ : The longtitudinal (front-back) and latitudinal (left-right) cyclic pitch con-
+
+ ¢¡§¨helicopter to accelerate forward/backwards or sideways.
+
+ ¢¡©angle of the rotor blades, the collective pitch control affects the main rotor's thrust.
+
+Thus, model identification is typically done not in the spatial (world) coordinates
+
+the , , and
+
+£¡§¦ ¡ ¡ ¡ ¡¦  ¢¡axes¦ ¡are¡ ¡
+
+  £
+
+ ¢¡ 
+
+¨ ©     ¨ ©   , but instead in the helicopter body coordinates, in which
+
+forwards, sideways, and down relative to the current position
+
+£ ¡   
+
+of the helicopter. Where there is risk of confusion, we will use superscript
+
+distinguish between spatial and body coordinates; thus,  is forward velocity, regardless of
+
+  
+
+orientation. Our model is identified in the body coordinates
+
+which has four fewer variables than
+
+"!
+
+  
+
+¡ ¡   ¡ £ ¡ ¦ ¡ ¡ ¡
+
+©    ¨ ©  .
+
+ 
+
+
+
+. Note that once this model is built, it is easily
+
+ 
+
+ 
+
+and to
+
+¨
+
+converted back using simple geometry to one in terms of spatial coordinates. Our main tool for model fitting was locally weighted linear regression (e.g., [11, 3]). Given
+
+6%  %£
+
+a dataset
+
+#$&% 
+
+¤¡ £ '%)(1032%54 £
+
+where the 's are vector-valued inputs and the
+
+% 
+
+valued outputs to be predicted, we let
+
+£
+
+9%£ 7
+
+'s are the real-
+
+be the design matrix whose -th row is , and let
+
+the prediction
+
+(say)
+
+ 
+
+H TSVUXWY$a`A@CB¦£ $  ,` B c $  `
+
+%R% £
+
+where
+
+£
+
+a larger weight. Here,
+
+d
+
+¦
+
+c
+
+6%b( Q Q
+
+@DE$F7GBIHP7&%)(¥(, 7GBIH £
+
+ 
+
+(1Q  £
+
+8
+
+be the vector of 's. In response to a query at , locally weighted linear regression makes
+
+£
+
+, and is a diagonal matrix with
+
+so that the regression gives datapoints near
+
+H
+
+determines how weights fall off with distance from , and
+
+was picked in our experiments via leave-one-out cross validation.1 Using the estimator for
+
+noise given in [3], this gives a model
+
+1
+
+£ e@ B  
+
+, where
+
+¡ d
+
+By
+
+gfih hqperts'uwvyx$ (.
+
+¦ 
+
+Actually, since we were fitting a model to a time-series, samples tend to be correlated in time,
+
+
+xdot xdot
+
+1 0.8 0.6 squared 0.4 0.2 0 0
+
+error
+
+mean
+
+0.5 seconds xdot 1
+
+0.5 0.4 0.3 squared 0.2 0.1 0 0
+
+2
+
+error
+
+1
+
+mean
+
+0
+
++1 errx x 
+
+  a1
+
+0.5 seconds thetadot 1
+
+ydot
+
+0.5 0.4 0.3 squared 0.2 0.1 0 0
+
+error error
+
+squared
+
+mean mean
+
+0.5 seconds 1
+
+0.012 0.01 0.008 0.006 0.004 0.002 0 0
+
+-1
+
+erry y 
+
+  a2
+
+-2
+
+-3 0 2 4
+
+(b)
+
+6 8 10 0.5 seconds 1 time
+
+errz z  err
+
+  a3
+
+  a4
+
+(a) (c)
+
+Figure 2: (a) Examples of plots comparing a model fit using the parameterization described in the text (solid lines) to some other models (dash-dot lines). Each point plotted shows the mean-squared error between the predicted value of a state variable--when a model is used to the simulate the helicopter's dynamics for a certain duration indicated on the   -axis--and the true value of that state variable (as measured on test data) after the same duration. Top left: Comparison of   -error to model not using Comparison of   and to linear deterministic model identified by [12]. (b) The solid line is the true helicopter state on 10s of test data. The dash-dot line is the helicopter state predicted by our model, given the initial state at time 0 and all the intermediate control inputs. The dotted lines show two standard deviations in the estimated state. Every two seconds, the estimated state is "reset" to the true state, and the track restarts with zero error. Note that the estimated state is of the full, highthe circles indicate whether a node outputs the sum of their inputs, or the © of the sum of their inputs. Each edge with an arrow in the picture denotes a tunable parameter. The solid lines show the hovering policy class (Section 5). The dashed lines show the extra weights added for trajectory
+
+¢¤£¦¥
+
+¡ , etc. terms. Top right: Comparison of   -error to model omitting intercept (bias) term. Bottom: ¡
+
+¡ § ¡
+
+¨ ¡
+
+dimensional state of the helicopter, but only
+
+¨¡ is shown here. (c) Policy class. The picture inside
+
+following (Section 6). applying locally-weighted regression with the state
+
+step differences (e.g., ¨ 
+
+£ `
+
+ and action  as inputs, and the one¡
+
+this gives us a non-linear, stochastic, model of the dynamics, allowing us to predict   as We actually used several refinements to this model. Similar to the use of body coordinates to exploit symmetries, there is other prior knowledge that can be incorporated. Since both is no need to carry out a regression for ¨ . Similarly, we know that the roll angle ¨ of regression to estimate  , the coefficient in corresponding to ¨ can be set to 0. This allows the helicopter should have no direct effect on forward velocity  . So, when performing us to reduce the number of parameters that have to be fit. Similar reasoning allows us to conclude (cf. [12]) that certain other parameters should be , (%'& or ) (gravity), and these were also hard-coded into the model. Finally, we added three extra (unobserved) variables Some of the (other) choices that we considered in selecting a model include whether to use identify the model; whether to hardwire certain coefficients as described; and whether to use weighted or unweighted linear regression. Our main tool for choosing among the models was plots such as those shown in Figure 2a. (See figure caption.) We were particularly interested in checking how accurate a model is not just for predicting   from   , but how accurate it is at longer time scales. Each of the panels in Figure 2a shows, for a model, the mean-squared error (as measured on test data) between the helicopter's true position and the estimated position at a certain time in the future (indicated on the -axis).   The helicopter's blade-tip moves at an appreciable fraction of the speed of sound. Given the and the presence of temporally close-by samples--which will be spatially close-by as well--may £ make data seem more abundant than in reality (leading to bigger 354 than might be optimal for test data). Thus, when leaving out a sample in cross validation, we actually left out a large window (16 seconds) of data around that sample, to diminish this bias.
+
+a function of  and  plus noise.
+
+
+
+¨! and ¨! are state variables, and we know that (at 50Hz) ¨"  £$# f ¨! ¨!%'& , there  
+
+    @
+
+ '
+
+
+
+¡ £!,¡ £!  
+
+¡
+
+10 tomodellatencies intheresponsestothecontrols. (See [9]fordetails.)
+
+the
+
+£!, £!
+
+and/or 20 terms; whether to include an intercept term; at what frequency to
+
+ £  ¥¡¡
+
+¨! ) of each of the state variablesin turnas the targetoutput,
+
+ ¡
+
+£
+
+
+danger and expense (about $70,000) of autonomous helicopters, we wanted to verify the fitted model carefully, so as to be reasonably confident that a controller tested successfully in simulation will also be safe in real life. Space precludes a full discussion, but one of our concerns was the possibility that unmodeled correlations in might mean the noise variance of the actual dynamics is much larger than predicted by the model. (See [9] for details.) To check against this, we examined many plots such as shown in Figure 2, to check that the helicopter state "rarely" goes outside the errorbars predicted by our model at various time scales (see caption). 4 Reinforcement learning: The PEGASUS algorithm We used the PEGASUS reinforcement learning algorithm of [10], which we briefly review
+
+h
+
+here. Consider an MDP with state space   , initial state
+
+transition probabilities §
+
+¢¡¤£¥ 
+
+family " of policies #$ %&¦ be given, and suppose our goal is to find a policy in " with
+
+high utility, where the policy of # is defined to be
+
+'
+
+$(# 0) $1¡
+
+!2
+
+$
+
+(  (Cf £V(Yf ¦
+
+! 
+
+$
+
+¦ (f
+
+#
+
+¡ ¡363616
+
+!©¨
+
+$(,
+
+, action space ¦ , state
+
+reward function    , and discount ! . Also let some
+
+¢¡
+
+3154¡  £
+
+where the expectation is over the random sequence of states ¡
+
+when # is executed in the MDP starting from state .
+
+visited over time
+
+These utilities are in general intractable to calculate exactly, but suppose we have a com-
+
+puter simulator of the MDP's dynamics--that is, a program that inputs
+
+57
+
+drawn from § Then a standard way to define an estimate 8
+
+'
+
+!¨
+
+£
+
+$(#
+
+Monte Carlo: We can use the simulator to sample a trajectory
+
+empirical sum of discounted rewards'  one "sample" with which to estimate
+
+¢¡  ¡ ¡163636,
+
+$©(.
+
+and outputs
+
+'
+
+$(#
+
+is via
+
+(
+
+of
+
+utilities and search for "
+
+UCB $D# '
+
+8
+
+($(#."
+
+$¢¡(. (f
+
+!2
+
+$) £ (f
+
+31 on this sequence, we obtain
+
+(
+
+¥¡¡
+
+and by taking the
+
+More generally, we could generate 9 such se-
+
+quences, and average to obtain a better estimator. We can then try to optimize the estimated
+
+Unfortunately, this is a difficult stochastic optimization problem: Evaluating 8
+
+a Monte Carlo sampling process, and two different evaluations of 8 '
+
+$D#
+
+'
+
+(
+
+$D#
+
+( involves
+
+xuA@v x
+
+will typically give
+
+slightly different answers. Moreover,even if the number of samples 9 that we average over
+
+is arbitrarily large, 8
+
+'
+
+$D#
+
+'
+
+(. $(#
+
+will fail with probability 1 to be a ("uniformly") good estimate of
+
+In our experiments, this fails to learn any reasonable controller for our helicopter.
+
+(
+
+The PEGASUS method uses the observation that almost all computer simulations of the form described sample 7 § by first calling a random number generator to get one (or more) random numbers E , and then calculating 7 as some deterministic function of the random number generator, then by pre-sampling all the random numbers E in advance and fixing them, we can then use these same, fixed, random numbers to evaluate any policy. Since all the random numbers are fixed, 8 F"G& is just an ordinary deterministic functhis also allows us to show that, so long as we average over a number of samples 9 that is at most polynomial in all' quantities of' interest, then with high probability, 8 will be a on the performance of the solutions found. For further discussion of PEGASUS and other work such as the variance reduction and gradient estimation methods (cf. [6, 5]), see [9]. 5 Learning to Hover One previous attempt had been made to use a learning algorithm to fly this helicopter, using
+
+w¡¡
+
+!¨
+
+
+
+input
+
+
+
+and the random E . If we demand that the simulator expose its interface to the
+
+' tion, and standard search heuristics can be used to search for x'uH@vyx U $D#
+
+B 8 ' (.
+
+Importantly,
+
+( uniformly good estimate of (458' ( $(# ` $(# ' 4PIRQ ). This also allows us to give guarantees
+
+S
+
+-synthesis [2]. This succeeded in flying the helicopter in simulation, but not on the actual
+
+helicopter (Shim, pers. comm.). Similarly, preliminary experiments using T
+
+¦
+
+and TVU
+
+controllers to fly a similar helicopter were also unsuccessful. These comments should not be taken as conclusive of the viability of any of these methods; rather, we take them to be indicative of the difficulty and subtlety involved in learning a helicopter controller.
+
+
+
+p $©(
+
+
+x-velocity (m/s) y-velocity (m/s) z-velocity (m/s)
+
+1.5 0.4 1
+
+1 0.2
+
+0.5 0.5
+
+0
+
+0
+
+-0.2
+
+-0.5 0
+
+-0.4 -1
+
+-1.5 0 5 10
+
+15 x-position (m) 20 25 30 -0.6 0 5 10 15 y-position (m) 20 25 30
+
+-0.5 0 7 5 10 15 z-position (m) 20 25 30
+
+66 65.5 65 64.5 64 63.5 63 62.5 62 61.5 0
+
+5 10 15 20 25 30
+
+-45 -50 -55 -60 -65 -70 -75 -80 0
+
+6.5
+
+6
+
+5.5
+
+5
+
+5 10 15 20 25 30 4.5 0 5 10 15 20 25 30
+
+Figure 3: Comparison of hovering performance of learned controller (solid line) vs. Yamaha li    velocities. Bottom: ¡    positions. We began by learning a policy for hovering in place. We want a controller that, given the
+
+censed/specially trained human pilot (dotted line). Top: ¡  ¨ ¢   ¨ ¢
+
+(
+
+current helicopter state and a desired hovering position and orientation
+
+computes controls £
+
+¡
+
+`
+
+$ ¤£
+
+¡¤£¥£ ¡¤¦¦£ ¡ £
+
+ ,
+
+( ( to make it hover stably there. For our policy class " ,
+
+¡
+
+©
+
+we chose the simple neural network depicted in Figure 2c (solid edges only). Each of the edges in the figure represents a weight, and the connections were chosen via simple reasoning about which control channel should be used to control which state variables. For instance, consider the the longitudinal (forward/backward) cyclic pitch control which causes the rotor plane to tilt forward/backward, thus causing the helicopter to pitch (and/or
+
+¡ £,
+
+¡&£
+
+accelerate) forward or backward. From Figure 2c, we can read off the
+
+§
+
+©¨
+
+£ £ f ¦ uwuCf ¨wx¥ © uwu1(Yf  f
+
+control control as
+
+%
+
+¡ £
+
+3547689473
+
+is defined to be the error in the
+
+ 
+
+-position
+
+%¨!& $(¨!)S
+
+'¥ 1x
+
+¨
+
+S
+
+¨
+
+$¨ S
+
+¨!    ¨!" ©$#
+
+uwu12 §
+
+¨!0  
+
+§
+
+£ (Yf £`
+
+6
+
+Here, the ¨ 's are the tunable parameters (weights) of the network, and
+
+& 
+
+(forward direction, in body coordinates)
+
+between where the helicopter currently is and where we wish it to hover. We chose a quadratic cost function on the (spatial representation of the) state, where2 @BA(CEDFHGIAQPSRTA G D7V'WXPSYA G D7VWXPS`aA G D7V'WXPcbR ¡ VaWXPXbY2¡¨ VWXPcb` ¡ V'WXPedSAgfBG!f D7VhDi
+
+  $U   ¨ ¨ U ¨ ¨
+
+(
+
+¢
+
+U
+
+This encourages the helicopter to hover near
+
+$ ¤£U ¡ £$£ ¡§¦p£  ¡ £
+
+ity small and not making abrupt movements. The weights q
+
+ ,whilealsokeepingtheveloc ¡
+
+qsr , etc. (distinct from the
+
+(1)
+
+%
+
+weights ¨ parameterizing our policy class) were chosen to scale each of the terms to be roughly the same order of magnitude. To encourage small actions and smooth control of
+
+¦ ¦
+
+the helicopter, we also used a quadratic penalty for actions: 
+
+q
+
+1x¨
+
+q
+
+hy¨
+
+and the overall reward was 
+
+¡ ¨ f ¡ ©¦ (, ¦
+
+$  $ $  
+
+w¡§(¡ (f ¡X(. $¡X(  ` $tq ¡ £ f ¡ ¦ f q
+
+wv¨ Eu¨
+
+imations 8
+
+Using the' modeltoidentified in Section 3, we can now apply PEGASUS to define approxthe weights, and the dynamics are themselves continuous in the actions, the estimates of utilities are also continuous in the weights.3 We may thus apply standard hillclimbing al$D#
+
+the utilities of policies. Since policies are smoothly parameterized in
+
+gorithms to maximize 8 '
+
+2
+
+fXGIf
+
+The
+
+$(# (
+
+in terms of the policy's weights. We tried both a gradient
+
+U errortermiscomputedwithappropriatewrappingabout w rad,sothatG'iU fF if
+
+f F'i
+
+ rad.
+
+(
+
+E G'i'
+
+rad, and the helicopter is currently facing
+
+3
+
+rad, the error is 0.02, not w
+
+Actually, this is not true. One last component of the reward that we did not mention earlier was
+
+that, if in performing the locally weighted regression, the matrix S is singular to numerical precision, then we declare the helicopter to have "crashed," terminate the simulation, and give it a huge negative (-50000) reward. Because the test checking if    is singular to numerical precision returns either 1 or 0,   has a discontinuity between "crash" and "not-crash." cA D
+
+
+10 9.5 9 8.5 8 7.5 7 6.5 6 5.5
+
+-58
+
+-59 6.4 6.2 6
+
+-60
+
+-61 82
+
+80 -62
+
+78 -63 -90
+
+76
+
+-64 74 -95
+
+-65 72
+
+70 -66 -100
+
+68 -67
+
+9.5 9 8.5 8 7.5 7 6.5 6 5.5 68.5
+
+-71
+
+-72
+
+-73
+
+-74
+
+-75
+
+-76
+
+-77
+
+-78
+
+-79
+
+64 63.5 66 -80 -105
+
+-68 64 68 67.5 -81
+
+Figure 4: Top row: Maneuver diagrams from RC helicopter competition. [Source:
+
+www.modelaircraft.org]. Bottom row: Actual trajectories flown using learned controller. the weights and then take a step in the indicated direction, and a random-walk algorithm in which we propose a random perturbation to the weights, and move there if it increases to scale the derivatives appropriately, since the estimates of the derivatives were sometimes numerically unstable.4 It was also important to apply some standard heuristics to prevent its solutions from diverging (such as verifying after each step that we did indeed take a step uphill on the objective 8 , and undoing/redoing the step using a smaller stepsize if this was ' not the case). The most expensivestep in policy search was the repeated Monte Carlo evaluation to obtain using different samples were run on different computers, and the results were then aggre-
+
+ascent algorithm, in which we numerically evaluate the derivative of 8 ' $(#
+
+with respect to
+
+' 8 D# . Both of these algorithms worked well, though with gradient ascent, it was important $ (
+
+' 8 D# . To speed this up, we parallelized our implementation, and Monte Carlo evaluations
+
+$ (
+
+gated to obtain 8 '
+
+$(#
+
+(.
+
+We ran PEGASUS using 30 Monte Carlo evaluations of 35 seconds
+
+of flying time each, and !
+
+ 
+
+6  ¡ ¢  & . Figure 1b shows the result of implementing and
+
+(
+
+running the resulting policy on the helicopter. On its maiden flight, our learned policy was successful in keeping the helicopter stabilized in the air. (We note that [1] was also successful at using our PEGASUS algorithm to control a subset, the cyclic pitch controls, of a helicopter's dynamics.) We also compare the performance of our learned policy against that of our human pilot trained and licensed by Yamaha to fly the R-50 helicopter. Figure 5 shows the velocities and positions of the helicopter under our learned policy and under the human pilot's control. As we see, our controller was able to keep the helicopter flying more stably than was a human pilot. Videos of the helicopter flying are available at http://www.cs.stanford.edu/~ang/nips03/ 6 Flying competition maneuvers We were next interested in making the helicopter learn to fly several challenging maneuvers. The Academy of Model Aeronautics (AMA) (to our knowledge the largest RC helicopter organization) holds an annual RC helicopter competition, in which helicopters have to be accurately flown through a number of maneuvers. This competition is organized into Class I (for beginners, with the easiest maneuvers)through Class III (with the most difficult maneuvers, for the most advanced pilots). We took the first three maneuvers from the most challenging, Class III, segment of their competition. Figure 4 shows maneuver diagrams from the AMA web site. In the first of these maneuvers
+
+4 A problem exacerbated by the discontinuities described in the previous footnote.
+
+
+(III.1), the helicopter starts from the middle of the base of a triangle, flies backwards to the lower-right corner, performs a (¡  pirouette (turning in place), flies backwards up an edge backwards to its starting position. Flying backwards is a significantly less stable maneuver than flying forwards, which makes this maneuverinteresting and challenging. In the second maneuver (III.2), the helicopter has to perform a nose-in turn, in which it flies backwards out to the edge of a circle, pauses, and then flies in a circle but always keeping the nose of the helicopter pointed at center of rotation. After it finishes circling, it returns to the starting point. Many human pilots seem to find this second maneuver particularly challenging. Lastly, maneuver III.3 involves flying the helicopter in a vertical rectangle, with two ¦¨§ How does one design a controller for flying trajectories? Given a controller for keeping
+
+of the triangle, backwards down the other edge, performs another (¤  '¥¢
+
+pirouette, and flies
+
+'©¢
+
+pirouettes in opposite directions halfway along the rectangle's vertical segments.
+
+(
+
+a system's state at a point
+
+$ S£
+
+¡¤£¥£ ¡¤¦¦£ ¡ £
+
+(
+
+make the system move
+
+a sequence of set through a particular trajectory is to slowly vary
+
+ , one standard way toalong
+
+$ ¤£
+
+¡ £$£ ¡§¦p£ ¡ £
+
+'£¢
+
+points on that trajectory. (E.g., see [4].) For instance, if we ask our6 helicopter tothen
+
+!-direction.
+
+at ¡ ¡ ¡
+
+6 ¡ ¡ ¡
+
+then a fraction of a second later ask it to hover at
+
+so on, our helicopter will slowly fly in the
+
+  ( ¡ ¡ ¡
+
+$F    ((,and
+
+$    $F    
+
+(,
+
+hover By taking this
+
+at
+
+procedure and "wrapping" it around our old policy class from Figure 2c, we thus obtain a computer program--that is, a new policy class--not just for hovering, but also for flying arbitrary trajectories. I.e., we now have a family of policies that take as input a trajectory, and that attempt to make the helicopter fly that trajectory. Moreover, we can now also retrain the policy's parameters for accurate trajectory following, not just hovering. Since we are now flying trajectories and not only hovering, we also augmented the policy class to take into account more of the coupling between the helicopter's different subdynamics. For instance, the simplest way to turn is to change the tail rotor collective pitch/thrust, so that it yaws either left or right. This works well for small turns, but for large turns, the thrust from the tail rotor also tends to cause the helicopter to drift sideways. Thus, we enriched the policy class to allow it to correct for this drift by applying the appropriate cyclic pitch controls. Also, having a helicopter climb or descend changes the amount of work done by the main rotor, and hence the amount of torque/anti-torque generated, which can cause the helicopter to turn. So, we also added a link between the collective pitch control and the tail rotor control. These modifications are shown in Figure 2c (dashed lines). We also needed to specify a reward function for trajectory following. One simple choice for  would have been to use Equation (1) with the newly-defined (time-varying)
+
+$ S£
+
+¡ £$£ ¡§¦p£ ¡ £ (
+
+(
+
+making the helicopter fly in the increasing -direction, so that
+
+¡ ¡ ¡
+
+!
+
+(say), and has its first coordinate
+
+  £
+
+$F   
+
+(
+
+ . But we did not consider this to be a good choice.¡ Specifically, consider
+
+ 
+
+$ ¤£
+
+£$£ ¡§¦p£ ¡ £
+
+ starts offas
+
+slowly increased over time. Then, while
+
+the actual helicopter position
+
+sistently behind
+
+to the moving
+
+ S£
+
+$ S£
+
+¡.£$£This ¡ £ ¡§¦p£
+
+ 
+
+will indeed increase, it will also almost certainly lag con-
+
+is because the hovering controller is always trying to "catch up"
+
+   S£
+
+`
+
+Thus,
+
+   e£
+
+may remain large, and the helicopter will
+
+cost, even if it is in fact flying a very accurate trajectory in the
+
+ 
+
+(.
+
+`
+
+continuously incur a
+
+increasing -direction exactly as desired. It would be undesirable to have the helicopter risk trying to fly more aggressively to reduce this fake "error," particularly if it is at the cost of increased error in the other coordinates. So, we changed the reward function to penal-
+
+V( ¡ £$£ ¡¤¦¦£ ¡ £  , but instead deviation from
+
+'(
+
+ize deviation not from ¡ £ ¡¤¦ ¡ 
+
+$ ¥
+
+$ S£ $ ¥
+
+¡¤£ ¡§¦ ¡ 
+
+ , where
+
+ isthe"projection"ofthehelicopter'spositionontothepathoftheidealized,
+
+'(
+
+(
+
+ ,
+
+desired trajectory. (In our example of flying in a straight line, for a helicopter at
+
+we easily see
+
+¡¤£ ¡¤¦ ¡  
+
+¡ ¡
+
+$ ¥
+
+'(
+
+E$ ¢¡  
+
+(.)
+
+$ ¢¡¤£¡¤¦
+
+¡
+
+Thus, we imagine an "external observer" that
+
+looks at the actual helicopter state and estimates which part of the idealized trajectory the helicopter is trying to fly through (taking care not to be confused if a trajectory loops back on itself), and the learning algorithm pays a penalty that is quadratic between the actual position and the "tracked" position on the idealized trajectory. We also needed to make sure the helicopter is rewarded for making progress along the
+
+
+trajectory. To do this, we used the potential-based shaping rewards of [8]. Since, we are already tracking where along the desired trajectory the helicopter is, we chose a potential
+
+(
+
+functionthat increases along the trajectory. Thus, wheneverthe helicopter's
+
+$ 
+
+ ¡¤£  ¡§¦  ¡ 
+
+
+
+makes forward progress along this trajectory, it receives positive reward. (See [8].)
+
+Finally, our modifications have decoupled our definition of the reward function from
+
+¡ £$£ ¡§¦p£ ¡ £ 
+
+and the evolution of
+
+V( ¡¤£$£ ¡§¦p£ ¡ £ 
+
+in time. So, we are now also free
+
+to consider allowing
+
+$ £
+
+¡¤£$£ ¡¤¦¦£ ¡ £
+
+ to evolve in a way that is different from the path of
+
+$ S£
+
+(
+
+$ £
+
+(
+
+the desired trajectory, but nonetheless in way that allows the helicopter to follow the actual, desired trajectory more accurately. (In control theory, there is a related practice of using the inverse dynamics to obtain better tracking behavior.) We considered several alternatives, but the main one used ended up being a modification for flying trajectories that have both a vertical and a horizontal component (such as along the two upper edges of the triangle in III.1). Specifically, it turns out that the (vertical)-response of the helicopter is very fast: ¦ To climb, we need only increase the collective pitch control, which almost immediately
+
+causes the helicopter to start accelerating upwards. In contrast, the
+
+much slower. Thus, if
+
+$ £
+
+ 
+
+licopter will tend to track the -component of the trajectory much more quickly, so that it accelerates into a climb steeper than &¢ , resulting in a "bowed-out" trajectory. Similarly, an angled descent results in a "bowed-in" trajectory. To correct for this, we artificially
+
+(
+
+ 
+
+slowed down the -response, so that when
+
+or descent, the
+
+¡¤£§ $£ ¡ £
+
+¦
+
+$ £
+
+$ £ ¡¤£¥£ ¡¤¦¦£ ¡ £  is movinginto an angledclimb
+
+ portion will evolve normally with time, but the changes to
+
+§
+
+V(
+
+¦ £
+
+¡¤£$£ ¡¤¦¦ ¦£ ¡ £
+
+and responses are £
+
+ movesat &¨¢ upwards as in maneuverIII.1,the he-
+
+ 
+
+V(
+
+will be delayed by seconds, where here is another parameter in our policy class, to be automatically learned by our algorithm. Using this setup and retraining our policy class' parameters for accurate trajectory following, we were able to learn a policy that flies all three of the competition maneuvers fairly accurately. Figure 4 (bottom) shows actual trajectories taken by the helicopter while flying these maneuvers. Videos of the helicopter flying these maneuvers are also available at the URL given at the end of Section 5. References [1] J. Bagnell and J. Schneider. Autonomous helicopter control using reinforcement learning policy search methods. In Int'l Conf. Robotics and Automation. IEEE, 2001.
+
+[2] G. Balas, J. Doyle, K. Glover, A. Packard, and R. Smith. toolbox user's guide, 1995.
+
+S
+
+-analysis and synthesis
+
+[3] W. Cleveland. Robust locally weighted regression and smoothing scatterplots. J. Amer. Stat. Assoc, 74, 1979. [4] Gene F. Franklin, J. David Powell, and Abbas Emani-Naeini. Feedback Control of Dynamic Systems. Addison-Wesley, 1995. [5] Y. Ho and X. Cao. Pertubation analysis of discrete event dynamic systems. Kluwer, 1991. [6] J. Kiefer and J. Wolfowitz. Stochastic estimation of the maximum of a regression function. Annals of Mathematical Statistics, 23:462­466, 1952. [7] J. Leishman. Principles of Helicopter Aerodynamics. Cambridge Univ. Press, 2000. [8] A. Y. Ng, D. Harada, and S. Russell. Policy invariance under reward transformations: Theory and application to reward shaping. In Proc. 16th ICML, pages 278­287,1999. [9] Andrew Y. Ng. Shaping and policy search in reinforcement learning. PhD thesis, EECS, University of California, Berkeley, 2003. [10] Andrew Y. Ng and Michael I. Jordan. PEGASUS: A policy search method for large MDPs and POMDPs. In Proc. 16th Conf. Uncertainty in Artificial Intelligence, 2000. [11] C. Atkeson S. Schaal and A. Moore. Locally weighted learning. AI Review, 11, 1997. [12] Hyunchul Shim. Hierarchical flight control system synthesis for rotorcraft-based unmanned aerial vehicles. PhD thesis, Mech. Engr., U.C. Berkeley, 2000.
+
+

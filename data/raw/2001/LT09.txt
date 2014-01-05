@@ -1,0 +1,618 @@
+Boosting and Maximum Likelihood for
+Exponential Models
+Guy Lebanon
+School of Computer Science
+Carnegie Mellon University
+Pittsburgh, PA 15213
+lebanon@cs.cmu.edu
+John Lafferty
+School of Computer Science
+Carnegie Mellon University
+Pittsburgh, PA 15213
+lafferty@cs.cmu.edu
+Abstract
+We derive an equivalence between AdaBoost and the dual of a convex
+optimization problem, showing that the only difference between mini­
+mizing the exponential loss used by AdaBoost and maximum likelihood
+for exponential models is that the latter requires the model to be normal­
+ized to form a conditional probability distribution over labels. In addi­
+tion to establishing a simple and easily understood connection between
+the two methods, this framework enables us to derive new regularization
+procedures for boosting that directly correspond to penalized maximum
+likelihood. Experiments on UCI datasets support our theoretical analy­
+sis and give additional insight into the relationship between boosting and
+logistic regression.
+1 Introduction
+Several recent papers in statistics and machine learning have been devoted to the relation­
+ship between boosting and more standard statistical procedures such as logistic regression.
+In spite of this activity, an easy­to­understand and clean connection between these differ­
+ent techniques has not emerged. Friedman, Hastie and Tibshirani [7] note the similarity
+between boosting and stepwise logistic regression procedures, and suggest a least­squares
+alternative, but view the loss functions of the two problems as different, leaving the precise
+relationship between boosting and maximum likelihood unresolved. Kivinen and Warmuth
+[8] note that boosting is a form of ``entropy projection,'' and Lafferty [9] suggests the use of
+Bregman distances to approximate the exponential loss. Mason et al. [10] consider boost­
+ing algorithms as functional gradient descent and Duffy and Helmbold [5] study various
+loss functions with respect to the PAC boosting property. More recently, Collins, Schapire
+and Singer [2] show how different Bregman distances precisely account for boosting and
+logistic regression, and use this framework to give the first convergence proof of AdaBoost.
+However, in this work the two methods are viewed as minimizing different loss functions.
+Moreover, the optimization problems are formulated in terms of a reference distribution
+consisting of the zero vector, rather than the empirical distribution of the data, making the
+interpretation of this use of Bregman distances problematic from a statistical point of view.
+In this paper we present a very basic connection between boosting and maximum likelihood
+for exponential models through a simple convex optimization problem. In this setting, it is
+
+seen that the only difference between AdaBoost and maximum likelihood for exponential
+models, in particular logistic regression, is that the latter requires the model to be nor­
+malized to form a probability distribution. The two methods minimize the same extended
+Kullback­Leibler divergence objective function subject to the same feature constraints. Us­
+ing information geometry, we show that projecting the exponential loss model onto the
+simplex of conditional probability distributions gives precisely the maximum likelihood
+exponential model with the specified sufficient statistics. In many cases of practical inter­
+est, the resulting models will be identical; in particular, as the number of features increases
+to fit the training data the two methods will give the same classifiers. We note that through­
+out the paper we view boosting as a procedure for minimizing the exponential loss, using
+either parallel or sequential update algorithms as in [2], rather than as a forward stepwise
+procedure as presented in [7] or [6].
+Given the recent interest in these techniques, it is striking that this connection has gone un­
+observed until now. However in general, there may be many ways of writing the constraints
+for a convex optimization problem, and many different settings of the Lagrange multipli­
+ers (or Kuhn­Tucker vectors) that represent identical solutions. The key to the connection
+we present here lies in the use of a particular non­standard presentation of the constraints.
+When viewed in this way, there is no need for special­purpose Bregman distances to give a
+unified account of boosting and maximum likelihood, as we only make use of the standard
+Kullback­Leibler divergence. But our analysis gives more than a formal framework for
+understanding old algorithms; it also leads to new algorithms for regularizing AdaBoost,
+which is required when the training data is noisy. In particular, we derive a regularization
+procedure for AdaBoost that directly corresponds to penalized maximum likelihood using a
+Gaussian prior. Experiments on UCI data support our theoretical analysis, demonstrate the
+effectiveness of the new regularization method, and give further insight into the relationship
+between boosting and maximum likelihood exponential models.
+2 Notation
+Let X and Y be finite sets. We denote by M = fm : X  Y ! R+ g the set of non­
+negative measures on XY , and by   M the set of conditional probability distributions,
+ = fm 2 M :
+P
+y2Y m(x; y) = 1; for each x 2 Xg. For m 2 M, we will overload
+the notation m(x; y) and m(y j x); the latter will be suggestive of a conditional probability
+distribution, but in general it need not be normalized. Let f j : X Y ! R, j = 1; : : : ; m,
+be given functions, which we will refer to as features. These will correspond to the weak
+learners in boosting, and to the sufficient statistics in an exponential model. Suppose that
+we have data f(x i ; y i )g n
+i=1 with empirical distribution ep (x; y) and marginal e p(x); thus,
+e
+p(x; y) = 1
+n
+P n
+i=1 Æ(x i ; x) Æ(y i ; y): We assume, without loss of generality, that e p(x) > 0
+for all x. Throughout the paper, we assume (for notational convenience) that the training
+data has the following property.
+Consistent Data Assumption. For each x 2 X with e p(x) > 0, there is a unique y 2 Y
+for which e
+p(y j x) > 0. This y will be denoted e y(x).
+For most data sets of interest, each x appears only once, so that the assumption trivially
+holds. However, if x appears more than once, we require that it is labeled consistently. We
+make this assumption mainly to correspond with the conventions used to present boosting
+algorithms; it is not essential to what follows.
+Given f j , we define the exponential model q  (y j x), for  2 R m , by q  (y j x) =
+1
+P
+y e h;f(x;y)i e h;f(x;y)i where h; f(x; y)i =
+P m
+j=1  j f j (x; y). The maximum likeli­
+hood estimation problem is to determine parameters  that maximize the conditional log­
+
+likelihood `() =
+P
+x;y ep (x; y) log q  (y j x) or minimize the log loss `(). The objective
+function to be minimized in the multi­label boosting algorithm AdaBoost.M2 [2] is the ex­
+ponential loss given by E M2 () =
+P n
+i=1
+P
+y 6=y i
+e h;f(x i ;y) f(x i ;y i )i : As has been often
+noted, the log loss and the exponential loss are qualitatively different. The exponential loss
+grows exponentially with increasing negative ``margin,'' while the log loss grows linearly.
+3 Correspondence Between AdaBoost and Maximum Likelihood
+Since we are working with unnormalized models we make use of the extended conditional
+Kullback­Leibler divergence or I­divergence, given by
+D(p; q) def
+=
+X
+x
+e p (x)
+X
+y
+
+p(y j x) log
+p(y j x)
+q(y j x) p(y j x) + q(y j x)
+
+defined on M  M (possibly taking on the value 1). Note that if p( j x) 2  and
+q( j x) 2  then this becomes the more familiar KL divergence for probabilities. Let
+features f j and a fixed default distribution q 0 2 M be given. We define F(ep ; f)  M as
+F(ep ; f) = fp 2 M :
+X
+x
+e p(x)
+X
+y
+p(y j x) (f j (x; y) E ep [f j j x]) = 0; all jg: (1)
+Since e p 2 F , this set is non­empty. Note that under the consistent data assumption, we
+have that E ep [f j x] = f(x; e y(x)). Consider now the following two convex optimization
+problems, labeled P 1 and P 2 .
+(P 1 ) minimize D(p; q 0 )
+subject to p 2 F(ep ; f)
+(P 2 ) minimize D(p; q 0 )
+subject to p 2 F(ep ; f)
+p 2 
+Thus, problem P 2 differs from P 1 only in that the solution is required to be normalized.
+As we'll show, the dual problem P 
+1 corresponds to AdaBoost, and the dual problem P 
+2
+corresponds to maximum likelihood for exponential models.
+This presentation of the constraints is the key to making the correspondence between Ada­
+Boost and maximum likelihood. Note that the constraint
+P
+x e p (x)
+P
+y p(y j x) f(x; y) =
+E ep [f ], which is the usual presentation of the constraints for maximum likelihood (as dual
+to maximum entropy), doesn't make sense for unnormalized models, since the two sides
+of the equation may not be ``on the same scale.'' Note further that attempting to rescale by
+dividing by the mass of p to get
+X
+x
+e p (x)
+P
+y p(y j x) f(x; y)
+P
+y p(y j x)
+= E ep [f ]
+would yield nonlinear constraints.
+We now derive the dual problems formally; the following section gives a precise statement
+of the duality result. To derive the dual problem P 
+1 , we calculate the Lagrangian as
+L 1 (p; ) =
+X
+x
+ep (x)
+X
+y
+p(y j x)
+
+log
+p(y j x)
+q 0 (y j x)
+1 h; f(x; y) E ep [f j x]i
+
+:
+For  2 R m , the connecting equation q 
+def
+= arg min p2M L 1 (p; ) is given by q  (y j x) =
+q 0 (y j x) e h;f(x;y) E ep [f j x]i : Thus, the dual function b h 1 () = L 1 (q  ; ) is given by
+b h 1 () =
+X
+x
+e p (x)
+X
+y
+q 0 (y j x) e h;f(x;y) E ep [f j x]i : (2)
+The dual problem is to determine  ? = arg max 
+b h(). To derive the dual for P 2 , we
+simply add additional Lagrange multipliers  x for the constraints
+P
+y p(y j x) = 1.
+
+3.1 Special cases
+It is now straightforward to derive various boosting and logistic regression problems as
+special cases of the above optimization problems.
+Case 1: AdaBoost.M2. Take q 0 (y j x) = 1. Then the dual problem max 
+b h 1 () is equiva­
+lent to computing  ? = arg min 
+P
+i
+P
+y 6=y i
+e h;f(x i ;y) f(x i ;y i ) which is the optimization
+problem of AdaBoost.M2.
+Case 2: Binary AdaBoost. In addition to the assumptions for the previous case, now as­
+sume that y 2 f1;+1g, and take f j (x; y) = 1
+2 y f j (x). Then the dual problem is given by
+ ? = arg min 
+P
+i e y i h;f(x i )i which is the optimization problem of binary AdaBoost.
+Case 3: Maximum Likelihood for Exponential Models. In this case we take the same setup
+as for AdaBoost.M2 but add the additional normalization constraints:
+P
+y p(y j x i ) =
+1; i = 1; : : : ; n: If these constraints are satisfied, then the other constraints take the
+form
+P
+x e p(x)
+P
+y p(y j x)f j (x; y) =
+P
+x;y e p(x; y)f j (x; y) and the connecting
+equation becomes q  (y j x) = 1
+Zx q 0 (y j x) e h;f(x;y)i were Z x is the normalizing term
+Z x =
+P
+y q 0 (yjx)e h;f(x;y)i , which corresponds to setting the Lagrange multiplier  x
+to the appropriate value. In this case, after a simple calculation the dual problem is seen
+to be b h 2 () =
+P
+x e p (x; y) log q  (y j x) which corresponds to maximum likelihood for a
+conditional exponential model with sufficient statistics f j (x; y).
+Case 4: Logistic Regression. Returning to the case of binary AdaBoost, we see that when
+we add normalization constraints as above, the model is equivalent to binary logistic regres­
+sion, since q  (1 j x) = 1
+1+e h;f(x)i : We note that it is not necessary to scale the features
+by a constant factor here, as in [7]; the correspondence between logistic regression and
+boosting is direct.
+3.2 Duality
+Let Q 1 and Q 2 be defined as the following exponential families:
+Q 1 (q 0 ; f) = fq 2 M : q(y j x) = q 0 (y j x) e h;f(x;y) f(x;~y(x))i ;  2 R m g
+Q 2 (q 0 ; f) = fq 2  : q(y j x) / q 0 (y j x) e h;f(x;y)i ;  2 R m g:
+Thus Q 1 is unnormalized while Q 2 is normalized. We now define the boosting solution
+q ?
+boost and maximum likelihood solution q ?
+ml as
+q ?
+boost = arg min q2Q1
+P
+x
+e p(x)
+P
+y q(y j x) q ?
+ml = arg max q2Q2
+P
+x
+e p(x) log q(~y j x)
+where Q denotes the closure of the set Q  M. The following theorem corresponds to
+Proposition 4 of [3] for the usual KL divergence; in [4] the duality theorem is proved for
+a general class of Bregman distances, including the extended KL divergence as a special
+case. Note that we do not work with divergences such as D( ~ 0; q) as in [2], but rather
+D(ep ; q), which is more natural and interpretable from a statistical point­of­view.
+Theorem. Suppose that D(ep ; q 0 ) < 1. Then q ?
+boost and q ?
+ml exist, are unique, and satisfy
+q ?
+boost = arg min
+p2F
+D(p; q 0 ) = arg min
+q2Q1
+D(ep ; q)
+q ?
+ml = arg min
+p2F\
+D(p; q 0 ) = arg min
+q2Q2
+D(ep ; q ) :
+Moreover, q ?
+ml is computed in terms of q ?
+boost as q ?
+ml = arg min p2F\ D(p; q ?
+boost ).
+
+PSfrag replacements
+F
+q ?
+boost
+q ?
+ml
+F \ 
+Q 1
+PSfrag replacements
+F
+q ?
+boost
+q ?
+ml
+F \ 
+Q 0
+1
+Figure 1: Geometric view of the duality theorem. Minimizing the exponential loss finds the member
+of Q1 that intersects with the feasible set of measures satisfying the moment constraints (left). When
+we impose the additional constraint that each conditional distribution q (y j x) must be normalized,
+we introduce a Lagrange multiplier for each training example x, giving a higher­dimensional family
+Q 0
+1
+. By the duality theorem, projecting the exponential loss solution onto the intersection of the
+feasible set with the simplex gives the maximum likelihood solution.
+This result has a simple geometric interpretation. The unnormalized exponential family
+Q 1 intersects the feasible set of measures F satisfying the constraints (1) at a single point.
+The algorithms presented in [2] determine this point, which is the exponential loss solution
+q ?
+boost = arg min q2Q1 D(ep ; q) (see Figure 1, left).
+On the other hand, maximum conditional likelihood estimation for an exponential model
+with the same features is equivalent to the problem q ?
+ml = arg min q2Q 0
+1
+D(ep ; q) where Q 0
+1
+is the exponential family with additional Lagrange multipliers, one for each normalization
+constraint. The feasible set for this problem is F\. Since F\  F , by the Pythagorean
+equality we have that q ?
+ml = arg min p2F\ D(p; q ?
+boost ) (see Figure 1, right).
+4 Regularization
+Minimizing the exponential loss or the log loss on real data often fails to produce finite
+parameters. Specifically, this happens when for some feature f j
+f j (x; y) f j (x; e
+y(x))  0 for all y and x with e p (x) > 0 (3)
+or f j (x; y) f j (x; e
+y(x))  0 for all y and x with e p (x) > 0:
+This is especially harmful since often the features for which (3) holds are the most impor­
+tant for the purpose of discrimination. Of course, even when (3) does not hold, models
+trained by maximum likelihood or the exponential loss can overfit the training data. A
+standard regularization technique in the case of maximum likelihood employs parameter
+priors in a Bayesian framework. See [11] for non­Bayesian alternatives in the context of
+boosting.
+In terms of convex duality, parameter priors for the dual problem correspond to ``poten­
+tials'' on the constraint values in the primal problem. The case of a Gaussian prior on ,
+for example, corresponds to a quadratic potential on the constraint values in the primal
+problem.
+
+We now consider primal problems over (p; c) where p 2 M and c 2 R m is a parameter
+vector that relaxes the original constraints. Define F(ep ; f; c)  M as
+F(ep ; f; c) =
+(
+p 2 M :
+X
+x
+e p (x)
+X
+y
+p(y j x) (f j (x; y) E ep [f j j x]) = c j
+)
+(4)
+and consider the primal problem P 1;reg given by
+(P 1;reg ) minimize D(p; q 0 ) + U(c)
+subject to p 2 F(ep ; f; c)
+where U : R m ! R is a convex function whose minimum is at 0.
+To derive the dual problem, the Lagrangian is calculated as L(p; c; ) = L(p; ) + U(c)
+and the dual function is h 1;reg () = h 1 () + U  () where U  () is the convex conjugate
+of U . For a quadratic penalty U(c) =
+P
+j
+1
+2  2
+j c 2
+j , we have U  () =
+P
+j
+1
+2  2
+j  2
+j and
+the dual function becomes
+h 1;reg () =
+X
+x
+ep (x)
+X
+y
+q 0 (y j x) e h;f(x;y) f(x;~y(x)i
+X
+j
+ 2
+j
+2 2
+j
+: (5)
+A sequential update rule for (5) incurs the small additional cost of solving a nonlinear
+equation by Newton­Raphson every iteration. See [1] for a discussion of this technique in
+the context of exponential models in statistical language modeling.
+5 Experiments
+We performed experiments on some of the UC Irvine datasets in order to investigate the
+relationship between boosting and maximum likelihood empirically. The weak learner was
+the decision stump FindAttrTest as described in [6], and the training set consisted of
+a randomly chosen 90% of the data. Table 1 shows experiments with regularized boosting.
+Two boosting models are compared. The first model q 1 was trained for 10 features gener­
+ated by FindAttrTest, excluding features satisfying condition (3). Training was carried
+out using the parallel update method described in [2]. The second model, q 2 , was trained
+using the exponential loss with quadratic regularization. The performance was measured
+using the conditional log­likelihood of the (normalized) models over the training and test
+set, denoted ` train and ` test , as well as using the test error rate  test . The table entries were
+averaged by 10­fold cross validation.
+For the weak learner FindAttrTest, only the Iris dataset produced features that satisfy
+(3). On average, 4 out of the 10 features were removed. As the flexibility of the weak
+learner is increased, (3) is expected to hold more often. On this dataset regularization
+improves both the test set log­likelihood and error rate considerably. In datasets where
+q 1 shows significant overfitting, regularization improves both the log­likelihood measure
+and the error rate. In cases of little overfitting (according to the log­likelihood measure),
+regularization only improves the test set log­likelihood at the expense of the training set
+log­likelihood, however without affecting test set error.
+Next we performed a set of experiments to test how much q ?
+boost differs from q ?
+ml , where
+the boosting model is normalized (after training) to form a conditional probability distribu­
+tion. For different experiments, FindAttrTest generated a different number of features
+(10--100), and the training set was selected randomly. The top row in Figure 2 shows for
+the Sonar dataset the relationship between ` train (q ?
+ml ) and ` train (q ?
+boost ) as well as between
+` train (q ?
+ml ) and D train (q ?
+ml ; q ?
+boost ). As the number of features increases so that the training
+
+Unregularized Regularized
+Data ` train (q 1 ) ` test (q 1 )  test (q 1 ) ` train (q 2 ) ` test (q 2 )  test (q 2 )
+Promoters ­0.29 ­0.60 0.28 ­0.32 ­0.50 0.26
+Iris ­0.29 ­1.16 0.21 ­0.10 ­0.20 0.09
+Sonar ­0.22 ­0.58 0.25 ­0.26 ­0.48 0.19
+Glass ­0.82 ­0.90 0.36 ­0.84 ­0.90 0.36
+Ionosphere ­0.18 ­0.36 0.13 ­0.21 ­0.28 0.10
+Hepatitis ­0.28 ­0.42 0.19 ­0.28 ­0.39 0.19
+Breast ­0.12 ­0.14 0.04 ­0.12 ­0.14 0.04
+Pima ­0.48 ­0.53 0.26 ­0.48 ­0.52 0.25
+Table 1: Comparison of unregularized to regularized boosting. For both the regularized and un­
+regularized cases, the first column shows training log­likelihood, the second column shows test log­
+likelihood, and the third column shows test error rate. Regularization reduces error rate in some
+cases while it consistently improves the test set log­likelihood measure on all datasets. All entries
+were averaged using 10­fold cross validation.
+data is more closely fit (` train (q ml ) ! 0), the boosting and maximum likelihood models
+become more similar, as measured by the KL divergence. This result does not hold when
+the model is unidentifiable and the two models diverge in arbitrary directions.
+The bottom row in Figure 2 shows the relationship between the test set log­likelihoods,
+` test (q ?
+ml ) and ` test (q ?
+boost ), together with the test set error rates  test (q ?
+ml ) and  test (q ?
+boost ). In
+these figures the testing set was chosen to be 50% of the total data. In order to indicate the
+number of points at each error rate, each circle was shifted by a small random value to avoid
+points falling on top of each other. While the plots in the bottom row of Figure 2 indicate
+that ` train (q ?
+ml ) > ` train (q ?
+boost ), as expected, on the test data the linear trend is reversed,
+so that ` test (q ?
+ml ) < ` test (q ?
+boost ). Identical experiments on Hepatitis, Glass and Promoters
+resulted in similar results and are omitted due to lack of space.
+The duality result suggests a possible explanation for the higher performance of boosting
+with respect to ` test . The boosting model is less constrained due to the lack of normalization
+constraints, and therefore has a smaller I­divergence to the uniform model. This may be
+interpreted as a higher extended entropy, or less concentrated conditional model.
+However, as `(q ?
+ml ) ! 0, the two models come to agree (up to identifiability). It is easy to
+show that for any exponential model q  2 Q 2 ; D train (q ?
+ml ; q  ) = `(q ?
+ml ) `(q  ): By taking
+q  = q ?
+boost it is seen that as the difference between `(q ?
+ml ) and `(q ?
+boost ) gets smaller, the
+divergence between the two models also gets smaller. The empirical results are consistent
+with the theoretical analysis. As the number of features is increased so that the training
+data is fit more closely, the model matches the empirical distribution e p and the normalizing
+term Z  (x) becomes a constant. In this case, normalizing the boosting model q ?
+boost does
+not violate the constraints, and results in the maximum likelihood model.
+Acknowledgments
+We thank Michael Collins, Michael Jordan, Andrew Ng, Fernando Pereira, Rob Schapire,
+and Yair Weiss for helpful comments on an early version of this paper. Part of this work was
+carried out while the second author was visiting the Department of Statistics, University of
+California at Berkeley.
+
+-0.3 -0.25 -0.2 -0.15 -0.1 -0.05
+-0.3
+-0.25
+-0.2
+-0.15
+-0.1
+-0.05
+0
+PSfrag replacements
+` train (q ?
+ml )
+`
+train
+(q
+?
+boost
+)
+-0.25 -0.2 -0.15 -0.1 -0.05
+0
+0.005
+0.01
+0.015
+0.02
+0.025
+0.03
+0.035
+0.04
+0.045
+PSfrag replacements
+` train (q ?
+ml )
+D
+train
+(q
+? ml
+;
+q
+?
+boost
+)
+-25 -20 -15 -10 -5
+-25
+-20
+-15
+-10
+-5
+PSfrag replacements
+` test (q ?
+ml )
+`
+test
+(q
+?
+boost
+)
+0.1 0.15 0.2 0.25 0.3 0.35 0.4
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+PSfrag replacements
+ test (q ?
+ml )
+
+test
+(q
+?
+boost
+)
+Figure 2: Comparison of AdaBoost and maximum likelihood for Sonar dataset. The top row com­
+pares ` train (q
+?
+ml ) to ` train (q
+?
+boost ) (left) and ` train (q
+?
+ml ) to D train (q
+?
+ml ; q ?
+boost ) (right). The bottom row
+shows the relationship between ` test (q
+?
+ml ) and ` test (q
+?
+boost ) (left) and  test (q
+?
+ml ) and  test (q
+?
+boost ) (right).
+The experimental results for other UCI datasets were very similar.
+References
+[1] S. Chen and R. Rosenfeld. A survey of smoothing techniques for ME models. IEEE Transac­
+tions on Speech and Audio Processing, 8(1), 2000.
+[2] M. Collins, R. E. Schapire, and Y. Singer. Logistic regression, AdaBoost and Bregman dis­
+tances. Machine Learning, to appear.
+[3] S. Della Pietra, V. Della Pietra, and J. Lafferty. Inducing features of random fields. IEEE
+Transactions on Pattern Analysis and Machine Intelligence, 19(4), 1997.
+[4] S. Della Pietra, V. Della Pietra, and J. Lafferty. Duality and auxiliary functions for Bregman
+distances. Technical Report CMU­CS­01­109, Carnegie Mellon University, 2001.
+[5] N. Duffy and D. Helmbold. Potential boosters? In Neural Information Processing Systems,
+2000.
+[6] Y. Freund and R. E. Schapire. Experiments with a new boosting algorithm. In International
+Conference on Machine Learning, 1996.
+[7] J. Friedman, T. Hastie, and R. Tibshirani. Additive logistic regression: A statistical view of
+boosting. The Annals of Statistics, 28(2), 2000.
+[8] J. Kivinen and M. K. Warmuth. Boosting as entropy projection. In Computational Learning
+Theory, 1999.
+[9] J. Lafferty. Additive models, boosting, and inference for generalized divergences. In Computa­
+tional Learning Theory, 1999.
+[10] L. Mason, J. Baxter, P. Bartlett, and M. Frean. Functional gradient techniques for combining
+hypotheses. In A. Smola, P. Bartlett, B. Sch˜olkopf, and D. Schuurmans, editors, Advances in
+Large Margin Classifiers, 1999.
+[11] G. R˜atsch, T. Onoda, and K.­R. M˜uller. Soft margins for AdaBoost. Machine Learning, 2001.
+

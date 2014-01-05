@@ -1,0 +1,1186 @@
+Adapting Codes and Embeddings for Polychotomies
+
+ 
+
+Gunnar Ratsch, Alexander J. Smola ¨ RSISE, CSL, Machine Learning Group The Australian National University Canberra, 0200 ACT, Australia Gunnar.Raetsch, Alex.Smola @anu.edu.au
+
+¡
+
+Sebastian Mika Fraunhofer FIRST Kekulestr. 7 12489 Berlin, Germany mika@first.fhg.de
+
+Abstract In this paper we consider formulations of multi-class problems based on a generalized notion of a margin and using output coding. This includes, but is not restricted to, standard multi-class SVM formulations. Differently from many previous approaches we learn the code as well as the embedding function. We illustrate how this can lead to a formulation that allows for solving a wider range of problems with for instance many classes or even "missing classes". To keep our optimization problems tractable we propose an algorithm capable of solving them using twoclass classifiers, similar in spirit to Boosting. 1 Introduction The theory of pattern recognition is primarily concerned with the case of binary classification, i.e. of assigning examples to one of two categories, such that the expected number of misassignments is minimal. Whilst this scenario is rather well understood, theoretically as well as empirically, it is not directly applicable to many practically relevant scenarios, the most prominent being the case of more than two possible outcomes. Several learning techniques naturally generalize to an arbitrary number of classes, such as density estimation, or logistic regression. However, when comparing the reported performance of these systems with the de-facto standard of using two-class techniques in combination with simple, fixed output codes to solve multi-class problems, they often lack in terms of performance, ease of optimization, and/or run-time behavior. On the other hand, many methods have been proposed to apply binary classifiers to multiclass problems, such as Error Correcting Output Codes (ECOC) [6, 1], Pairwise Coupling [9], or by simply reducing the problem of discriminating classes to "one vs. the rest" dichotomies. Unfortunately the optimality of such methods is not always clear (e.g., how to choose the code, how to combine predictions, scalability to many classes). Finally, there are other problems similar to multi-class classification which can not be solved satisfactory by just combining simpler variants of other algorithms: multi-label problems, where each instance should be assigned to a subset of possible categories, and ranking problems, where each instance should be assigned a rank for all or a subset of possible outcomes. These problems can, in reverse order of their appearance, be understood as more and more refined variants of a multi-variate regression, i.e. two-class multi-class multi-label ranking multi-variate regression Which framework and which algorithm in there one ever chooses, it is usually possible to make out a single scheme common to all these: There is an encoding step in which
+
+¢ ¢
+
+£ £ £ £
+
+
+the input data are embedded into some "code space" and in this space there is a code book which allows to assign one or several labels or ranks respectively by measuring the similarity between mapped samples and the code book entries. However, most previous work is either focused on finding a good embedding given a fixed code or just optimizing the code, given a fixed embedding (cf. Section 2.3). The aim of this work is to propose (i) a multi-class formulation which optimizes the code and the embedding of the training sample into the code space, and (ii) to develop a general ranking technique which as well specializes to specific multi-class, multi-label and ranking problems as it allows to solve more general problems. As an example of the latter consider the following model problem: In chemistry people are interested in mapping sequences to structures. It is not yet known if there is an one-to-one correspondence and hence the problem is to find for each sequence the best matching structures. However, there are only say a thousand sequences the chemists have good knowledge about. They are assigned, with a certain rank, to a subset of say a thousand different structures. One could try to cast this as a standard multi-class problem by assigning each training sequence to the structure ranked highest. But then, there will be classes to which only very few or no sequences are assigned and one can obviously hardly learn using traditional techniques. The machine we propose is (at least in principle) able to solve problems like this by reflecting relations between classes in the way the code book is constructed and at the same time trying to find an embedding of the data space into the code space that allows for a good discrimination. The remainder of this paper is organized as follows: In Section 2 we introduce some basic notions of large margin, output coding and multi-class classification. Then we discuss the approaches of [4] and [21] and propose to learn the code book. In Section 3 we propose a rather general idea to solve resulting multi-class problems using two-class classifiers. Section 4 presents some preliminary experiments before we conclude. 2 Large Margin Multi-Class Classification
+
+Denote by
+
+ 
+
+the sample space (not necessarily a metric space), by
+
+¡
+
+labels or ranks (e.g.
+
+of classes, or
+
+ 
+
+i.e.
+
+¢
+
+!#"$ $('0)
+
+¡¢¡£¢¥¤§¦©¨¨©¨¦
+
+for multi-class problems where
+
+) 
+
+the space of possible denotes the number
+
+
+
+¢
+
+¦&%  213¡ 4 ¤§¦©¨©¨¨¦5 for a ranking problem), and let with . ¡
+
+¢
+
+be a training sample of size ,
+
+Output Coding It is well known (see [6, 1] and references therein) that multi-class probseparately using a two-class technique. This can be understood as assigning to each class
+
+lems can be solved by decomposing a polychotomy into
+
+7 7
+
+a binary string
+
+in an
+
+E1FD
+
+8
+
+'9) !@
+
+ 
+
+dichotomies and solving these
+
+¤A¦©¤ CB
+
+¡
+
+of length
+
+D
+
+which is called a code word. This results
+
+binary code matrix. Now each of the
+
+D
+
+columns of this matrix defines a par¢
+
+6
+
+titioning of ¢ classes into two subsets, forming binary problems for which a classifier is
+
+trained. Evaluation is done by computing the output of all
+
+new bit-string, and then choosing the class such that some distance measure between this string and the corresponding row of the code matrix is minimal, usually the Hamming distance. Ties can be broken by uniformly selecting a winning class, using prior information
+
+or, where possible, using confidence outputs from the basic classifiers.1
+
+Since the codes for each class must be unique, there are
+
+#V Q ' GIH&PQSR ¢UT B
+
+(for
+
+V WYX B
+
+)
+
+7 D
+
+learned functions, forming a
+
+possible code matrices to choose from. One possibility is to choose the codes to be errorcorrecting (ECOC) [6]. Here one uses a code book with e.g. large Hamming distance between the code words, such that one still gets the correct decision even if a few of the classifiers err. However, finding the code that minimizes the training error is NP-complete, even for fixed binary classifiers [4]. Furthermore, errors committed by the binary classifiers are not necessarily independent, significantly reducing the effective number of wrong bits that one can handle [18, 19]. Nonetheless ECOC has proven useful and algorithms for finding a good code (and partly also finding the corresponding classifiers) have been
+
+1 We could also use ternary codes, i.e.
+
+`badcegfAehci
+
+, allowing for "don't care" classes.
+
+
+proposed in e.g. [15, 7, 1, 19, 4]. Noticeably, most practical approaches suggest to drop the requirement of binary codes, and instead propose to use continuous ones. We now show how predictions with small (e.g. Hamming) distance to their appropriated code words can be related to a large margin classifier, beginning with binary classification. 2.1 Large Margins
+
+Dichotomies Here a large margin classifier is defined as a mapping
+
+property that or more specifically with
+
+%¥ 
+
+" ',
+
+$ #" $('§¦©¨ %   #" $ $(' ¢¡ ) ¦&% 
+
+( ¤£ 
+
+with the
+
+¨
+
+, where is
+
+some positive constant [20]. Since such a positive margin may not always be achievable, one typically maximizes a penalized version of the maximum margin, such as
+
+
+
+
+
+ $  $ "!$# &% $ " $ ''¦ @ $ $ ¦)( %   ¤ ¦
+
+ 
+
+32 (
+
+)10
+
+where
+
+¦ 4F¢ ¤§¦©¨¨©¨¦   ¨ and (1)
+
+Here
+
+ 
+
+distance of
+
+" $$'4¦ @)." $
+
+!$# &%
+
+is a regularization term,
+
+% ¢ ¤
+
+@¤  'Infrom
+
+#" $ ' @ g@ '5'is @ #"$ $ ' @we¤ 'could @ $ 5   ¤ H 5  %
+
+a regularization constant and
+
+0
+
+class of functions under consideration. Note that for
+
+also as
+
+for
+
+¢ ¤
+
+the target
+
+¤
+
+and the target
+
+@
+
+H ¤rewrite(and 
+
+¦
+
+denotes the the condition
+
+likewise
+
+other words, we can express the margin as the difference between the
+
+.
+
+6
+
+¤
+
+Polychotomies While this insight by itself is not particularly useful, it paves the way for
+
+an extension of the notion of the margin to multi-class problems: denote by
+
+measure and by
+
+¨ FA "¡DCE£'
+
+corresponding to class . Then we can define the margin
+
+class with respect to
+
+¦ ¦5% ¡¢3GIHQPRTSVU 6 8 ¦ as 7
+
+' d#" '&'@
+
+A
+
+, (
+
+8 B ¢ ¤§¦©¨©¨¨©¦ D
+
+7A
+
+¢
+
+ B
+
+7 'd) 7 )87@9
+
+a distance
+
+is the length of the code) target vectors
+
+of an observation
+
+' A " '5'
+
+¨
+
+"
+
+%
+
+¦ ¦&% ¨ BA " ' 6 8 % ¦
+
+This means that we measure the minimal relative difference in distance between
+
+correct target and any other target
+
+
+
+optimization problem:
+
+
+
+minimize
+
+8 %
+
+'
+
+8 7
+
+'
+
+A
+
+and (2) , the
+
+(cf. [4]). We obtain accordingly the following
+
+¦
+
+$D 
+
+ $ W!$#A
+
+% where 6 8 ¦ 7 ' A " $('5'@ 6 8 % ¦ $(' d" $('5''¦ @ $ A ¤
+
+ (3)
+
+for all
+
+7YX¢%
+
+$ $1¦`( A )a0 and
+
+. For the time being we chose
+
+¤
+
+as a reference margin --
+
+an adaptive means of choosing the reference margin can be implemented using the -trick,
+
+which leads to an easier to control regularization parameter [16]. 2.2 Distance Measures
+
+Several choices of
+
+6
+
+are possible. However, one can show that only
+
+A
+
+and related functions will lead to a convex constraint on : Lemma 1 (Difference of Distance Measures) Denote by
+
+b 6 8b¦ ¢Ech8 c H A ' @dA
+
+H
+
+metric distance measure. Then the only case where
+
+# A ' @
+
+v iH 6 8b¦A
+
+occurs if
+
+A ' '  BA '  A 6 8b¦
+
+A ' @8e A '
+
+r  But B
+
+) 8gf#¦
+
+6 8b¦ A¡ B 1  Ba£ A
+
+is convex in
+
+is symmetric.
+
+A '
+
+, where
+
+a symfor all
+
+8 ¦&8Tf 6 8b¦ ¢`6¥h 8 6&i
+
+A
+
+Proof Convexity in
+
+8
+
+only possible if
+
+v iH 6 8b¦ A
+
+joint terms in and
+
+Aimplies
+
+'
+
+that
+
+is a function of
+
+8qpsr
+
+must be of linear nature in . Symmetry, on the other hand, implies
+
+A6
+
+8wfI¦ %
+
+A '
+
+is positive semidefinite. This is
+
+only. The latter, however, implies that the only
+
+that the term must be linear in , too, which proves the claim. Lemma 1 implies that any distance functions other than the ones described above will lead to optimization problems with potentially many local minima, which is not desirable. How-
+
+6
+
+ever, for quadratic we will get a convex optimization problem (assuming suitable
+
+!$# &%)
+
+8
+
+
+and then there are ways to efficiently solve (3). Finally, re-defining  
+
+7 7
+
+that it is sufficient to consider only
+
+6 8 ¦ 6 8 % ¦
+
+' d" '&' @ A ' d#" '&' A
+
+¢ h8c c H h8c % c H 8 p
+
+6 8b¦ ¢ h8c c H 7A' ' @ A
+
+8 ¡¢ 8 r 7
+
+'
+
+7
+
+'
+
+means
+
+@ ' . V ' d" '@ V ' d#" '
+
+We obtain
+
+A
+
+8 % p ¨
+
+A
+
+(4)
+
+Note, that if the code words have the same length, the difference of the projections of
+
+onto different code words determines the margin. We will indeed later consider a more
+
+7 ' d" '&' ' A #" ', A
+
+convenient case:
+
+6 8 ¦
+
+7 ¢8 p
+
+which will lead to linear constraints only and
+
+A
+
+allows us to use standard optimization packages. However, there are no principal limitations about using the Euclidean distance.
+
+7 '
+
+If we choose
+
+¡
+
+D
+
+8
+
+to be an error-correcting code, such as those in [6, 1], one will often have
+
+. Hence, we use fewer dimensions than we have classes. This means that during
+
+R ¢ 6 8 ¦ ¢ ¤A¦¨©¨¨¦
+
+¢
+
+#" ' 7 ' A " '5', 7
+
+optimization we are trying to find
+
+from an
+
+D
+
+¢
+
+functions ¢ ¢ ,
+
+dimensional subspace. In other words, we choose the subspace and perform
+
+regularization by allowing only a smaller class of functions. By appropriately choosing the subspace one may encode prior knowledge about the problem.
+
+2.3 Discussion and Relation to Previous Approaches
+
+¤£ ¦¥ £ ¨§
+
+Note that for
+
+of solving
+
+¢
+
+  R
+
+¢ ¤ R
+
+we have that (4) is equal
+
+V(  U " ' @ #"8 '&'7
+
+' @  V V ' d#" ' @ V ' d" '
+
+7 8 p
+
+A
+
+8 % p
+
+A
+
+¢
+
+and hence the problem of multi-class classification reverts to the problem
+
+binary classification problems of one vs. the remaining classes. Then our ap-
+
+proach turns out to be very similar to the idea presented in [21] (except for some additional
+
+slack-variables). A different approach was taken in [4]. Here, the function
+
+A
+
+is held fix and the code
+
+8
+
+is
+
+optimized. In their approach, the code is described as a vector in a kernel feature space and one obtains in fact an optimization problem very similar to the one in [21] and (3) (again, the slack-variables are defined slightly different). Another idea which is quite similar to ours was also presented at the conference [5]. The resulting optimization problem turns out to be convex, but with the drawback, that one can either not fully optimize the code vectors or not guarantee that they are well separated. Since these approaches were motivated by different ideas (one optimizing the code, the
+
+7 '
+
+other optimizing the embedding), this shows that the role of the code
+
+ding function
+
+A
+
+is interchangeable if the function or the code, respectively, is fixed.
+
+A
+
+8
+
+and the embed-
+
+Our approach allows arbitrary codes for which a function is learned. This is illustrated in
+
+Figure 1. The position of the code words (="class centers") determine the function . The position of the centers relative to each other may reflect relationships between the classes (e.g. classes "black" & "white" and "white" & "grey" are close).
+
+A
+
+Figure 1: Illustration of embedding idea: The samples are mapped from the input space
+
+into the code space
+
+¡
+
+via the embedding function , such that samples from the same class
+
+A  
+
+are close to their respective code book vector (crosses on the right). The spatial organization of the code book vectors reflects the organization of classes in the space.  
+
+2.4 Learning Code & Embedding
+
+This leaves us with the question of how to determine a "good" code and a suitable . As we can see from (4), for fixed the constraints are linear in and vice versa, yet we have non-
+
+A A 8
+
+
+convex constraints, if both
+
+A
+
+any rotation applied to
+
+8
+
+and
+
+Aandwill 8
+
+are variable. Finding the global optimum is therefore
+
+computationally infeasible when optimizing
+
+A
+
+and simultaneously (furthermore note that
+
+8
+
+leave the margin invariant, which shows the presence
+
+of local minima due to equivalent codes). Instead, we propose the following method: for fixed code
+
+A
+
+quently, for fixed , optimize over , possibly repeating the process. The first step follows [4], i.e. to learn the code for a fixed function. Both steps separately can be performed fairly efficient (since the optimization problems are convex; cf. Lemma 1). This procedure is guaranteed to decrease the over all objective function at every step and converges to a local minimum. We now show how a code maximizing the margin can be found. To avoid a trivial solution (we can may virtually increase the margin by rescaling all one does not need an additional regularization constant in front of this term, if the distance is linear on both arguments. If one prefers sparse codes, one may use the ¡ -norm instead. In summary, we obtain the following convex quadratic program for finding the codes which can be solved using standard optimization techniques:
+
+8 ' by some constant), we add   R h8c c 7 HH to the objective function. It can be shown that
+
+
+
+
+
+'
+
+minimize subject to § ¦¨§© h£¢R¥¤
+
+ 8
+
+8 8
+
+optimize over
+
+A
+
+, and subse-
+
+7 $%    8 p
+
+ $  R 
+
+$('@ '5' Ah8c "7$('c'¦HH @ $
+
+¤  for all 4F¢ ¤§¦©¨¨©¨©¦ and 7 X ¢% ¨ $ (5)
+
+The technique for finding the embedding will be discussed in more detail in Section 3. Initialization To obtain a good initial code, we may either take recourse to readily available tables [17] or we may use a random code, e.g. by generating vectors uniformly
+
+distributed on the
+
+W  ¤ W HP B
+
+exists two such vectors (out of
+
+H
+
+  "!
+
+$#
+
+ @ '
+
+H
+
+D
+
+-dimensional sphere. One can show that the probability that there
+
+VA'
+
+) that have a smaller distance than
+
+
+
+is bounded by ¢
+
+(proof given in the full paper). Hence, with probability greater
+
+V
+
+
+
+than the random code vectors have distances greater than ¢ !&% '(0) from each other.2
+
+3 Column Generation for Finding the Embedding There are several ways to setup and optimize the resulting optimization problem (3). For
+
+instance in [21, 4] the class of functions is the set of
+
+space and the regularizer
+
+!$# &%
+
+hyperplanes in some kernel feature
+
+is the sum of the ¡ -norms of the hyperplane normal vectors.
+
+324
+
+7  
+
+H
+
+¢
+
+In this section we consider a different approach. Denote by4F2G4
+
+¤A¦¨©¨¨¦
+
+98 a class of basis functions and let
+
+¡
+
+the regularizer solving: TVU3WEXY § `FU3WbaS
+
+G HQP¥HQGIHRQ
+
+subject to
+
+!$# &%
+
+4
+
+ ¢
+
+ CB4
+
+to be the ¡ -norm on the expansion coefficients. We are interested in
+
+AA@ ED )¡
+
+1
+
+¢
+
+P
+
+¡C £ 65 ¢
+
+9HI P1 . We choose
+
+B   
+
+D 4
+
+7 
+
+8 8 % p  
+
+' @ $('&'$ #" $(' ¦ @ $
+
+0c
+
+T
+
+  $
+
+¤ ¦ 4F¢ ¤§¦©¨©¨¨¦5 ¦ % ¢X ¢ ¤A¦¨©¨¨©¦
+
+c
+
+$ 7 (6)
+
+¢
+
+To derive a column generation method [12, 2] we need the dual optimization problem, or
+
+more specifically its constraints:
+
+ $ U S    R
+
+d §
+
+§
+
+, and , ¢
+
+e $ $ '@ '5' §" $ 'gf
+
+§
+
+R 8 % 8 p 7 2e4 ¤A¦ ¢ ¤A¦©¨¨©¨¦ E7
+
+e $ ¦d(
+
+R 4 ¢ ¤A¦¨©¨¨¦5 % ¢X ¢ ¤A¦©¨¨©¨¦
+
+£8
+
+$ 7
+
+2 However, also note that this is quite a bit worse than the best packing, which scales with hgi
+
+(7) ) '(0)
+
+rather than h i % . This is due a the union-bound argument in the proof, which requires us to sum '(0) over the probability that all hqprh $sutFv pairs have more than w distance. Fa c
+
+
+and   §
+
+U   !$e
+
+ S R R  4 ¢ ¤A¦¨©¨©¨©¦5
+
+f §
+
+# ,
+
+ . The idea of column generation is to start with a
+
+restricted master problem, namely without the variables
+
+  ¢
+
+(i.e 8
+
+(
+
+). Then one solves the
+
+corresponding dual problem (7) and then finds the hypothesis that corresponds to a violated constraint (and also one primal variable). This hypothesis is included in the optimization problem, one resolves and finds the next violated constraint. If all constraints of the full
+
+problem are satisfied, one has reached optimality. We now construct a hypothesis set 1 from a scalar valued base-class 1  
+
+
+
+where 7 
+
+¢ ¤§¦©¨©¨¨¦
+
+2
+
+is to extend
+
+4d
+
+¢
+
+2   4d ¡C £
+
+8  , which has particularly nice properties for our purposes. The idea ¡
+
+£¢ ¥¤ ¢ ¡C £  ¨§B  B ¦c¡ ©¤c ¢ ¤A¦  ¨
+
+2 2
+
+)
+
+1
+
+§ 1  
+
+by multiplication with vectors
+
+¡
+
+1
+
+¦
+
+¡¡ )) B
+
+:
+
+Since there are infinitely many functions in this set 1 , we have an infinite number of constraints in the dual optimization problem. By using the described column generation technique one can, however, find the solution of this semi-infinite programming problem [13]. We have to identify the constraint in4d (7), which is maximally violated, i.e. one has to find a
+
+¡
+
+2
+
+"partitioning" and a hypothesis
+
+ $ U S    R
+
+§
+
+4d
+
+with maximal
+
+!$e #" $('8 $ ' @ '&' ¡ ¡
+
+2 § R 4d % 8 p ¢ p ¦
+
+4d
+
+¡
+
+7
+
+(8) 4d
+
+for appropriate
+
+for
+
+¢
+
+
+
+. Maximizing (8) with respect to
+
+, one chooses
+
+¡
+
+¢  P 
+
+
+
+4d
+
+';
+
+if
+
+2¢
+
+V
+
+, then
+
+c c ¤ ¢ ¤4d
+
+¡ 2
+
+¢  c  c
+
+is easy for a given
+
+#
+
+¡ H
+
+4d
+
+and for
+
+one chooses the minimizing4d unit vector. However, finding 2
+
+difficult problem, if not all
+
+previously used hypotheses to find the best . As a second step one finds the hypothesis
+
+that maximizes
+
+4d
+
+¡
+
+employs the more sophisticated techniques suggested in [15]. If there is no hypothesis left that corresponds to a violated constraint, the dual optimization problem is optimal.
+
+ 
+
+In this work we are2 mainly interested in the case
+
+problem of finding 4d
+
+ ¢
+
+, since then
+
+¤ bB
+
+¡
+
+¡ ) !
+
+¡
+
+p 
+
+are known in advance (see also [15]). We propose to test all4d . Only if one cannot find a hypothesis that violates a constraint, one 2
+
+2
+
+¡
+
+and
+
+2
+
+¢ ¤:
+
+simultaneously is a
+
+and the
+
+simplifies greatly. Then we can use another learning algorithm that
+
+minimizes or approximately minimizes the training error of a weighted training set (rewrite (8)). This approach has indeed many similarities to Boosting. Following the ideas in [14] one can show that there is a close relationship between our technique using the trivial code and the multi-class boosting algorithms as e.g. proposed in [15]. 4 Extensions and Illustration 4.1 A first Experiment In a preliminary set of experiments we use two benchmark data sets from the UCI benchmark repository: glass and iris. We used our column generation strategy as described in Section 3 in conjunction with the code optimization problem to solve the combined optionly one model parameters ( ). We selected it by -fold cross validation on the training data. The test error is determined by averaging over five splits of training and test data. As base learning algorithm we chose decision trees (C4.5) which we only use as two-class
+
+mization problem to find the code and the embedding. We used  D ¢
+
+. The algorithm has ¢
+
+"
+
+classifier in our column generation algorithm. On the glass data set we obtained an error rate of
+
+( # ¨$&% "(¨'(%
+
+. In [1] an error of
+
+#&)0%
+
+was reported for SVMs using a polynomial kernel. We also computed the test error of multi-
+
+class decision trees and obtained relatively improve existing results by
+
+rate of
+
+V 4 ¨( % ¨5&%
+
+error. Hence, our hybrid algorithm could . On the iris data we could achieve an error
+
+#1'(¨2"0%3"0%¤ " ¨'&%
+
+and could slightly improve the result of decision trees (
+
+' ¨( % " ¨( %
+
+).
+
+
+However, SVMs beat our result with
+
+V
+
+%
+
+error [1]. We conjecture that this is due to the
+
+properties of decision trees which have problems generating smooth boundaries not aligned with coordinate axes. So far, we could only show a proof of concept and more experimental work is necessary. It is in particular interesting to find practical examples, where a non-trivial choice of the code (via optimization) helps simplifying the embedding and finally leads to additional improvements. Such problems often appear in Computer Vision, where there are strong relationships between classes. Preliminary results indicate that one can achieve considerable improvements when adapting codes and embeddings [3].
+
+3
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5 0.5
+
+Figure 2: Toy example for learning missing classes. Shown is the decision boundary and the confidence for assigning a sample to the upper left class. The training set, however, did not contain samples from this class. Instead, we used (9) with the information that each example besides belonging to its own class with confidence two also belongs to the other classes with confidence one iff its distance to the respective center is less than one.
+
+1 1.5 2 2.5 3
+
+4.2 Beyond Multi-Class So far we only considered the case where there is only one class to which an example belongs to. In a more general setting as for example the problem mentioned in the introduction, there can be several classes, which possibly have a ranking. We have the sets
+
+  $¢¡
+
+¢ ¦7 ¦ H
+
+5  
+
+7 7
+
+ 
+
+, which contain all pairs of "relations" between
+
+all pairs of positive and negative classes of
+
+¢
+
+H $¤¡¤§¦©¨©¨¨h¦5contains
+
+¡ ¡
+
+¢
+
+ D 4
+
+the positive classes. The set an example.
+
+!7  '  )£
+
+f  ¦"! S¦&8 ¥§¦©¨minimize
+
+subject to
+
+A " ' where T
+
+) 9 ) e ¦¨
+
+ '% '
+
+e7$#' B
+
+ &%   $  0)  $f   §
+
+$   (
+
+c §
+
+(  
+
+4
+
+$ $ 0c
+
+ ( c ' )   $ ¦7
+
+§
+
+8c c HH
+
+(9)
+
+7 $ '
+
+8 7
+
+ ' @ '5' A #" $ ''¦ @ $
+
+8 p 8 p
+
+H
+
+all
+
+7
+
+for
+
+¤§¦©¨¨©¨¦
+
+T
+
+U¢ ¡C £  B ¢ ¤A¦©¨¨©¨¦H
+
+for all and
+
+32e4
+
+8
+
+57  
+
+A
+
+' @ '5' A #" $ ''¦and¤ @77 $f H
+
+74F¢4F¢H
+
+¤§¦©¨¨©¨¦
+
+T
+
+c ' ) $ ¦7 £
+
+£8 . ¡
+
+7 8
+
+¡¢
+
+  B 4
+
+ §" ' D 4F2e4
+
+and 1
+
+In this formulation one tries to find a code and an embedding , such that for each ex-
+
+ample the output wrt. each class this example has a relation with, reflects the order of this relations (i.e. the examples get ranked appropriately). Furthermore, the program tries to achieve a "large margin" between relevant and irrelevant classes for each sample. Similar formulations can be found in [8] (see also [11]). Optimization of (9) is analogous to the column generation approach discussed in Section 3. We omit details due to constraints on space. A small toy example, again as a limited proof of concept, is given in Figure 2. Connection to Ranking Techniques Ordinal regression through large margins [10] can be seen as an extreme case of (9), where we have as many classes as4 observations, and each multi-dimensional regression. 5 Conclusion We proposed an algorithm to simultaneously optimize output codes and the embedding of the sample into the code book space building upon the notion of large margins. Further-
+
+" ' @ " '$¦ ¨ @ #
+
+ 
+
+#4 # , if "
+
+pair of observations has to satisfy a ranking relation
+
+4
+
+be preferred to
+
+"   
+
+is to
+
+. This formulation can of course also be understood as a special case of
+
+
+more, we have shown, that only quadratic and related distance measures in the code book space will lead to convex constraints and hence convex optimization problems whenever either the code or the embedding is held fixed. This is desirable since at least for these sub-problems there exist fairly efficient techniques to compute these (of course the combined optimization problem of finding the code and the embedding is not convex and has local minima). We proposed a column generation technique for solving the embedding optimization problems. It allows the use of a two-class algorithm, of which there exists many efficient ones, and has connection to boosting. Finally we proposed a technique along the same lines that should be favorable when dealing with many classes or even empty classes. Future work will concentrate on finding more efficient algorithms to solve the optimization problem and on more carefully evaluating their performance. Acknowledgements We thank B. Williamson and A. Torda for interesting discussions. References [1] E.L. Allwein, R.E. Schapire, and Y. Singer. Reducing multiclass to binary: A unifying approach for margin classifiers. Journal of Machine Learning Research, 1:113­141, 2000. [2] K.P. Bennett, A. Demiriz, and J. Shawe-Taylor. A column generation algorithm for boosting. In P. Langley, editor, Proc. 17th ICML, pages 65­72, San Francisco, 2000. Morgan Kaufmann. [3] B. Caputo and G. R¨atsch. Adaptive codes for visual categories. November 2002. Unpublished manuscript. Partial results presented at NIPS'02. [4] K. Crammer and Y. Singer. On the learnability and design of output codes for multiclass problems. In N. Cesa-Bianchi and S. Goldberg, editors, Proc. Colt, pages 35­46, San Francisco, 2000. Morgan Kaufmann. [5] O. Dekel and Y. Singer. Multiclass learning by probabilistic embeddings. In NIPS, vol. 15. MIT Press, 2003. [6] T.G. Dietterich and G. Bakiri. Solving multiclass learning problems via error-correcting output codes. Journal of Aritifical Intelligence Research, 2:263­286, 1995. [7] V. Guruswami and A. Sahai. Multiclass learning, boosing, and error-correcting codes. In Proc. of the twelfth annual conference on Computational learning theory, pages 145­155, New York, USA, 1999. ACM Press. [8] S. Har-Peled, D. Roth, and D. Zimak. Constraint classification: A new approach to multiclass classification and ranking. In NIPS, vol. 15. MIT Press, 2003. [9] T.J. Hastie and R.J. Tibshirani. Classification by pairwise coupling. In M.I. Jordan, M.J. Kearnsa, and S.A. Solla, editors, Advances in Neural Information Processing Systems, vol. 10. MIT Press, 1998. [10] R. Herbrich, T. Graepel, and K. Obermayer. Large margin rank boundaries for ordinal regression. In A. J. Smola, P. L. Bartlett, B. Sch¨olkopf, and D. Schuurmans, editors, Advances in Large Margin Classifiers, pages 115­132, Cambridge, MA, 2000. MIT Press. [11] R. Jin and Z. Ghahramani. Learning with multiple labels. In NIPS, vol. 15. MIT Press, 2003. [12] S. Nash and A. Sofer. Linear and Nonlinear Programming. McGraw-Hill, New York, NY, 1996. [13] G. R¨atsch, A. Demiriz, and K. Bennett. Sparse regression ensembles in infinite and finite hypothesis spaces. Machine Learning, 48(1-3):193­221, 2002. Special Issue on New Methods for Model Selection and Model Combination. [14] G. R¨atsch, M. Warmuth, S. Mika, T. Onoda, S. Lemm, and K.-R. M¨uller. Barrier boosting. In Proc. COLT, pages 170­179, San Francisco, 2000. Morgan Kaufmann. [15] R.E. Schapire. Using output codes to boost multiclass learning problems. In Machine Learning: Proceedings of the 14th International Conference, pages 313­321, 1997. [16] B. Sch¨olkopf, A. Smola, R.C. Williamson, and P.L. Bartlett. New support vector algorithms. Neural Computation, 12:1207 ­ 1245, 2000. [17] N. Sloane. Personal homepage. http://www.research.att.com/~njas/. [18] W. Utschick. Error-Correcting Classification Based on Neural Networks. Shaker, 1998. [19] W. Utschick and W. Weichselberger. Stochastic organization of output codes in multiclass learning problems. Neural Computation, 13(5):1065­1102, 2001. [20] V.N. Vapnik and A.Y. Chervonenkis. A note on one class of perceptrons. Automation and Remote Control, 25, 1964. [21] J. Weston and C. Watkins. Multi-class support vector machines. Technical Report CSD-TR-9804, Royal Holloway, University of London, Egham, 1998.
+
+

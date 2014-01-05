@@ -1,0 +1,478 @@
+The Noisy Euclidean Traveling Salesman
+Problem and Learning
+Mikio L. Braun, Joachim M. Buhmann
+braunm@cs.uni-bonn.de, jb@cs.uni-bonn.de
+Institute for Computer Science, Dept. III,
+University of Bonn
+Romerstrae 164, 53117 Bonn, Germany
+Abstract
+We consider noisy Euclidean traveling salesman problems in the
+plane, which are random combinatorial problems with underlying
+structure. Gibbs sampling is used to compute average trajectories,
+which estimate the underlying structure common to all instances.
+This procedure requires identifying the exact relationship between
+permutations and tours. In a learning setting, the average trajec-
+tory is used as a model to construct solutions to new instances
+sampled from the same source. Experimental results show that the
+average trajectory can in fact estimate the underlying structure and
+that overtting eects occur if the trajectory adapts too closely to
+a single instance.
+1 Introduction
+The approach in combinatorial optimization is traditionally single-instance and
+worst-case-oriented. An algorithm is tested against the worst possible single in-
+stance. In reality, algorithms are often applied to a large number of related instances,
+the average-case performance being the measurement of interest. This constitutes
+a completely dierent problem: given a set of similar instances, construct solutions
+which are good on average. We call this kind of problem multiple-instances and
+average-case-oriented. Since the instances share some information, it might be ex-
+pected that this problem is simpler than solving all instances separately, even for
+NP-hard problems.
+We will study the following example of a multiple-instance average-case problem,
+which is built from the Euclidean travelings salesman problem (TSP) in the plane.
+Consider a salesman who makes weekly trips. At the beginning of each week, the
+salesman has a new set of appointments for the week, for which he has to plan
+the shortest round-trip. The location of the appointments will not be completely
+random, because there are certain areas which have a higher probability of contain-
+ing an appointment, for example cities or business districts within cities. Instead
+of solving the planning problem each week from scratch, a clever salesman will try
+to exploit the underlying density and have a rough trip pre-planned, which he will
+only adapt from week to week.
+An idealizing formulization of this setting is as follows. Fix the number of ap-
+pointments n 2 N. Let x 1 ; : : : ; xn 2 R 2 and  2 R+ . Then, the locations of the
+
+appointments for each week are given as samples from the normally distributed
+random vectors (i 2 f1; : : : ; ng)
+X i  N (x i ;  2 ): (1)
+The random vector (X 1 ; : : : ; Xn ) will be called a scenario, sampled appointment
+locations (sampled) instance. The task consists in nding the permutation  2 Sn
+which minimizes  7! d (n)(1) +
+P n 1
+i=1 d (i)(i+1) , where d ij := kX i X j k 2 , and
+Sn being the set of all bijective functions on the set f1; : : : ; ng. Typical examples
+are depicted in gure 1(a){(c).
+It turns out that the multiple-instance average-case setting is related to learning
+theory, especially to the theory of cost-based unsupervised learning. This relation-
+ship becomes clear if one considers the performance measure of interest. The algo-
+rithm takes a set of instances I 1 ; : : : ; I n as input and outputs a number of solutions
+s 1 ; : : : ; s n . It is then measured by the average performance (1=n)
+P n
+k=1 C(s k ; I k ),
+where C(s; I) denotes the cost of solution s on instance I . We now modify the
+performance measure as follows. Given a nite number of instances I 1 ; : : : ; I n , the
+algorithm has to construct a solution s 0 on a newly sampled instance I 0 . The perfor-
+mance is then measured by the expected cost E(C(s 0 ; I 0 )). This can be interpreted
+as a learning task. The instances I 1 ; : : : ; I n are then the training data, E(C(s 0 ; I 0 ))
+is the analogue of the expected risk or cost, and the set of solutions is identied
+with the hypothesis class in learning theory.
+In this paper, the setting presented in the previous paragraph is studied with the
+further restriction that only one training instance is present. From this training in-
+stance, an average solution is constructed, represented by a closed curve in the plane.
+This average trajectory is supposed to capture the essential structure of the under-
+lying probability density, similar to the centroids in K-means clustering. Then, the
+average trajectory is used as a seed for a simple heuristic which constructs solutions
+on newly drawn instances. The average trajectories are computed by geometrically
+averaging tours which are drawn by a Gibbs sampler at nite temperature. This
+will be discussed in detail in sections 2 and 3. It turns out that the temperature
+acts as a scale or smoothing parameter. A few comments concerning the selection
+of this parameter are given in section 6.
+The technical content of our approach is reminiscent of the \elastic net"-approaches
+of Durbin and Willshaw (see [2], [5]), but diers in many points. It is based on
+a completely dierent algorithmic approach using Gibbs sampling and a general
+technique for averaging tours. Our algorithm has polynomial complexity per Monte
+Carlo step and convergence is guaranteed by the usual bounds for Markov Chain
+Monte Carlo simulation and Gibbs sampling. Furthermore, the goal is not to provide
+a heuristic for computing the best solution, but to extract the relevant statistics of
+the Gibbs distribution at nite temperatures to generate the average trajectory,
+which will be used to compute solutions on future instances.
+2 The Metropolis algorithm
+The Metropolis algorithm is a well-known algorithm which simulates a homogeneous
+Markov chain whose distribution converges to the Gibbs distribution. We assume
+that the reader is familiar with the concepts, we give here only a brief sketch of the
+relevant results and refer to [6], [3] for further details.
+Let M be a nite set and f : M ! R. The Gibbs distribution at temperature T 2 R+
+is given by (m 2 M)
+g T (m) := exp( f(m)=T )
+P
+m 0 2M exp( f(m 0 )=T ) : (2)
+
+The Metropolis algorithm works as follows. We start with any element m 2 M and
+set X 1   m. For i  2, apply a random local update m 0 := (X i ). Then set
+X i+1  
+ m 0 with probability min
+ 1; exp (f(X i ) f(m 0 ))=T
+	
+X i else : (3)
+This scheme converges to the Gibbs distribution if certain conditions on  are met.
+Furthermore, a L 2 -law of large numbers holds: For h : M ! R, 1
+n
+P n
+k=1 h(X k ) !
+P
+m2M g T (m)h(m) in L 2 . For TSP, M = Sn and  is the Lin-Kernighan two-change
+[4], which consists in choosing two indexes i; j at random and reversing the path
+between the appointments i and j. Note that the Lin-Kernighan two-change and
+its generalizations for neighborhood search are powerful heuristic in itself.
+3 Averaging Tours
+Our goal is to compute the average trajectory, which should grasp the underlying
+structure common to all instances, with respect to the Gibbs measure at non-zero
+temperature T . The Metropolis algorithm produces a sequence of permutations
+ 1 ;  2 ; : : : with Pfn = : g ! g T ( : ) for n ! 1. Since permutations cannot be
+added, we cannot simply compute the empirical means of n . Instead, we map
+permutations to their corresponding trajectories.
+Denition 1 (trajectory) The trajectory of  2 Sn given n points x 1 ; : : : ; xn is a
+mapping () : f1; : : : ; ng ! R 2 dened by ()(i) := x (i) . The set of all trajec-
+tories (for all sets of n points) is denoted by Tn (this is the set of all mappings
+ : f1; : : : ; ng ! R 2 ).
+Addition of trajectories and multiplication with scalars can be dened pointwise.
+Then it is technically possible to compute 1
+k
+P n
+k=1 ( k ). Unfortunately, this does
+not yield the desired results, since the relation between permutations and tours is
+not one-to-one. For example, the permutation obtained by starting the tour at a
+dierent city still corresponds to the same tour. We therefore need to dene the
+addition of trajectories in a way which is independent of the choice of permutation
+(and therefore trajectory) to represent the tour. We will study the relationship
+between tours and permutations rst in some detail, since we feel that the concepts
+introduced here might be generally useful for analyzing combinatorial optimization
+problems.
+Denition 2 (tour and length of a tour) Let G = (V; E) be a complete (undirected)
+graph with V = f1; : : : ; ng and E = V
+2
+ . A subset t 2 E is called a tour i jtj = n,
+for every v 2 V , there exist exactly two e 1 ; e 2 2 t such that v 2 e 1 and v 2 e 2 ,
+and (V; t) is connected. Given a symmetric matrix (d ij ) of distances, the length of
+a tour t is dened by `(t) :=
+P
+fi;jg2t d ij .
+The tour corresponding to a permutation  2 Sn is given by
+t() :=
+ f(1); (n)g
+	 [
+n 1
+[
+i=1
+ f(i); (i + 1)g
+	
+: (4)
+If t() = t for a permutation  and a tour t, we say that  represents t. We
+call two permutations ,  0 equivalent, if they represent the same tour and write
+   0 . Let [] denote the equivalence class of  as usual. Note that the length of
+a permutation is fully determined by its equivalence class. Therefore,  describes
+the intrinsic symmetries of the TSP formulated as an optimization problem on Sn ,
+denoted by TSP(Sn ).
+We have to dene the addition  of trajectories such that the sum is independent of
+the representation. This means that for two tours t 1 , t 2 such that t 1 is represented
+
+by  1 ,  0
+1 and t 2 by  2 ,  0
+2 it holds that ( 1 )  ( 2 )  ( 0
+1 )  ( 0
+2 ). The idea
+will be to normalize both summands before addition. We will rst study the exact
+representation symmetry of TSP(Sn ).
+The TSP(Sn ) symmetry group Algebraically speaking, Sn is a group with
+concatenation of functions as multiplication, so we can characterize the equivalence
+classes of  by studying the set of operations on a permutation which map to the
+same equivalent class. We dene a group action of Sn on itself by right translation
+(; g 2 Sn ):
+\  " : Sn  Sn ! Sn ; g   :=g 1 : (5)
+Note that any permutation in Sn can be mapped to another by an appropriate
+group action (namely  !  0 by ( 0 1 )  .), such that the group action of Sn on
+itself su∆ces to study the equivalence classes of .
+For certain g 2 Sn , it holds that t(g  ) = t(). We want to determine the maximal
+set H t
+of elements which keeps t invariant. It even holds that H t
+is a subgroup
+of Sn : The identity is trivially in H t
+. Let g; h be t-invariant, then t((gh 1 )  ) =
+t(g (h 1  )) = t(h 1  ) = t(h (h 1  ) = t(). H t
+will be called the symmetry
+group of TSP(Sn ) and it follows that [] = H t
+  :=fh   j h 2 H t
+g.
+The shift  and reversal % are dened by (i 2 f1; : : : ; ng)
+(i) :=
+ i + 1 i < n;
+1 i = n ; %(i) :=n + 1 i; (6)
+and set H :=h%; i, the group generated by  and %. It holds that (this result is an
+easy consequence of %% = id f1;:::;ng , % =  1 % and  n = id f1;:::;ng )
+H = f k j k 2 f1; : : : ; ngg [ f% k j k 2 f1; : : : ; ngg: (7)
+The fundamental result is
+Theorem 1 Let t be the mapping which sends permutations to tours as dened in
+(4). Then, H t
+= H, where H t
+is the set of all t-invariant permutations and H is
+dened in (7).
+Proof: It is obvious that H  H t
+. Now, let h 1 2 H t
+. We are going to prove
+that t-invariant permutations are completely dened by their values on 1 and 2.
+Let h 2 H t
+and k :=h(1). Then, h(2) = (k) or h(2) =  1 (k), because otherwise,
+h would give rise to a link
+ f(h(1)); (h(2))g
+	 =
+2 t(). For the same reason, h(3)
+must be mapped to  2 (k). Since h must be bijective, h(3) 6= h(1), so that the sign
+of the exponent must be the same as for h(2). In general, h(i) =  (i 1) (k). Now
+note that for i; k 2 f1; : : : ; ng,  i (k) =  k (i) and therefore,
+h =
+  k 1 if h(i) =  i 1 (k)
+% n k if h(i) =  i+1 (k) : 
+Adding trajectories We can now dene equivalence for trajectories. First dene
+a group action of Sn on Tn analogously to (5): the action of h 2 H t
+on  2 Tn is
+given by h   :=  ∆ h 1 . Furthermore, we say that   , if H t
+  = H t
+ .
+Our approach is motivated geometrically. We measure distances between trajectories
+as follows. Let d : R 2  R 2 ! R+ be a metric. Then dene (;  2 Tn )
+d(; ) :=
+Xn
+k=1
+d((k); (k)): (8)
+Before adding two trajectories we will rst choose equivalent representations  0 ,  0
+which minimize d( 0 ;  0 ). Because of the results presented so far, searching through
+
+all equivalent trajectories is computationally tractable. Note that for h 2 H t
+, it
+holds that d(h  ; h  ) = d(; ) as h only reorders the summands. It follows that
+it su∆ces to change the representations only for one argument, since d(h  ; i  ) =
+d(; h 1 i  ). So the time complexity of one addition reduces to 2n computation of
+distances which involve n subtractions each.
+The normalizing action is dened by (;  2 Tn )
+n  := argmin
+n2H t
+d(; n  ): (9)
+Assuming that the normalizing action is unique 1 , we can prove
+Theorem 2 Let ,  be two trajectories, and n  the unique normalizing action as
+dened in (9). Then, the operation
+   :=  + n    (10)
+is representation invariant.
+Proof: Let  0 = g  ,  0 = h   for g; h 2 H t
+. We claim that n  0  0 = gn  h 1 .
+The normalizing action is dened by
+n  0  0 = argmin
+n 0 2H
+d( 0 ; n 0   0 ) = argmin
+n 0 2H t
+d(g  ; n 0 h  ) = argmin
+n 0 2H t
+d(; g 1 n 0 h  );
+(11)
+by inserting g 1 parallelly before both arguments in the last step. Since the nor-
+malizing action is unique, it follows that for the n 0 realizing the minimum it holds
+that g 1 n 0 h = n  and therefore n 0 = n  0  0 = gn  h 1 . Now, consider the sum
+ 0   0 =  0 + n  0  0  0 = g   + (gn  h 1 )h   = g ( + n  )    ; (12)
+which proves the representation independence. 
+The sum of more than two trajectories can be dened by normalizing everything
+with respect to the rst summand, so that empirical sums 1
+k
+L n
+i=1 ( i ) are now
+well-dened.
+4 Inferring Solutions on New Instances
+We transfer a trajectory to a new set of appointments x 1 ; : : : ; xn by computing the
+relaxed tour using the following nite-horizon adaption technique:
+First of all, passing times t i for all appointments are computed. We extend the
+domain of a trajectory  from f1; : : : ; ng to the interval [1; n+ 1) by linear interpo-
+lation. Then we dene t i such that (t i ) is the earliest point with minimal distance
+between appointment x i and the trajectory. The passing times can be calculated
+easily by simple geometric considerations. The permutation which sorts (t i ) n
+i=1 is
+the relaxed solution of  to (x i ).
+In a post-processing step, self-intersections are removed rst. Then, segments of
+length w are optimized by exhaustive search. Let  be the relaxed solution. The
+path from (i) to (i + w + 2) (index addition is modulo n) is replaced by the
+best alternative through the appointments (i + 1); : : : ; (i +w+ 1). Iterate for all
+i 2 f1; : : : ; ng until there is no further improvement. Since this procedure has time
+complexity w!n, it can only be done e∆ciently for small w.
+1 Otherwise, perturb the locations of the appointments by innitesimal changes.
+
+5 Experiments
+For experiments, we used the following set-up: We took the k:k 1 -norm to determine
+the normalizing action. Typical sample-sizes for the Markov chain Monte Carlo
+integration were 1000 with 100 steps in between to decouple consecutive samples.
+Scenarios were modeled after eq. (1), where the x i were chosen to form simple
+geometric shapes.
+Average trajectories for dierent temperatures are plotted in gures 1(a){(c). As
+the temperature decreases, the average trajectory converges to the trajectory of a
+single locally optimal tour. The graphs demonstrate that the temperature T acts
+as a smoothing parameter.
+To estimate the expected risk of an average trajectory, the post-processed relaxed
+(PPR) solutions were averaged over 100 new instances (see gure 1(d){(g)) in order
+to estimate the expected costs. The costs of the best solutions are good approx-
+imations, within 5% of the average minimum as determined by careful simulated
+annealing. An interesting eect occurs: the expected costs have their minimum at
+non-zero temperature. The corresponding trajectories are plotted in gure 1(e),(f).
+They recover the structure of the scenario. In other words, average trajectories com-
+puted at temperatures which are too low, start to overt to noise present only in
+the instance for which they were computed. So computation of the global optimum
+of a noisy combinatorial optimization problem might not be the right strategy, be-
+cause the solutions might not reect the underlying structure. Averaging over many
+suboptimal solutions provides much better statistics.
+6 Selection of the Temperature
+The question remains how to select the optimal temperature. This problem is es-
+sentially the same as determining the correct model complexity in learning theory,
+and therefore no fully satisfying answer is readily available. The problem is nev-
+ertheless suited for the application of the heuristic provided by the empirical risk
+approximation (ERA) framework [1], which will be briey sketched here.
+The main idea of ERA is to coarse-grain the set of hypotheses M by treating
+hypotheses as equivalent which are only slightly dierent. Hypotheses whose ` 1
+mutual distance (dened in a similar fashion as (8)) is smaller than the parameter
+ 2 R+ are considered statistically equivalent. Selecting a subset of solutions such
+that ` 1 -spheres of radius  cover M results in the coarse-grained hypothesis set
+M  . VC-type large deviation bounds depending on the size of the coarse-grained
+hypothesis class can now be derived:
+P
+
+C 2 (m  ) min
+m2M
+C 2 (m) > 2"
+	  2jM  j sup
+m2M
+exp
+ n(" ) 2
+m + c(" )
+
+; (13)
+m depending on the distribution. The bound weighs two competing eects. On
+the one hand, increasing  introduces a systematic bias in the estimation. On the
+other hand, decreasing  increases the cardinality of the hypothesis class. Given a
+condence ∆ > 0, the probability of being worse than " > 0 on a second instance and
+ are linked. So an optimal coarsening  can be determined. ERA then advocates
+to either sample from the -sphere around the empirical minimizer or average over
+these solutions.
+Now it is well known, that the Gibbs sampler is concentrated on solutions whose
+costs are below a certain threshold. Therefore, the ERA is suited for our approach.
+In the relating equation the log cardinality of the approximation set occurs, which
+is usually interpreted as microcanonical entropy. This relates back to statistical
+physics, the starting point of our whole approach. Now interpreting  as energy,
+we can compute the stop temperature from the optimal . Using the well-known
+
+relation from statistical physics dentropy
+d energy = T 1 , we can derive a lower bound on
+the optimal temperature depending on variance estimates of the specic scenario
+given.
+7 Conclusion
+In reality, optimization algorithms are often applied to many similar instances. We
+pointed out that this can be interpreted as a learning problem. The underlying
+structure of similar instances should be extracted and used in order reduce the
+computational complexity for computing solutions to related instances.
+Starting with the noisy Euclidean TSP, the construction of average tours is studied
+in this paper, which involves determining the exact relationship between permuta-
+tion and tours, and identifying the intrinsic symmetries of the TSP. We hope that
+this technique might prove to be useful for other applications in the eld of averag-
+ing over solutions of combinatorial problems. The average trajectories are able to
+capture the underlying structure common to all instances. A heuristic for construct-
+ing solutions on new instances is proposed. An empirical study of these procedures
+is conducted with results satisfying our expectations.
+In terms of learning theory, overtting eects can be observed. This phenomenon
+points at a deep connection between combinatorial optimization problems with noise
+and learning theory, which might be bidirectional. On the one hand, we believe that
+noisy (in contrast to random) combinatorial optimization problems are dominant
+in reality. Robust algorithms could be built by rst estimating the undistorted
+structure and then using this structure as a guideline for constructing solutions
+for single instances. On the other hand, hardness of e∆cient optimization might be
+linked to the inability to extract meaningful structure. These connections, which are
+subject of further studies, link statistical complexity to computational complexity.
+Acknowledgments
+The authors would like to thank Naftali Tishby, Scott Kirkpatrick and Michael
+Clausen for their helpful comments and discussions.
+References
+[1] J. M. Buhmann and M. Held. Model selection in clustering by uniform conver-
+gence bounds. Advances in Neural Information Processing Systems, 12:216{222,
+1999.
+[2] R. Durbin and D. Willshaw. An analogue approach to the travelling salesman
+problem using an elastic net method. Nature, 326:689{691, 1987.
+[3] S. Kirkpatrick, C. D. Gelatt, and M. P. Vecchi. Optimisation by simulated
+annealing. Science, 220:671{680, 1983.
+[4] S. Lin and B. Kernighan. An eective heuristic algorithm for the traveling
+salesman problem. Operations Research, 21:498{516, 1973.
+[5] P.D. Simic. Statistical mechanics as the underlying theory of \elastic" and
+\neural" optimizations. Network, 1:89{103, 1990.
+[6] G. Winkler. Image Analysis, Random elds and Dynamic Monte Carlo Methods,
+volume 27 of Application of Mathematics. Springer, Heidelberg, 1995.
+
+0.300000
+0.150000
+0.010000
+100 circle 0.03 !inversetemp 0.1
+0.200000
+0.075000
+0.000500
+50 multpts2 0.025 10 0.76542 ≠0.74268 0.23139 0.05728 ≠0.01597 0.21479 0.83224 0.58332 ≠0.66957 ≠0.71381 ≠0.38332 0.76413 ≠0.84114 0.25756 ≠0.76287 0.53431 ≠0.76965 ≠0.43692 0.65004 ≠0.49575 muniform2 !inversetemp
+0.1
+0.200000
+0.020000
+50 nedge 5 0.1 muniform2 0 !inversetemp
+0.1
+(a) (b) (c)
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+17
+17.1
+17.2
+17.3
+17.4
+17.5
+17.6
+17.7
+17.8
+17.9
+18
+temperature T
+average
+costs
+of
+PPR
+solution
+sigma 2 = 0.03 Temp: 0.150000
+Length: 5.779571
+100 circle 0.03 muniform2 0 !inversetemp 0.1
+(d) (e)
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+11.25
+11.3
+11.35
+11.4
+11.45
+11.5
+11.55
+11.6
+temperature T
+average
+costs
+of
+PPR
+solution
+sigma = 0.025 Temp: 0.212759
+Length: 6.295844
+50 multpts2 0.025 5 10 0.76542 ≠0.74268 0.23139 0.05728 ≠0.01597 0.21479 0.83224 0.58332 ≠0.66957 ≠0.71381 ≠0.38332 0.76413 ≠0.84114 0.25756 ≠0.76287 0.53431 ≠0.76965 ≠0.43692 0.65004 ≠0.49575 muniform2 0 !inversetemp
+0.1
+(f) (g)
+Figure 1: (a) Average trajectories at dierent temperatures for n = 100 appoint-
+ments on a circle with  2 = 0:03. (b) Average trajectories at dierent temperatures,
+for multiple Gaussian sources, n = 50 and  2 = 0:025. (c) The same for an instance
+with structure on two levels. (d) Average tour length of the post-processed relaxed
+(PPR) solutions for the circle instance plotted in (a). The PPR width was w = 5.
+The average ts to noise in the data if the temperature is too low, leading to over-
+tting phenomena. Note that the average best solution is  16:5. (e) The average
+trajectory with the smallest average length of its PPR solutions in (d). (f) Average
+tour length as in (d). The average best solution is  10:80. (g) Lowest temperature
+trajectory with small average PPR solution length in (f).
+

@@ -1,0 +1,480 @@
+Efficient and Robust Feature Extraction by Maximum Margin Criterion
+
+Haifeng Li Tao Jiang
+
+Department of Computer Science University of California Riverside, CA 92521 {hli,jiang}@cs.ucr.edu
+
+Keshu Zhang Department of Electrical Engineering University of New Orleans New Orleans, LA 70148 kzhang1@uno.edu Abstract
+
+A new feature extraction criterion, maximum margin criterion (MMC), is proposed in this paper. This new criterion is general in the sense that, when combined with a suitable constraint, it can actually give rise to the most popular feature extractor in the literature, linear discriminate analysis (LDA). We derive a new feature extractor based on MMC using a different constraint that does not depend on the nonsingularity of the within-class scatter matrix Sw. Such a dependence is a major drawback of LDA especially when the sample size is small. The kernelized (nonlinear) counterpart of this linear feature extractor is also established in this paper. Our preliminary experimental results on face images demonstrate that the new feature extractors are efficient and stable. 1 Introduction In statistical pattern recognition, the high-dimensionality is a major cause of the practical limitations of many pattern recognition technologies. In the past several decades, many dimensionality reduction techniques have been proposed. Linear discriminant analysis (LDA, also called Fisher's Linear Discriminant) [1] is one of the most popular linear dimensionality reduction method. In many applications, LDA has been proven to be very powerful.
+
+LDA is given by a linear transformation matrix W  RD Fisher criterion (a kind of Rayleigh coefficient)
+
+JF (W) = WT SbW WT SwW
+
+×d
+
+maximizing the so-called
+
+(1) piSi are the between-
+
+where Sb =
+
+c i=1 pi(mi-m)(mi-m)T and Sw
+
+=
+
+c i=1
+
+class scatter matrix and the within-class scatter matrix, respectively; c is the number of classes; mi and pi are the mean vector and a priori probability of class i, respectively; i; D and d are the dimensionalities of the data before and after the transformation, respectively. To maximize (1), the transformation matrix W must be constituted by the largest eigenvectors of S- Sb. The purpose of LDA is to maximize the between-class scatter while simultaneously minimizing the within-class scatter. The two-class LDA has a close connection to optimal linear Bayes classifiers. In the two-class case, the transformation matrix W is just a vector, which is in the same direction as the discriminant in the corresponding optimal Bayes classifier. However, it has been shown that LDA is suboptimal for multi-class problems [2]. A major drawback of LDA is that it cannot be applied when Sw is singular due to the small sample size problem [3]. The small sample size problem arises
+
+m = c i=1 pimi is the overall mean vector; Si is the within-class scatter matrix of class
+
+1 w
+
+
+whenever the number of samples is smaller than the dimensionality of samples. For example, a 64 × 64 image in a face recognition system has 4096 dimensions, which requires more than 4096 training data to ensure that Sw is nonsingular. So, LDA is not a stable method in practice when the training data are scarce. In recent years, many researchers have noticed this problem and tried to overcome the computational difficulty with LDA. Tian et al. [4] used the pseudo-inverse matrix S+ instead
+
+w
+
+of the inverse matrix Sw . For the same purpose, Hong and Yang [5] tried to add a singular value perturbation to Sw to make it nonsingular. Neither of these methods are theoretically sound because Fisher's criterion is not valid when Sw is singular. When Sw is singular, any positive Sb makes Fisher's criterion infinitely large. Thus, these naive attempts to calculate the (pseudo or approximate) inverse of Sw may lead to arbitrary (meaningless) results. Besides, it is also known that an eigenvector could be very sensitive to small perturbation if its corresponding eigenvalue is close to another eigenvalue of the same matrix [6]. In 1992, Liu et al. [7] modified Fisher's criterion by using the total scatter matrix St = Sb + Sw as the denominator instead of Sw. It has been proven that the modified criterion is exactly equivalent to Fisher's criterion. However, when Sw is singular, the modified criterion reaches the maximum value (i.e., 1) no matter what the transformation W is. Such an arbitrary transformation cannot guarantee the maximum class separability unless WT SbW is maximized. Besides, this method need still calculate an inverse matrix, which is time consuming. In 2000, Chen et al. [8] proposed the LDA+PCA method. When Sw is of full rank, the LDA+PCA method just calculates the maximum eigenvectors of S- Sb to
+
+1
+
+form the transformation matrix. Otherwise, a two-stage procedure is employed. First, the data are transformed into the null space V0 of Sw. Second, it tries to maximize the betweenclass scatter in V0, which is accomplished by performing principal component analysis (PCA) on the between-class scatter matrix in V0. Although this method solves the small sample size problem, it is obviously suboptimal because it maximizes the between-class scatter in the null space of Sw instead of the original input space. Besides, the performance of the LDA+PCA method drops significantly when n - c is close to the dimensionality D, where n is the number of samples and c is the number of classes. The reason is that the dimensionality of the null space V0 is too small in this situation, and too much information is lost when we try to extract the discriminant vectors in V0. LDA+PCA also need calculate the rank of Sw, which is an ill-defined operation due to floating-point imprecisions. At last, this method is complicated and slow because too much calculation is involved. Kernel Fisher's Discriminant (KFD) [9] is a well-known nonlinear extension to LDA. The instability problem is more severe for KFD because Sw in the (nonlinear) feature space F is always singular (the rank of Sw is n-c). Similar to [5], KFD simply adds a perturbation µI to Sw. Of course, it has the same stability problem as that in [5] because eigenvectors are sensitive to small perturbation. Although the authors also argued that this perturbation acts as some kind of regularization, i.e., a capacity control in F, the real influence in this setting of regularization is not yet fully understood. Besides, it is hard to determine an optimal µ since there are no theoretical guidelines. In this paper, a simpler, more efficient, and stable method is proposed to calculate the most discriminant vectors based on a new feature extraction criterion, the maximum margin criterion (MMC). Based on MMC, new linear and nonlinear feature extractors are established. It can be shown that MMC represents class separability better than PCA. As a connection to Fisher's criterion, we may also derive LDA from MMC by incorporating some suitable constraint. On the other hand, the new feature extractors derived above (based on MMC) do not suffer from the small sample size problem, which is known to cause serious stability problems for LDA (based on Fisher's criterion). Different from LDA+PCA, the new feature extractors based on MMC maximize the between-class scatter in the input space instead of the null space of Sw. Hence, it has a better overall performance than LDA+PCA, as confirmed by our preliminary experimental results.
+
+t
+
+-1
+
+
+2 Maximum Margin Criterion Suppose that we are given empirical data (x1, y1), . . . , (xn, yn)  X × {C1, . . . , Cc} Here, the domain X  RD is some nonempty set that the patterns xi are taken from. The yi's are called labels or targets. By studying these samples, we want to predict the label y  {C1, . . . , Cc} of some new pattern x  X . In other words, we choose y such that (x, y) is in some sense similar to the training examples. For this purpose, some measure need be employed to assess similarity or dissimilarity. We want to keep such similarity/dissimilarity information as much as possible after the dimensionality reduction, i.e., transforming x from RD to Rd, where d D. If some distance metric is used to measure the dissimilarity, we would hope that a pattern is close to those in the same class but far from those in different classes. So, a good feature extractor should maximize the distances between classes after the transformation. Therefore, we may define the feature extraction criterion as
+
+c c
+
+J = 1 2 pipjd(Ci, Cj) (2)
+
+i=1 j=1
+
+We call (2) the maximum margin criterion (MMC). It is actually the summation of c(c-1) interclass margins. Like the weighted pairwise Fisher's criteria in [2], one may also define a weighted maximum margin criterion. Due to the page limit, we omit the discussion in this paper. One may use the distance between mean vectors as the distance between classes, i.e. d(Ci, Cj) = d(mi, mj) (3) where mi and mj are the mean vectors of the class Ci and the class Cj, respectively. However, (3) is not suitable since it neglects the scatter of classes. Even if the distance between the mean vectors is large, it is not easy to separate two classes that have the large spread and overlap with each other. By considering the scatter of classes, we define the interclass distance (or margin) as d(Ci, Cj) = d(mi, mj) - s(Ci) - s(Cj) (4) where s(Ci) is some measure of the scatter of the class Ci. In statistics, we usually use the generalized variance |Si| or overall variance tr(Si) to measure the scatter of data. In this paper, we use the overall variance tr(Si) because it is easy to analyze. The weakness of the overall variance is that it ignores covariance structure altogether. Note that, by employing the overall/generalized variance, the expression (4) measures the "average margin" between two classes while the minimum margin is used in support vector machines (SVMs) [10]. With (4) and s(Ci) being tr(Si), we may decompose (2) into two parts J = pipj(d(mi, mj) - tr(Si) - tr(Sj))
+
+c c
+
+i=1 j=1 c c
+
+c c
+
+1 2
+
+=
+
+1 2 1 2
+
+pipjd(mi, mj) - 1 2 pipj(tr(Si) + tr(Sj))
+
+i=1 j=1 i=1 j=1
+
+The second part is easily simplified to tr(Sw)
+
+c c c
+
+1 2 pipj(tr(Si) + tr(Sj)) =
+
+c
+
+pitr(Si) = tr piSi = tr(Sw) (5)
+
+i=1 j=1 i=1 i=1
+
+
+By employing the Euclidean distance, we may also simplify the first part to tr(Sb) as follows
+
+c c c c
+
+1 2 pipjd(mi, mj) =
+
+c
+
+1 2 pipj(mi-mj)T (mi-mj)
+
+i=1 j=1
+
+c
+
+i=1 j=1
+
+= 1 2 pipj(mi-m + m - mj)T (mi-m + m - mj)
+
+i=1 j=1
+
+After expanding it, we can simplify the above equation to using the fact pj(m - mj) = 0. So
+
+c
+
+c j=1 c
+
+c
+
+1 2
+
+pipjd(mi, mj) = tr
+
+c i=1 pi(mi-m)T (mi-m) by
+
+pi(mi-m)(mi-m)T = tr(Sb) (6)
+
+i=1 j=1 i=1
+
+Now we obtain Since tr(Sb) measures the overall variance of the class mean vectors, a large tr(Sb) implies that the class mean vectors scatter in a large space. On the other hand, a small tr(Sw) J = tr(Sb - Sw) (7)
+
+implies that every class has a small spread. Thus, a large J indicates that patterns are close to each other if they are from the same class but are far from each other if they are from different classes. Thus, this criterion may represent class separability better than PCA. Recall that PCA tries to maximize the total scatter after a linear transformation. But the data set with a large within-class scatter can also have a large total scatter even when it has a small between-class scatter because St = Sb + Sw. Obviously, such data are not easy to classify. Compared with LDA+PCA, we maximize the between-class scatter in input space rather than the null space of Sw when Sw is singular. So, our method can keep more discriminative information than LDA+PCA does. 3 Linear Feature Extraction When performing dimensionality reduction, we want to find a (linear or nonlinear) mapping from the measurement space M to some feature space F such that J is maximized after the transformation. In this section, we discuss how to find an optimal linear feature extractor. In the next section, we will generalize it to the nonlinear case.
+
+Consider a linear mapping W  RD ×d . We would like to maximize
+
+J(W) = tr(SW -Sw ) b
+
+where SW and SW are the between-class scatter matrix and within-class scatter matrix in
+
+b w
+
+the feature space F. Since W is a linear mapping, it is easy to show SW = WTSbW and
+
+b
+
+SW = WT SwW. So, we have J(W) = tr WT (Sb-Sw)W w
+
+W
+
+(8)
+
+In this formulation, we have the freedom to multiply W with some nonzero constant. Thus, we additionally require that W is constituted by the unit vectors, i.e. W = [w1 w2 . . . wd] and wk wk = 1. This means that we need solve the following
+
+T
+
+constrained optimization max
+
+d
+
+wk (Sb-Sw)wk T
+
+k=1
+
+subject to wk wk - 1 = 0 T k = 1, . . . , d
+
+
+Note that, we may also use other constraints in the above. For example, we may require tr WT SwW = 1 and then maximize tr WT SbW . It is easy to show that maximizing MMC with such a constraint in fact results in LDA. The only difference is that it involves a constrained optimization whereas the traditional LDA solves an unconstrained optimization. The motivation for using the constraint wk wk = 1 is that it allows us to
+
+T
+
+avoid calculating the inverse of Sw and thus the potential small sample size problem. To solve the above optimization problem, we may introduce a Lagrangian L(wk,k) = wk (Sb-Sw)wk - k(wk wk - 1)
+
+d
+
+T T
+
+k=1
+
+with multipliers k. The Lagrangian L has to be maximized with respect to k and wk. The condition that at the stationary point, the derivatives of L with respect to wk must
+
+vanish
+
+L(wk, k) wk = ((Sb-Sw) - kI)wk = 0 k = 1, . . . , d (10)
+
+(9)
+
+leads to which means that the k's are the eigenvalues of Sb-Sw and the wk's are the corresponding eigenvectors. Thus
+
+(Sb-Sw)wk =kwk k = 1, . . . , d (11)
+
+d d d
+
+J(W) = wk (Sb-Sw)wk = T kwk wk = T k (12)
+
+k=1 k=1 k=1
+
+Therefore, J(W) is maximized when W is composed of the first d largest eigenvectors of Sb - Sw. Here, we need not calculate the inverse of Sw, which allows us to avoid the small sample size problem easily. We may also require W to be orthonormal, which may help preserve the shape of the distribution. 4 Nonlinear Feature Extraction with Kernel In this section, we follow the approach of nonlinear SVMs [10] to kernelize the above linear feature extractor. More precisely, we first reformulate the maximum margin criterion in terms of only dot-product (x),(y) of input patterns. Then we replace the dot-product
+
+by some positive definite kernel k(x,y), e.g. Gaussian kernel e- Consider the maximum margin criterion in the feature space F J(W) = wk (S-S)wk
+
+d
+
+T
+
+b w
+
+k=1
+
+where S and S are the between-class scatter matrix and within-class scatter ma-
+
+b w
+
+trix in F, i.e., S =
+
+b
+
+S = i
+
+c i=1
+
+1 ni ni j=1
+
+c i=1
+
+pi(m - m)(m - m)T , S
+
+i i =
+
+ni j=1
+
+c i=1
+
+piS and
+
+i
+
+((xj ) - m)((x(j ) - m)T with m =
+
+i i i
+
+(i) i)
+
+i)
+
+w ni 1
+
+(x(j ), m = i)
+
+x-y 2 .
+
+pim, and x(j i is the pattern of class Ci that has ni samples.
+
+For us, an important fact is that each wk lies in the span of (x1),(x2),... ,(xn).
+
+Therefore, we can find an expansion for wk in the form wk = expansion and the definition of m, we have
+
+i n
+
+wk m = T i (k) l
+
+
+
+ni
+
+n l=1 (k) l (xl). Using this
+
+l=1
+
+1  ni (xl), (x(j ) i)
+
+j=1
+
+ 
+
+
+Replacing the dot-product by some kernel function k(x,y) and defining (mi)l
+
+1 ni ni j=1 k(xl, x(j ), we get wk m = k mi with (k)l = l T T (k)
+
+i
+
+c c
+
+pim = k T i wk m = wk T T
+
+i) . Similarly, we have
+
+T pimi = k m
+
+=
+
+with m =
+
+c i=1 d
+
+pimi. This means wk (m - m) = k (mi - m). and T i
+
+d c
+
+i=1 T
+
+i=1
+
+wk Swk = T b
+
+d c
+
+pi(wk (m - m))(wk (m - m))T T T i i
+
+d
+
+k=1 k=1 i=1
+
+pTi k (mi - m)(mi - m)T k = pi(mi - m)(mi - m)T . T =  Sbk T k
+
+k=1 i=1 c
+
+i=1
+
+k=1
+
+where Sb =
+
+Similarly, one can simplify WTSW. First, we have wk ((x(j ) - m) = k (k(j T T w
+
+mi) with (k(j )l = k(xl, x(j ). Considering wk Swk m))(wk ((x(j ) - m))T , we have T i
+
+T i)
+
+i
+
+i ni
+
+wk Swk = T i  (k(j T k i) - mi)(k(j i) - mi)Tk
+
+i) i) =
+
+i j=1 ni
+
+i) 1 ni
+
+(wk ((x(j ) - T
+
+i) i)
+
+-
+
+=
+
+=
+
+=
+
+1 ni 1 ni 1 ni 1 ni
+
+j=1 ni
+
+ Si(ej - T k 1 ni
+
+j=1 ni
+
+T k
+
+1ni)(ej - 1
+
+ni
+
+1 ni 1 1ni)T STi k 1
+
+T
+
+ Si(ejeTj - 1
+
+ Si(Ini×ni - ni 1ni 1Tni )Si k
+
+k
+
+j=1 T
+
+ej1Tni- ni 1nieTj + n2i 1ni1Tni)Si k
+
+T
+
+where (Si)lj = k(xl,xj ), Ini×ni is the ni ×ni identity matrix, 1ni is the ni-dimensional vector of 1's, and ej is the canonical basis vector of ni dimensions. Thus, we obtain
+
+d d c
+
+T wk Swwk =
+
+d c
+
+
+
+k=1 c i=1
+
+T k
+
+
+
+1 1 T
+
+pi ni k Si(Ini- ni 1ni1Tni)Si k T
+
+d 1 T
+
+(i)
+
+k=1 k=1 i=1
+
+1 = pi ni Si(Ini- ni 1ni1Tni)Si
+
+T
+
+T
+
+ Swk
+
+k
+
+k =
+
+where Sw = space F is
+
+i=1 k=1
+
+pi ni Si(Ini- ni 1ni1Tni)Si . So the maximum criterion in the feature
+
+d
+
+1 1
+
+J(W) =  (Sb - Sw)k T k (13)
+
+k=1
+
+Similar to the observations in Section 3, the above criterion is maximized by the largest eigenvectors of Sb - Sw.
+
+
+0.25 0.2 0.15 0.1 0.05 0 RAW LDA+PCA MMC KMMC
+
+rate
+
+error
+
+24 22 20 18 16 14 12 10 8 training 6 4 2
+
+(second)
+
+time
+
+LDA+PCA MMC KMMC
+
+20 25
+
+30 class no. 35 40 20 25 30 class no. 35 40
+
+(a) The comparison in term of error rate. (b) The comparison in term of training time.
+
+Figure 1: Experimental results obtained using a linear SVM on the original data (RAW), and the data extracted by LDA+PCA, the linear feature extractor based on MMC (MMC) and the nonlinear feature extractor based on MMC (KMMC), which employs the Gaussian kernel with  = 0.03125.
+
+5 Experiments To evaluate the performance of our new methods (both linear and nonlinear feature extractors), we ran both LDA+PCA and our methods on the ORL face dataset [11]. The ORL dataset consists of 10 face images from 40 subjects for a total of 400 images, with some variation in pose, facial expression and details. The resolution of the images is 112 × 92, with 256 gray-levels. First, we resized the images to 28 × 23 to save the experimental time. Then, we reduced the dimensionality of each image set to c - 1, where c is the number of classes. At last we trained and tested a linear SVM on the dimensionality-reduced data. As a control, we also trained and tested a linear SVM on the original data before its dimensionality was reduced. In order to demonstrate the effectiveness and the efficiency of our methods, we conducted a series of experiments and compared our results with those obtained using LDA+PCA. The error rates are shown in Fig.1(a). When trained with 3 samples and tested with 7 other samples for each class, our method is generally better than LDA+PCA. In fact, our method is usually better than LDA+PCA on other numbers of training samples. To save space, we do not show all the results here. Note that our methods can even achieve lower error rates than a linear SVM on the original data (without dimensionality reduction). However, LDA+PCA does not demonstrate such a clear superiority over RAW. Fig. 1(a) also shows that the kernelized (nonlinear) feature extractor based on MMC is significantly better than the linear one, in particular when the number of classes c is large. Besides accuracy, our methods are also much more efficient than LDA+PCA in the sense of the training time required. Fig. 1(b) shows that our linear feature extractor is about 4 times faster than LDA+PCA. The same speedup was observed on other numbers of training samples. Note that our nonlinear feature extractor is also faster than LDA+PCA in this case although it is very time-consuming to calculate the kernel matrix in general. An explanation of the speedup is that the kernel matrix size equals the number of samples, which is pretty small in this case. Furthermore, our method performs much better than LDA+PCA when n - c is close to the dimensionality D. Because the amount of training data was limited, we resized the images to 168 dimensions to create such a situation. The experimental results are shown in Fig. 2. In this situation, the performance of LDA+PCA drops significantly because the null space of Sw has a small dimensionality. When LDA+PCA tries to maximize the between-class scatter in this small null space, it loses a lot of information. On the other hand, our method tries to maximize the between-class scatter in the original input space. From Fig. 2, we can
+
+
+0.45 0.4 0.35 0.3 0.25 error 0.2 0.15 0.1 0.05 LDA+PCA MMC KMMC
+
+rate rate
+
+error
+
+0.7 0.6 0.5 0.4 0.3 0.2 0.1 0 LDA+PCA MMC KMMC
+
+20 25
+
+30 class no. 35 40 20 25 30 class no. 35 40
+
+(a) Each class contains three training samples. (b) Each class contains four training samples.
+
+Figure 2: Comparison between our new methods and LDA+PCA when n - c is close to D.
+
+see that LDA+PCA is ineffective in this situation because it is even worse than a random guess. But our method still produced acceptable results. Thus, the experimental results show that our method is better than LDA+PCA in terms of both accuracy and efficiency. 6 Conclusion In this paper, we proposed both linear and nonlinear feature extractors based on the maximum margin criterion. The new methods do not suffer from the small sample size problem. The experimental results show that it is very efficient, accurate, and robust. Acknowledgments We thank D. Gunopulos, C. Domeniconi, and J. Peng for valuable discussions and comments. This work was partially supported by NSF grants CCR-9988353 and ACI-0085910. References [1] R. A. Fisher. The use of multiple measurements in taxonomic problems. Annual of Eugenics, 7:179­188, 1936. [2] M. Loog, R. P. W. Duin, and R. Haeb-Umbach. Multiclass linear dimension reduction by weighted pairwise fisher criteria. IEEE Transactions on Pattern Analysis and Machine Intelligence, 23(7):762­766, 2001. [3] K. Fukunaga. Introduction to Statistical Pattern Recognition. Academic Press, New York, 2nd edition, 1990. [4] Q. Tian, M. Barbero, Z. Gu, and S. Lee. Image classification by the foley-sammon transform. Optical Engineering, 25(7):834­840, 1986. [5] Z. Hong and J. Yang. Optimal discriminant plane for a small number of samples and design method of classifier on the plane. Pattern Recognition, 24(4):317­324, 1991. [6] G. W. Stewart. Introduction to Matrix Computations. Academic Press, New York, 1973. [7] K. Liu, Y. Cheng, and J. Yang. A generalized optimal set of discriminant vectors. Pattern Recognition, 25(7):731­739, 1992. [8] L. Chen, H. Liao, M .Ko, J. Lin, and G. Yu. A new LDA-based face recognition system which can solve the small sample size problem. Pattern Recognition, 33(10):1713­1726, 2000. [9] S. Mika, G. R¨atsch, J. Weston, B. Sch¨olkopf, and K.-R. M¨uller. Fisher discriminant analysis with kernels. In Y.-H. Hu, J. Larsen, E. Wilson, and S. Douglas, editors, Neural Networks for Signal Processing IX, pages 41­48. IEEE, 1999. [10] V. N. Vapnik. Statistical Learning Theory. John Wiley & Sons, New York, 1998. [11] F. Samaria and A. Harter. Parameterisation of a stochastic model for human face identification. In Proceedings of 2nd IEEE Workshop on Applications of Computer Vision, Sarasota, FL, 1994.
+
+

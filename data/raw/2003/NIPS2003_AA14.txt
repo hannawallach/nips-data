@@ -1,0 +1,636 @@
+Sparse Greedy Minimax Probability Machine Classification
+
+Thomas R. Strohmann Department of Computer Science University of Colorado, Boulder strohman@cs.colorado.edu Gregory Z. Grudic Department of Computer Science University of Colorado, Boulder grudic@cs.colorado.edu Andrei Belitski Department of Computer Science University of Colorado, Boulder Andrei.Belitski@colorado.edu Dennis DeCoste Machine Learning Systems Group NASA Jet Propulsion Laboratory decoste@aig.jpl.nasa.gov
+
+Abstract The Minimax Probability Machine Classification (MPMC) framework [Lanckriet et al., 2002] builds classifiers by minimizing the maximum probability of misclassification, and gives direct estimates of the probabilistic accuracy bound . The only assumptions that MPMC makes is that good estimates of means and covariance matrices of the classes exist. However, as with Support Vector Machines, MPMC is computationally expensive and requires extensive cross validation experiments to choose kernels and kernel parameters that give good performance. In this paper we address the computational cost of MPMC by proposing an algorithm that constructs nonlinear sparse MPMC (SMPMC) models by incrementally adding basis functions (i.e. kernels) one at a time ­ greedily selecting the next one that maximizes the accuracy bound . SMPMC automatically chooses both kernel parameters and feature weights without using computationally expensive cross validation. Therefore the SMPMC algorithm simultaneously addresses the problem of kernel selection and feature selection (i.e. feature weighting), based solely on maximizing the accuracy bound . Experimental results indicate that we can obtain reliable bounds , as well as test set accuracies that are comparable to state of the art classification algorithms.
+
+1 Introduction The goal of a binary classifier is to maximize the probability that unseen test data will be classified correctly. Assuming that the test data is generated from the same probability distribution as the training data, it is possible to derive specific probability bounds for the case that the decision boundary is a hyperplane. The following result due to Marshall and Olkin [1] and extended by Bertsimas and Popescu [2] provides the theoretical basis for
+
+
+assigning probability bounds to hyperplane classifiers: sup Pr{aTz  b} = 2 = infaTt (t - ¯z)T- (t - ¯z) (1) where a  Rd,b are the hyperplane parameters, z is a random vector, and t is an ordinary vector. Lanckriet et al (see [3] and [4]) used the above result to build the Minimax Probability Machine for binary classification (MPMC). From (1) we note that the only required relevant information of the underlying probability distribution for each class is its mean and covariance matrix. No other estimates and/or assumptions are needed, which implies that the obtained bound (which we refer to as ) is essentially distribution free, i.e. it holds for any distribution with a certain mean and covariance matrix. As with other classification algorithms such as Support Vector Machines (SVM) (see [5]), the main disadvantage of current MPMC implementations is that they are computationally expensive (same complexity as SVM), and require extensive cross validation experiments to choose kernels and kernel parameter to give good performance on each data set. The goal of this paper is to propose a kernel based MPMC algorithm that directly addresses these computational issues. Towards this end, we propose a sparse greedy MPMC (SMPMC) algorithm that efficiently builds classifiers, while at the same time maintains the distribution free probability bound of MPM type algorithms. To achieve this goal, we propose to use an iterative algorithm which adds basis functions (i.e. kernels) one by one, to an initially "empty" model. We are considering basis functions that are induced by Mercer kernels, i.e. functions of the following form f(z) = K(z, zi) (where zi is an input vector of the training data). Bases are added in a greedy way: we select the particular zi that maximizes the MPMC objective . Furthermore, SMPMC chooses optimal kernel parameters that maximize this metric (hence the subscript  in K), including automatically weighting input features by j  0 for each kernel added, such that zi = (1z1,2z2,...,dzd) for d dimensional data. The proposed SMPMC algorithm automatically selects kernels and re-weights features (i.e. does feature selection) for each new added basis function, by minimizing the error bound (i.e. maximizing ). Thus the large computational cost of cross validation (typically used by SVM and MPMC) is avoided. The paper is organized as follows: Section 2.1 reviews the standard MPMC; Section 2.2 describes the proposed sparse greedy MPMC algorithm (SMPMC); and Sections 2.3-2.4 show how we can use sparse MPMC to determine optimal kernel parameters. In section 3 we compare our results to the ones described in the original MPMC paper (see [4]), showing the probability bounds and the test set accuracies for different binary classification problems. The conclusion is presented in section 4. Matlab source code for the SMPMC algorithm is available online: http://nago.cs.colorado.edu/strohman/papers.html 2 Classification model In this section we develop a sparse version of the Minimax Probability Machine for binary classification. We show that besides a significant reduction in computational cost, the SMPMC algorithm allows us to do automated kernel and feature selection. 2.1 Minimax Probability Machine for binary classification We will briefly describe the underlying concepts of the MPMC framework as developed by Lanckriet et al. (see [4]). The goal of MPMC is to find a decision boundary H(a,b) = {z|aTz = b} such that the minimum probability H of classifying future data correctly is maximized. If we assume that the two classes are generated from random vectors x and y,
+
+1 b z
+
+E[z]=¯z,Cov[z]=z
+
+1 1 + 2
+
+
+we can express this probability bound just in terms of the means and covariances of these random vectors: H = inf Pr{aTx  b  aTy  b} (2) Note that we do not make any distributional assumptions other than that x, x, y, and x ¯ ¯ are bounded. Exploiting a theorem from Marshall and Olkin [1], it is possible to rewrite (2) as a closed form expression:
+
+x(¯ x),y(¯ y) x, y,
+
+H = 1 1 + m2 (3)
+
+where
+
+m = min a aTxa + aTya s.t. aT(x - y) = 1 ¯ ¯ (4)
+
+The optimal hyperplane parameter a is the vector that minimizes (4). The hyperplane parameter b can then be computed as:
+
+b = aT x - ¯
+
+aT xa m
+
+(5)
+
+A new data point znew is classified according to sign(aT znew - b); if this yields +1, znew is classified as belonging to class x, otherwise it is classified as belonging to class y. 2.2 Sparse MPM classification One of the appealing properties of Support Vector Machines is that their models typically rely only on a small fraction of the training examples, the so called support vectors. The models obtained from the kernelized MPMC, however, use all of the training examples (see [4]), i.e. the decision hyperplane will look like:
+
+Nx Ny
+
+a(i K(xi,z) + x) a(i K(yi,z) = b y) (6)
+
+i=1 i=1
+
+where in general all a(i ,a(i = 0. x) y)
+
+This brings up the question whether one can construct sparse models for the MPMC where most of the coefficients a(i or a(i are zero. In this paper we propose to do this by starting
+
+x) y)
+
+with an initially "empty" model and then adding basis functions one by one. As we will see shortly, this approach is speeding up both learning and evaluation time while it is still maintaining the distribution free probability bound of the MPMC. Before we outline the algorithm we introduce some notation: N = Nx + Ny the total number of training examples
+
+= ( ,...,
+
+= (
+
+1 (k) 1
+
+N
+
+)T  {-1,1}N the labels of the training data
+
+(k) N
+
+)T  RN output of the model after adding the kth basis function (k)
+
+a( b(
+
+k)
+
+,...,
+
+k)
+
+Kb
+
+= the MPMC hyperplane coefficients when adding the kth basis function = the MPMC hyperplane offset when adding the kth basis function = (Kv(v,x1),...,Kv(v,xNx),Kv(v,y1),...,Kv(v,yNy))T basis function evaluated on all training examples (empirical map)
+
+Kxv = (Kv(v,x1),...,Kv(v,xNx))T evaluated only on positive examples Kyv = (Kv(v,y1),...,Kv(v,yNy))T evaluated only on negative examples before applying the sign function). v  Rd is the training vector generating the basis function Kv . We will simply write K( , Kx , Ky for the kth basis function.
+
+Note that (k) is a vector of real numbers (the distances of the training data to the hyperplane
+
+1 k) (k) (k)
+
+1 Note that we use the same symbol K for both the empirical map and the induced function. It
+
+will always be clear from the context what K refers to.
+
+
+For the first basis we are solving the one dimensional MPMC:
+
+m = min a2 a + (1) Kx a a2 a s.t. a(Kx - Ky ) = 1 (1) Ky (1) (1) (7)
+
+where Kx and Kx are the mean and variance of the vector Kx (which is the first basis function evaluated on all positive training examples). Because of the constraint the feasible region contains just one value for a(1): a(1) = 1/(Kx - Ky ) (1)
+
+(1) (1)
+
+a2 a
+
+(1)
+
+Kx
+
+a+ a2
+
+
+
+b(1) = a(1)Kx - The first model then looks like: (1)
+
+= a(1)Kx - (1)
+
+(1) (8)
+
+Kx
+
+(1)
+
++
+
+(1) 2 (1)
+
+a2
+
+(1) (1) a  (1)
+
+Kx Ky
+
+Kx
+
+(1)
+
+Ky
+
+= a(1)K(1) - b(1)
+
+All of the subsequent models use the previous estimation
+
+basis K( k+1)
+
+(k)
+
+(9) as one input and the next
+
+as the other input. We set up the two dimensional classification problem:
+
+x( y(
+
+k+1)
+
+k+1)
+
+= [ = [ (k) x (k) y
+
+(k+1)
+
+,Kx
+
+(k+1)
+
+,Ky
+
+]  RNx× ]  RNy×
+
+2
+
+(10) 2
+
+And solve the following optimization problem:
+
+m = min aTx( k+1)
+
+where x(
+
+a k+1)
+
+a + aTy( k+1) a s.t. aT(x( k+1)
+
+(k+1) ,Kx
+
+- y( k+1) ) = 1
+
+is the 2-dimensional mean vector ( (k) x
+
+)T and where x( k+1)
+
+(11) is the
+
+2 × 2 sample covariance matrix of the vectors
+
+Let a( b(
+
+k+1)
+
+k+1) = (a(1 k+1) ,a(2 k+1)
+
+(k) x (k+1) and Kx
+
+.
+
+)T be the optimal solution of (11). We set:
+
+a(
+
+k+1) a(
+
+k+1)T x( k+1) a( k+1)
+
+k+1)T
+
+a( - b(
+
+k+1)T = a( x( k+1) - (12)
+
+a( = a(1
+
+k+1)T x( k+1) +
+
+and obtain the next model as: (k+1) k+1) (k) + a(2 k+1) K( k+1)
+
+y( a( k+1) k+1)
+
+k+1) (13)
+
+As stated above, one computational advantage of SMPMC is that we typically use only a small number of training examples to obtain our final model (i.e. k << N). Another benefit is that we have to solve only one and two dimensional MPMC problems. As seen in (8) the one dimensional solution is trivial to compute. An analysis of the two dimensional problem shows that it can be reduced to the problem of finding the roots of a fourth order polynomial. Polynomials of degree 4 still have closed form solutions (see e.g. [6]) which can be computed efficiently. In the standard MPMC algorithm (see [4]), however, the solution a for equation (4) has N dimensions and can therefore only be found by expensive numerical methods. It may seem that the values of  = 1/(1 + m2) which we obtain from (11) are not true for the whole model since we are considering only two dimensional problems and not all of the k + 1 dimensions we have added so far through our basis functions. But it turns out that the "local" bound (from the 2D MPMC) is indeed equal to the "global" bound (when considering all k + 1 dimensions). We state this fact more formally in the following theorem:
+
+Theorem 1: Let (k)
+
+= c0 + c1K(1) + ... + ckK( be the sparse MPMC model at the k)
+
+be the solution of the two dimensional
+
+k+1) .
+
+kth iteration (k  1) and let a(1
+
+(k+1)
+
+MPMC: = a(1
+
+k+1)
+
+(k)
+
+k+1)
+
++ a(2
+
+,a(2 k+1)
+
+K(
+
+,b( k+1)
+
+- b( k+1) k+1)
+
+Then the values of  for the two dimensional MPMC and for the k +1 dimensional MPMC are the same. Proof: see Appendix
+
+
+2.3 Selection of bases and Gaussian Kernel widths In our experiments we are using the Gaussian kernel which looks like:
+
+K(u,v) = exp(-||
+
+u - v||22) 22
+
+(14)
+
+where  is the so called kernel width. As mentioned before, one typically has to choose  manually or determine it by cross validation (see [4]). The SMPMC algorithm greedily selects a basis function ­ out of a randomly chosen candidate set ­ to maximize  which is equivalent to minimizing the value of m in (7) and (11). Before we state the optimization problem for the one and two dimensional MPMC we rewrite (14) so that we can get rid of
+
+the denominator:
+
+K(u,v) = exp(-||u - v||22)   0 (15)
+
+The optimization problem we solve for the first iteration is then:
+
+minm() = min a2 a + (1) Kx  a a2 a s.t. a(Kx - Ky ) = 1 (1) Ky (1) (1) (16)
+
+note that ­ even though we did not state it explicitly ­ the statistics 2 ,2 , Kx , and Ky (and consequently the coefficient a) all depend on the kernel parameter . Kx (1) Ky (1)
+
+(1)
+
+The two dimensional problem that has to be solved for all subsequent iterations k  2 turns into the following optimization problem for :
+
+minm() = min aTx(  a
+
+Again, x( k+1) , y( k+1)
+
+, x(
+
+k+1) a+ aTy( k+1) a s.t. aT(x( k+1) -y( k+1) ) = 1 (17)
+
+(1)
+
+k+1)
+
+, and y(
+
+k+1) all depend on the kernel parameter  and from
+
+these four statistics we can compute the minimizer a  R2 analytically. 2.4 Feature selection For doing feature selection with Gaussian kernels one has to replace the uniform kernel width  with a d dimensional vector  of kernel weightings: Note that the optimization problems (16) and (17) for the one respectively two dimensional MPMC are now d dimensional instead of just one dimensional. 3 Experiments In this section we describe the results we obtained for SMPMC on various classification benchmarks. We used the same data sets as Lanckriet et al. in [4] for the standard MPMC. The data sets were randomly divided into 90% training data and 10% test data and the results were averaged over 50 runs for each of the five problems (see table 1). In all the experiments listed in table 1 we used the feature selection algorithm (with the exception of Sonar where width selection was used) and had a candidate set of size 5, i.e. at each iteration the best basis out of 5 randomly chosen candidates was selected. The results we obtained are comparable to the ones reported by Lanckriet et al [4]. Note that for all of the data sets SMPMC uses significantly less basis functions than MPMC does which directly translates into an accordingly smaller evaluation cost. The differences in training cost are shown in table 2. The total training time for standard MPMC takes into account the 50-fold cross validation and 10 candidates for the kernel parameter. We observe that for all of the five data sets the training cost of sparse MPMC is only a fraction of the one for standard MPMC. The two plots in figure 1 show what typical learning curves for sparse MPMC look like. As the number of basis function increases, both the bound  and the test set accuracy start
+
+K(u,v) = exp(- d l=1 l(ul - vl)2) (l  0 l = 1,...,d) (18)
+
+
+Table 1: Bound , Test set accuracy (TSA), number of bases (B) for sparse and standard MPMC
+
+Dataset Twonorm Breast Cancer Ionosphere Pima Diabetes Sonar
+
+Standard MPMC (Lanckriet et al.)
+
+ 91.3 ± 0.1% 89.1 ± 0.1% 89.3 ± 0.2% 32.5 ± 0.2% 99.9 ± 0.1% TSA 95.7 ± 0.5% 96.9 ± 0.3% 91.5 ± 0.7% 76.2 ± 0.6% 87.5 ± 0.9% B 270 614 315 691 187  86.4 ± 0.1% 90.9 ± 0.1% 77.7 ± 0.2% 38.2 ± 0.1% 78.5 ± 0.2%
+
+SMPMC TSA 98.3 ± 0.4% 96.8 ± 0.3% 91.6 ± 0.5% 75.4 ± 0.7% 86.4 ± 1.0%
+
+B 25 50 25 50 80
+
+Table 2: training time (in seconds) for Matlab implementations of SMPMC and MPMC
+
+Dataset Twonorm Breast Cancer Ionosphere Pima Diabetes Sonar # training examples 270 614 315 691 187 SMPMC training time 125.0 188.5 416.3 165.6 35.3
+
+Standard MPMC (Lanckriet et al.)
+
+one optimization 23.9 122.4 28.1 186.5 8.7 total training time 1199.2 6123.2 1404.3 9324.2 435.1
+
+to go up and after a while stabilize. The stabilization point usually occurs earlier when one does full feature selection (a  weight for each input dimension) instead of kernel width selection (one uniform  for all dimensions). We also experimented with different sizes for the candidate set. The plots in figure 2 show what happens for 1, 5, and 10 candidates. The overall behavior is that the test set accuracy as well as the  value converge earlier for larger candidate sets (but note that a larger candidate set also increases the computational cost per iteration). As seen in figure 1, feature selection gives usually better results in terms of the bound  and the test set accuracy. Furthermore, a feature selection algorithm should indicate which features are relevant and which are not. We set up an experiment for the Twonorm data (which has 20 input features) where we added 20 additional noisy features that were not related to the output. The results are shown in figure 3 and demonstrate that the feature selection algorithm obtained from SMPMC is able to distinguish between relevant and irrelevant features. 4 Conclusion & future work This paper introduces a new algorithm (Sparse Minimax Probability Machine Classification - SMPMC) for building sparse classification models that provide a lower bound on the probability of classifying future data correctly. We have shown that the method of iteratively adding basis functions has significant computational advantages over the standard MPMC, while it still maintains the distribution free probability bound . Experimental results indicate that automated selection of kernel parameters, as well as automated feature selection (weighting), both key characteristics of the SMPMC algorithm, result in error rates that are competitive with those obtained by models where these parameters must be tuned by computationally expensive cross validation. Future research on sparse greedy MPMC will focus on establishing a theoretical framework for a stopping criterion, when adding more basis functions (kernels) will not significantly reduce error rates, and may lead to overfitting. Also, experiments have so far focused on using Gaussian kernels as basis functions. From the experience with other kernel algorithms, it is known that other type of kernels (polynomial, tanh) can yield better results for certain applications. Furthermore, our framework is not limited to Mercer kernels, and other types
+
+
+1
+
+Ionosphere 0.9 Sonar
+
+0.8 0.9
+
+0.7 0.8
+
+0.6
+
+0.7
+
+0.5
+
+0.6
+
+0.5
+
+0.4
+
+ for WS TSA for WS  for FS TSA for FS
+
+0.4
+
+0.3
+
+0.2
+
+ for WS TSA for WS  for FS TSA for FS
+
+0.3 0.1
+
+0.2 0 0 5 10 15 20 25 0 10 20 30 40 50 60 70 80
+
+basis functions basis functions
+
+Figure 1: Bound  and Test Set accuracy (TSA) for width selection (WS) and feature selection (FS). Note that the accuracies are all higher than the corresponding bounds.
+
+0.4
+
+0.78
+
+Test set accuracy  bound
+
+0.76 0.35
+
+0.74
+
+0.3
+
+0.72
+
+0.25
+
+0.7
+
+0.2 0.68
+
+0.66
+
+0.64
+
+1 candidate 5 candidates 10 candidates
+
+0.15
+
+0.1
+
+1 candidate 5 candidates 10 candidates
+
+10 12 14
+
+0.62
+
+0.05
+
+0.6 0 2 4
+
+6 8 16 18 20
+
+0 2 4 6 8 10 12 14 16 18 20
+
+basis functions
+
+basis functions
+
+Figure 2: Accuracy and bound for the Diabetes data set using 1,5 or 10 basis candidates per iteration. Again, the  bound is a true lower bound on the test set accuracy.
+
+0.8
+
+0.7
+
+0.6
+
+ i
+
+0.5
+
+0.4
+
+weight
+
+0.3
+
+0.2
+
+0.1 0 5 10 15 20
+
+feature i
+
+Figure 3: Average feature weighting for the Twonorm data set over 50 test runs. The first 20 features are the original inputs, the last 20 features are additional noisy inputs
+
+25 30 35 40
+
+
+of basis functions are also worth investigating. Recent work by Crammer et al. [7] uses boosting to construct a suitable kernel matrix iteratively. An interesting open question is how this approach relates to sparse greedy MPMC. References [1] A. W. Marshall and I. Olkin. Multivariate chebyshev inequalities. Annals of Mathematical Statistics, 31(4):1001­1014, 1960. [2] I. Popescu and D. Bertsimas. Optimal inequalities in probability theory: A convex optimization approach. Technical Report TM62, INSEAD, Dept. Math. O.R., Cambridge, Mass, 2001. [3] G. R. G. Lanckriet, L. E. Ghaoui, C. Bhattacharyya, and M. I. Jordan. Minimax probability machine. In T. G. Dietterich, S. Becker, and Z. Ghahramani, editors, Advances in Neural Information Processing Systems 14, Cambridge, MA, 2002. MIT Press. [4] G. R. G. Lanckriet, L. E. Ghaoui, C. Bhattacharyya, and M. I. Jordan. A robust minimax approach to classification. Journal of Machine Learning Research, 3:555­582, 2002. [5] B. Scholkopf and A. Smola. Learning with Kernels. MIT Press, Cambridge, MA, 2002. ¨ [6] William H. Beyer. CRC Standard Mathemathical Tables, page 12. CRC Press Inc., Boca Raton, FL, 1987. [7] K. Crammer, J. Keshet, and Y. Singer. Kernel design using boosting. In T. G. Dietterich, S. Becker, and Z. Ghahramani, editors, Advances in Neural Information Processing Systems 15, Cambridge, MA, 2003. MIT Press. Appendix: Proof of Theorem 1 We have to show that the values of m are equal for the two dimensional MPMC and the k + 1
+
+
+
+dimensional MPMC. We will just show the equivalence for the first term argumentation will hold for the second term. aTxa, an analogue
+
+For the two dimensional MPMC we have the following for the term under the square root:
+
+2( 
+
+k+1) k+1)
+
+a(2
+
+(k+1)
+
+Kx
+
+k) (k) (k+1)
+
+x Kx
+
+a(1 = [a(1
+
+k+1)
+
+Note that we can rewrite
+
+2(
+
+k) x
+
+k+1)
+
+a(2 k+1) x (k+1) (k)
+
+Kx
+
+x
+
+k+1) (k+1)
+
+a2 
+
+a(1
+
+2
+
+Kx
+
+(k+1) (19)
+
+]22( + 2a(1 k) x
+
+(1)
+
+Kx (k)
+
++ [a(2 k+1)
+
+(k) (k+1)
+
+x
+
+]22
+
+(1) (k)
+
+= Cov(c0 + c1Kx + ... + ckKx ,c0 + c1Kx + ... + ckKx )
+
+= k i=1 k j=1
+
+cicjCov(Kx ,Kx )
+
+(1)
+
+(i)
+
+(j) (k)
+
+(k+1) (20)
+
+ (k) (k+1)
+
+x Kx
+
+= Cov(c0 + c1Kx + ... + ckKx ,Kx
+
+=
+
+k i=1
+
+ciCov(Kx ,Kx (i) (k+1) )
+
+)
+
+by using properties of the sample covariance (linearity, Cov(const,X) = 0). For the k + 1 dimensional MPMC let us first determine the k + 1 coefficients:
+
+(k+1)
+
+= a(1 = a(1
+
+k+1)
+
+k+1)
+
+(c0 + c1Kx + ... + ckKx ) + a(2
+
+c1Kx + ... + a(1 (1) k+1) ckKx + a(2 (k) k+1)
+
+(1) (k) k+1)
+
+Kx
+
+(k+1)
+
+Kx (k+1)
+
+- b( + a(1
+
+k+1)
+
+k+1)
+
+   
+
+c0 - b( k+1)
+
+The term under the square root then looks like:
+
+  
+
+
+
+a(1 ... a(1
+
+k+1) k+1)
+
+a(2
+
+k+1)
+
+c1 ck
+
+T  
+
+2
+
+(1)
+
+ ... 
+
+Kx
+
+ Kx
+
+... Kx ... ... (1) (k) Kx Kx ... (1) (k+1) Kx
+
+(k) (1) (k+1) (1)
+
+Kx
+
+Kx
+
+Kx
+
+... 2
+
+(k)
+
+Kx (k) (k+1) Kx
+
+Kx (k+1) (k)
+
+... Kx Kx
+
+a(1 ... a(1
+
+k+1) k+1)
+
+a(2
+
+k+1)
+
+c1 ck   
+
+(21)
+
+2
+
+Kx (k+1)
+
+Multiplying out (21) and substituting according to the equations in (20) yields exactly expression (19) (which is the aT xa term of the two dimensional MPM). Since this equivalence will hold likewise for the aTya term in m, we have shown that m (and therefore ) is equal for the two dimensional and the k + 1 dimensional MPMC.
+
+

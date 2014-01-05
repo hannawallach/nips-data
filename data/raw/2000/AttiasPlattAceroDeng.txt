@@ -1,0 +1,473 @@
+Speech Denoising and Dereverberation Using
+Probabilistic Models
+Hagai Attias John C. Platt Alex Acero Li Deng
+Microsoft Research
+1 Microsoft Way
+Redmond, WA 98052
+fhagaia,jplatt,alexac,dengg@microsoft.com
+Abstract
+This paper presents a unified probabilistic framework for denoising and
+dereverberation of speech signals. The framework transforms the denois­
+ing and dereverberation problems into Bayes­optimal signal estimation.
+The key idea is to use a strong speech model that is pre­trained on a
+large data set of clean speech. Computational efficiency is achieved by
+using variational EM, working in the frequency domain, and employing
+conjugate priors. The framework covers both single and multiple micro­
+phones. We apply this approach to noisy reverberant speech signals and
+get results substantially better than standard methods.
+1 Introduction
+This paper presents a statistical­model­based algorithm for reconstructing a speech source
+from microphone signals recorded in a stationary noisy reverberant environment. Speech
+enhancement in a realistic environment is a challenging problem, which remains largely
+unsolved in spite of more than three decades of research. Speech enhancement has many
+applications and is particularly useful for robust speech recognition [7] and for telecommu­
+nication.
+The difficulty of speech enhancement depends strongly on environmental conditions. If a
+speaker is close to a microphone, reverberation effects are minimal and traditional methods
+can handle typical moderate noise levels. However, if the speaker is far away from a micro­
+phone, there are more severe distortions, including large amounts of noise and noticeable
+reverberation. Denoising and dereverberation of speech in this condition has proven to be
+a very difficult problem [4].
+Current speech enhancement methods can be placed into two categories: single­
+microphone methods and multiple­microphone methods. A large body of literature exists
+on single­microphone speech enhancement methods. These methods often use a proba­
+bilistic framework with statistical models of a single speech signal corrupted by Gaussian
+noise [6, 8]. These models have not been extended to dereverberation or multiple micro­
+phones.
+Multiple­microphone methods start with microphone array processing, where an array of
+microphones with a known geometry is deployed to make both spatial and temporal mea­
+surements of sounds. A microphone array offers significant advantages compared to single
+microphone methods. Non­adaptive algorithms can denoise a signal reasonably well, as
+
+long as it originates from a limited range of azimuth. These algorithms do not handle re­
+verberation, however. Adaptive algorithms can handle reverberation to some extent [4], but
+existing methods are not derived from a principled probabilistic framework and hence may
+be sub­optimal.
+Work on blind source separation has attempted to remove the need for fixed array geome­
+tries and pre­specified room models. Blind separation attempts the full multi­source, multi­
+microphone case. In practice, the most successful algorithms concentrate on instantaneous
+noise­free mixing with the same number of sources as sensors and with very weak prob­
+abilistic models for the source [5]. Some algorithms for noisy non­square instantaneous
+mixing have been developed [1], as well as algorithms for convolutive square noise­free,
+mixing [9]. However, the full problem including noise and convolution has so far remained
+open.
+In this paper, we present a new method for speech denoising and dereverberation. We use
+the framework of probabilistic models, which allows us to integrate the different aspects
+of the whole problem, including strong speech models, environmental noise and reverber­
+ation, and microphone arrays. This integration is performed in a principled manner facili­
+tating a coherent unified treatment. The framework allows us to produce a Bayes­optimal
+estimation algorithm. Using a strong speech model leads to computational intractability,
+which we overcome using a variational approach. The computational efficiency is further
+enhanced by working in the frequency domain and by employing conjugate priors. The
+resulting algorithm has complexity O(N log N). Results on noisy speech show significant
+improvement over standard methods.
+Due to space limitations, the full derivation and mathematical details for this method are
+provided in the technical report [3].
+Notation and conventions. We work with time series data using a frame­by­frame analysis
+with N­point frames. Thus, all signals and systems, e.g. y i
+n , have a time point subscript
+extending over n = 0; :::; N 1. With the superscript i omitted, yn denotes all microphone
+signals. When n is also omitted, y denotes all signals at all time points. Superscripts may
+become subscripts and vice versa when no confusion arises. The discrete Fourier transform
+(DFT) of xn is ~
+x k =
+P
+n exp( i! k n)xn . We define the primed quantity
+~ a 0
+k = 1
+p
+X
+n=1
+e i!k n an (1)
+for variables an with n = 1; :::; p.
+The Gaussian distribution for a random vector a with mean  and precision matrix V (de­
+fined as the inverse covariance matrix) is denoted N (a j ; V ). The Gamma distribution for
+a non­negative random variable  with  degrees of freedom and inverse scale  is denoted
+G( j ; ) /  =2 1 exp( =2). Their product, the Normal­Gamma distribution
+NG(a;  j ; V; ; ) = N (a j ; V )G( j ; ) ; (2)
+turns out to be particularly useful. Notice that it relates the precision of a to .
+Problem Formulation We consider the case where a single speech source is present and
+M microphones are available. The treatment of the single­microphone case is a special
+case of M = 1, but is not qualitatively different.
+Let xn be the signal emitted by the source at time n, and let y i
+n be the signal received at
+microphone i at the same time. Then
+y i
+n = h i
+n ? xn + u i
+n =
+X
+m
+h i
+m xn m + u i
+n ; (3)
+where h i
+m is the impulse response of the filter (of length K i  N ) operating on the source
+as it propagates toward microphone i, ? is the convolution operator, and u i
+n denotes the
+
+noise recorded at that microphone. Noise may originate from both microphone responses
+and from environmental sources.
+In a given environment, the task is to provide an optimal estimate of the clean speech signal
+x from the noisy microphone signals y i . This requires the estimation of the convolving
+filters h i and characteristics of the noise u i . This estimation is accomplished by Bayesian
+inference on probabilistic models for x and u i .
+2 Probabilistic Signal Models
+We now turn to our model for the speech source. Much of the work on speech denoising in
+the past has usually employed very simple source models: AR or ARMA descriptions [6].
+One exception is [8], which uses an HMM whose observations are Gaussian AR mod­
+els. These simple denoising models incorporate very little information on the structure of
+speech. Such an approach a priori allows any value for the model coefficients, including
+values that are unlikely to occur in a speech signal. Without a strong prior, it is difficult to
+estimate the convolving filters accurately due to identifiability. A source prior is especially
+important in the single microphone case, which estimates N clean samples plus model co­
+efficients from N noisy samples. Thus, the absence of a strong speech model degrades
+reconstruction quality.
+The most detailed statistical speech models available are those employed by state­of­the­
+art speech recognition engines. These systems are generally based on mixture of diagonal
+Gaussian models in the mel­cepstral domain. These models are endowed with temporal
+Markov dynamics and have a very large ( 100000) number of states corresponding to
+individual atoms of speech. However, in the mel­cepstral domain, the noisy reverberant
+speech has a strong non­linear relationship to the clean speech.
+Physical speech production model. In this paper, we work in the linear time/frequency
+domain using a statistical model and take an intermediate approach regarding the model
+size. We model speech production with an AR(p) model:
+xn =
+p
+X
+m=1
+amxn m + vn ; (4)
+where the coefficients am are related to the physical shape of a ``lossless tube'' model of
+the vocal tract.
+To turn this physical model into a probabilistic model, we assume that v n are indepen­
+dent zero­mean Gaussian variables with scalar precision . Each speech frame x =
+(x 0 ; :::; xN 1 ) has its own parameters  = (a 1 ; :::; a p ; ). Given , the joint distribution
+of x is generally a zero­mean Gaussian, p(x j ) = N (x j 0; ), where  is the N  N
+precision matrix. Specifically, the joint distribution is given by the product
+p(x j ) =
+Y
+n
+N (x n j
+X
+m
+amxn m ; ): (5)
+Probabilistic model in the frequency domain. However, rather than employing this prod­
+uct form directly, we work in the frequency domain and use the DFT to write
+p(x j ) / exp(
+
+2N
+N 1
+X
+k=0
+j ~
+a 0
+k j 2 j ~
+x k j 2 ) ; (6)
+where ~ a 0
+k is defined in (1). The precision matrix  is now given by an inverse DFT, nm =
+(=N)
+P
+k e i!k (n m) j ~ a 0
+k j 2 . This matrix belongs to a sub­class of Toeplitz matrices
+called circulant Toeplitz. It follows from (6) that the mean power spectrum of x is related
+to  via S k = hj ~
+x k j 2 i = N=( j ~ a 0
+k j 2 ).
+
+Conjugate priors. To complete our speech model, we must specify a distribution over the
+speech production parameters . We use a S­state mixture model with a Normal­Gamma
+distribution (2) for each component s = 1; :::; S: p( j s) = N (a 1 ; :::; a p j  s ; V s )G( j
+ s ;  s ). This form is chosen by invoking the idea of a conjugate prior, which is defined as
+follows. Given the model p(x j )p( j s), the prior p( j s) is conjugate to p(x j ) iff the
+posterior p( j x; s), computed by Bayes' rule, has the same functional form as the prior.
+This choice has the advantage of being quite general while keeping the clean speech model
+analytically tractable.
+It turns out, as discussed below, that significant computational savings result if we restrict
+the p  p precision matrices V s to have a circulant Toeplitz structure. To do this without
+having to impose an explicit constraint, we reparametrize p( j s) in terms of  s
+n ;  s
+n instead
+of  s
+n ; V s
+nm , and work in the frequency domain:
+p( j s) / exp(
+
+2p
+p 1
+X
+k=0
+j ~
+ s
+k ~ a k ~
+ s
+k j 2 )   s
+2 exp(
+ s
+2
+) : (7)
+Note that we use a p­ rather than N­point DFT. The precisions are now given by the inverse
+DFT V s
+nm = (1=p)
+P
+k e i!k (n m) j ~
+ s
+k j 2 and are manifestly circulant. It is easy to show
+that conjugacy still holds.
+Finally, the mixing fractions are given by p(s) =  s . This completes the specification of
+our clean speech model p(x) in terms of the latent variable model p(x; ; s) = p(x j )p( j
+s)p(s). The model is parametrized by W = ( s
+m ;  s
+m ;  s ;  s ;  s ).
+Speech model training. We pre­train the speech model parameters W using 10000 sen­
+tences of the Wall Street Journal corpus, recorded with a close­talking microphone for 150
+male and female speakers of North American English. We used 16msec overlapping frames
+with N = 256 time points at 16kHz sampling rate. Training was performed using an EM
+algorithm derived specifically for this model [3]. We used S = 256 clusters and p = 12.
+W were initialized by extracting the AR(p) coefficients from each frame using the autocor­
+relation method. These coefficents were converted into cepstral coefficients, and clustered
+into S classes by k­means clustering. We then considered the corresponding hard clusters
+of the AR(p) coefficients, and separately fit a model p( j s) (7) to each. The resulting
+parameters were used as initial values for the full EM algorithm.
+Noise model. In this paper, we use an AR(q) description for the noise recorded by micro­
+phone i, u i
+n =
+P
+m b i
+m u i
+n m + w i
+n . The noise parameters are  i = (b i
+m ;  i ), where  i are
+the precisions of the zero­mean Gaussian excitations w i
+n . In the frequency domain we have
+the joint distribution
+p(u i j  i ) / exp(
+ i
+2N
+N 1
+X
+k=0
+j ~ b 0
+i;k j 2 j ~
+u i
+k j 2 ) : (8)
+As in (6), the parameters  i determine the spectra of the noise. But unlike the speech
+model, the AR(q) noise model is chosen for mathematical convenience rather than for its
+relation to an underlying physical model.
+Noisy speech model. The form (8) now implies that given the clean speech x, the distribu­
+tion of the data y i is
+p(y i j x) / exp(
+ i
+2N
+N 1
+X
+k=0
+j ~ b 0
+i;k j 2 j ~ y i
+k
+~ h i
+k ~
+x k j 2 ) : (9)
+This completes the specification of our noisy speech model p(y) in terms of the joint dis­
+tribution
+Q
+i p(y i j x)p(x j )p( j s)p(s).
+
+3 Variational Speech Enhancement (VSE) Algorithm
+The denoising and dereverberation task is accomplished by estimating the clean speech x,
+which requires estimating the speech parameters , the filter coefficients h i , and the noise
+parameters  i . These tasks can be performed by the EM algorithm. This algorithm receives
+the data y i from an utterance (a long sequence of frames) as input and proceeds iteratively.
+In the E­step, the algorithm computes the sufficient statistics of the clean speech x and
+the production parameters  for each frame. In the M­step, the algorithm uses the suffi­
+cient statistics to update the values of h i and  i , which are assumed unchanged throughout
+the utterance. This assumption limits the current VSE algorithm to stationary noise and
+reverberation. Source reconstruction is performed as a by­product of the E­step.
+Intractability and variational EM. In the clean speech model p(x) above, inference (i.e.
+computing p(s;  j x) for the observed clean speech x) is tractable. However, in the
+noisy case, x is hidden and consequently inference becomes intractable. The posterior
+p(s; ; x j y) includes a quartic term exp(x 2  2 ), originating from the product of two Gaus­
+sian variables, which causes the intractability.
+To overcome this problem, we employ a variational approach [10]. We replace the exact
+posterior distribution over the hidden variables by an approximate one, q(s; ; x j y), and
+select the optimal q by maximizing
+F [q] =
+X
+s
+Z
+dxd q(s; ; x j y) log
+p(s; ; x; y)
+q(s; ; x j y)
+(10)
+w.r.t. q. To achieve tractability, we must restrict the space of possible q. We use the partially
+factorized form
+q = q(s)q( j s)q(x j s) ; (11)
+where the y­dependence of q is omitted. Given y, this distribution defines a mixture model
+for x and a mixture model for , while maintaining correlations between x and  (i.e.,
+q(x; ) 6= q(x)q()). Maximizing F is equivalent to minimizing the KL distance between
+q and the exact conditional p(s; ; x j y) under the restriction (11).
+With no further restriction, the functional form of q falls out of free­form optimization, as
+shown in [2]. For the production parameters, q( j s) turns out to have the form q( j s) =
+N (a 1 ; :::; a p j ^
+ s ;  ^
+V s )G( j ^
+ s ; ^
+ s ). This form is functionally identical to that of the prior
+p( j s), consistent with the conjugate prior idea. The parameters of q are distinguished
+from the prior's by the ^ symbol. Similarly, the state responsibilities are q(s) = ^  s . For
+the clean speech, we obtain Gaussians, q(x j s) = N (x j  s ;  s ), with state­dependent
+means and precisions.
+E­step and Wiener filtering. To derive the E­step, we first ignore reverberation by setting
+h i
+n = Æ n;0 and assuming a single microphone signal yn , thus omitting i. The extension to
+multiple microphones and reverberation is straightforward.
+The parameters of q are estimated at the E­step from the noisy speech in each frame, using
+an iterative algorithm. First, the parameters of q( j s) are updated via
+^
+V s = R s + V s ; ^
+ s = ^
+V 1
+s (r s + V s  s ) ; (12)
+where R s
+nm = (1=N)
+P
+k e i!k (n m) E s (j ~ x k j 2 ), r s
+n = R s
+n0 , and E s denotes averaging
+w.r.t. q(x j s), which is easily done analytically. The update rules for ^
+ s , ^
+ s , ^  s are shown
+in [3].
+Next, the parameters of q(x j s) are obtained by inverse DFT via
+ s
+n =
+1
+N
+N 1
+X
+k=0
+e i!k n ~
+f s
+k ~
+y k ;  s
+nm =
+1
+N
+N 1
+X
+k=0
+e i!k (n m) ~
+g s
+k ; (13)
+
+where ~
+f s
+k =  j ~ b 0
+k j 2 =~g s
+k , and ~ g s
+k =  j ~ b 0
+k j 2 +E s ( j ~ a 0
+k j 2 ). Here E s denotes averaging
+w.r.t. q( j s). These steps are iterated to convergence, upon which the estimated speech
+signal for this frame is given by the weighted sum ^
+x =
+P
+s ^
+ s  s .
+We point out that the correspondence between AR parameters and spectra implies the
+Wiener filter form ~
+f s
+k = S s
+k =(S s
+k + N k ), where S s
+k is the estimated clean speech spec­
+trum associated with state s, and N k is the noise spectrum, both at frequency ! k . Hence,
+the updated  s in (13) is obtained via a state­dependent Wiener filter, and the clean speech
+is estimated by a sum of Wiener filters weighted by the state responsibilities. The same
+Wiener structure holds in the presence of reverberation. Notice that, whereas the conven­
+tional Wiener filter is linear and obtained directly from the known speech spectrum, our
+filters depend nonlinearly on the data, since the unknown speech spectra and state respon­
+sibilities are estimated iteratively by the above algorithm.
+M­step. After computing the sufficient statistics of ; x for each frame,  i and h i are
+updated using the whole utterance. The update rules are shown in [3]. Alternatively, the
+ i can be estimated directly by maximum likelihood if a non­speech portion of the input
+signal can be found.
+Computational savings. The complexity of the updates for q(x j s) and q( j s) is
+N log N and Sp log p, respectively. This is due to working in the frequency domain, using
+the FFT algorithm to perform the DFT, and by using conjugate priors and circulant preci­
+sions. Working in the time domain and using priors with general precisions would result in
+the considerably higher complexity of N 2 and Sp 3 , respectively.
+4 Experiments
+Denoising. We tested this algorithm on 150 speech sentences by male and female speakers
+from the Wall Street Journal (WSJ) database, which were not included in the training set.
+These sentences were distorted by adding either synthetic noise (white or pink), or noise
+recorded in an office environment with a PC and air conditioning. The distortions were ap­
+plied at different SNRs. All of these noises were stationary. We then applied the algorithm
+to estimate the noise parameters and reconstruct the original speech signal. The result was
+compared with a sophisticated, subband­based implementation of the spectral subtraction
+(SS) technique.
+Denoising & Dereverberation. We tested this algorithm on 100 WSJ sentences, which
+were distorted by convolving them with a 10­tap artificial filter and adding synthetic white
+Gaussian noise at different SNRs. We then applied the algorithm to estimate both the noise
+level and the filter. Here we used a simpler speech model with p( j s) = Æ(  s ).
+Speech Recognition. We also examined the potential contribution of this algorithm to
+robust speech recognition, by feeding the denoised signals as inputs to a recognition sys­
+tem. The system used a version of the Microsoft continuous­density HMM (Whisper), with
+6000 tied HMM states (senones), 20 Gaussians per state, and the speech represented via
+Mel­cepstrum, delta cepstrum, and delta­delta cepstrum. A fixed bigram language model
+is used in all the experiments. The system had been trained on a total of 16; 000 female
+clean speech sentences. The test set consisted of 167 female WSJ sentences, which were
+distorted by adding synthetic white non­Gaussian noise. The word error rate was 55.06%
+under the training­test mismatched condition of no preprocessing on the test set and de­
+coding by HMMs trained with clean speech. This condition is the baseline for the relative
+performance improvement listed in the last row of Table 1. For these experiments, we
+compared VSE to the SS algorithm described in [7].
+Table 1 shows that the Variational Speech Enhancement (VSE) algorithm is superior to SS
+at removing stationary noise either measured via SNR improvement or via relative reduc­
+tion in speech recognition error rate (compared to baseline).
+
+dB noise reverb SS SS VSE VSE
+added added synthetic real synthetic real
+noise noise noise noise
+SNR improvement 5 No 4.3 4.3 6.0 5.5
+SNR improvement 10 No 4.1 4.1 5.8 5.1
+SNR improvement 5 Yes 6.7 10.2
+SNR improvement 10 Yes 8.3 13.2
+Speech recognition
+relative improvement 10 No 38.6% 65.1%
+Table 1: Experimental Results.
+5 Conclusion
+We have presented a probabilistic framework for denoising and dereverberation. The
+framework uses a strong speech model to perform Bayes­optimal signal estimation. The
+parameter estimation and the reconstruction of the signal are performed using a varia­
+tional EM algorithm. Working in the frequency domain and using conjugate priors leads to
+great computational savings. The framework applies equally well to one­microphone and
+multiple­microphone cases. Experiments show that the optimal estimation can outperform
+standard methods such as spectral subtraction. Future directions include adding temporal
+dynamics to the speech model via an HMM structure, using a richer adaptive noise model
+(e.g. a mixture), and handling non­stationary noise and filters.
+References
+[1] H. Attias. Independent factor analysis. Neural Computation, 11(4):803--851, 1999.
+[2] H. Attias. A variational bayesian framework for graphical models. In T. Leen, edi­
+tor, Advances in Neural Information Processing Systems, volume 12, pages 209--215.
+MIT Press, 2000.
+[3] H. Attias, J. C. Platt, A. Acero, and L. Deng. Speech denoising and dereverberation
+using probabilistic models: Mathematical details. Technical Report MSR­TR­2001­
+02, Microsoft Research, 2001. http://research.microsoft.com/hagaia.
+[4] M. S. Brandstein. On the use of explicit speech modeling in microphone array appli­
+cations. In Proc. ICASSP, pages 3613--3616, 1998.
+[5] J.­F. Cardoso. Infomax and maximum likelihood for source separation. IEEE Signal
+Processing Letters, 4(4):112--114, 1997.
+[6] A. Dembo and O. Zeitouni. Maximum a posteriori estimation of time­varying ARMA
+processes from noisy observations. IEEE Trans. Acoustics, Speech, and Signal Pro­
+cessing, 36(4):471--476, 1988.
+[7] L. Deng, A. Acero, M. Plumpe, and X. D. Huang. Large­vocabulary speech recogni­
+tion under adverse acoustic environments. In Proceedings of the International Con­
+ference on Spoken Language Processing, volume 3, pages 806--809, 2000.
+[8] Y. Ephraim. Statistical­model­based speech enhancement systems. Proc. IEEE,
+80(10):1526--1555, 1992.
+[9] J. C. Platt and F. Faggin. Networks for the separation of sources that are superimposed
+and delayed. In J. E. Moody, editor, Advances in Neural Information Processing
+Systems, volume 4, pages 730--737, 1992.
+[10] L. K. Saul, T. Jaakkola, and M. I. Jordan. Mean field theory of sigmoid belief net­
+works. J. Artificial Intelligence Research, 4:61--76, 1996.
+

@@ -1,0 +1,553 @@
+Accumulator networks: Suitors of local
+probability propagation
+Brendan J. Frey and Anitha Kannan
+Intelligent Algorithms Lab, University of Toronto, www.cs.toronto.edu/frey
+Abstract
+One way to approximate inference in richly-connected graphical
+models is to apply the sum-product algorithm (a.k.a. probabil-
+ity propagation algorithm), while ignoring the fact that the graph
+has cycles. The sum-product algorithm can be directly applied in
+Gaussian networks and in graphs for coding, but for many condi-
+tional probability functions { including the sigmoid function { di-
+rect application of the sum-product algorithm is not possible. We
+introduce \accumulator networks" that have low local complexity
+(but exponential global complexity) so the sum-product algorithm
+can be directly applied. In an accumulator network, the probability
+of a child given its parents is computed by accumulating the inputs
+from the parents in a Markov chain or more generally a tree. After
+giving expressions for inference and learning in accumulator net-
+works, we give results on the \bars problem" and on the problem
+of extracting translated, overlapping faces from an image.
+1 Introduction
+Graphical probability models with hidden variables are capable of representing com-
+plex dependencies between variables, lling in missing data and making Bayes-
+optimal decisions using probabilistic inferences (Hinton and Sejnowski 1986; Pearl
+1988; Neal 1992). Large, richly-connected networks with many cycles can poten-
+tially be used to model complex sources of data, such as audio signals, images and
+video. However, when the number of cycles in the network is large (more precisely,
+when the cut set size is exponential), exact inference becomes intractable. Also, to
+learn a probability model with hidden variables, we need to ll in the missing data
+using probabilistic inference, so learning also becomes intractable.
+To cope with the intractability of exact inference, a variety of approximate inference
+methods have been invented, including Monte Carlo (Hinton and Sejnowski 1986;
+Neal 1992), Helmholz machines (Dayan et al. 1995; Hinton et al. 1995), and
+variational techniques (Jordan et al. 1998).
+Recently, the sum-product algorithm (a.k.a. probability propagation, belief prop-
+agation) (Pearl 1988) became a major contender when it was shown to produce
+astounding performance on the problem of error-correcting decoding in graphs with
+over 1,000,000 variables and cut set sizes exceeding 2 100;000 (Frey and Kschischang
+1996; Frey and MacKay 1998; McEliece et al. 1998).
+The sum-product algorithm passes messages in both directions along the edges in a
+graphical model and fuses these messages at each vertex to compute an estimate of
+P (variablejobs), where obs is the assignment of the observed variables. In a directed
+
+(a) (b) (c)
+l (y)
+(x )
+p
+p (x )
+p (x )
+l (y)
+l (y) l (y)
+(x )
+p
+p (x )
+p (x )
+l (y)
+(x )
+p
+p (x )
+(y)
+l (y)
+l (y)
+l (y)
+p
+l (x )
+1
+J J
+j j
+1 1
+x 1 j x J
+z
+z k
+z 1
+x
+y
+K
+k
+K 1
+J J
+j j
+1 1
+1
+J J
+1 1
+x 1 j x J
+z
+z k
+z 1
+x
+y
+K
+k
+K
+x 1 j x J
+z
+z k
+z 1
+x
+y
+K
+k
+K
+j j
+Figure 1: The sum-product algorithm passes messages in both directions along each edge in a
+Bayesian network. Each message is a function of the parent. (a) Incoming messages are fused
+to compute an estimate of P (yjobservations). (b) Messages are combined to produce an
+outgoing message k (y). (c) Messages are combined to produce an outgoing message  j (x j ).
+Initially, all messages are set to 1. Observations are accounted for as described in the text.
+graphical model (Bayesian belief network) the message on an edge is a function of
+the parent of the edge. The messages are initialized to 1 and then the variables are
+processed in some order or in parallel. Each variable fuses incoming messages and
+produces outgoing messages, accounting for observations as described below.
+If x 1 ; : : : ; x J are the parents of a variable y and z 1 ; : : : ; z K are the children of y,
+messages are fused at y to produce function F (y) as follows (see Fig. 1a):
+F (y) =
+Y
+k
+ k (y)
+X
+x1
+  
+X
+xJ
+P (yjx 1 ; : : : ; x J )
+Y
+j
+ j (x j )
+
+ P (y; obs); (1)
+where P (yjx 1 ; : : : ; x J ) is the conditional probability function associated with y. If
+the graph is a tree and if messages are propagated from every variable in the network
+to y, as described below, the estimate is exact: F (y) = P (y; obs). Also, normalizing
+F (y) gives P (yjobs). If the graph has cycles, this inference is approximate.
+The message  k (y) passed from y to z k is computed as follows (see Fig. 1b):
+ k (y) = F (y)= k (y): (2)
+The message  j (x j ) passed from y to x j is computed as follows (see Fig. 1c):
+ j (x j ) =
+X
+y
+X
+x1
+  
+X
+x j 1
+X
+x j+1
+  
+X
+xJ
+Y
+k
+ k (y)
+
+P (yjx 1 ; : : : ; x J )
+Y
+i6=j
+ i (x i )
+
+: (3)
+Notice that x j is not summed over and is excluded from the product of the -
+messages on the right.
+If y is observed to have the value y  , the fused result at y and the outgoing 
+messages are modied as follows:
+F (y)  
+
+F (y) if y = y 
+0 otherwise ;  k (y)  
+
+ k (y) if y = y 
+0 otherwise : (4)
+The outgoing  messages are computed as follows:
+ j (x j ) =
+X
+x1
+  
+X
+x j 1
+X
+x j+1
+  
+X
+xJ
+Y
+k
+ k (y  )
+
+P (y = y  jx 1 ; : : : ; x J )
+Y
+i6=j
+ i (x i )
+
+: (5)
+If the graph is a tree, these formulas can be derived quite easily using the fact that
+summations distribute over products. If the graph is not a tree, a local independence
+assumption can be made to justify these formulas. In any case, the algorithm
+computes products and summations locally in the graph, so it is often called the
+\sum-product" algorithm.
+
+(a) (b) (c)
+s
+s ­1
+N,N
+s N
+s N
+2,1
+s
+s
+s N
+3,1 ,1
+3,2 ,2
+,3
+x
+x
+x
+2
+3
+x N
+1
+Figure 2: The local complexity of a richly connected directed graphical model such as the one
+in (a) can be simplied by assuming that the eects of a child's parents are accumulated by a
+low-complexity Markov chain as shown in (b). (c) The general structure of the \accumulator
+network" considered in this paper.
+2 Accumulator networks
+The complexity of the local computations at a variable generally scales exponen-
+tially with the number of parents of the variable. For example, fusion (1) re-
+quires summing over all congurations of the parents. However, for certain types
+of conditional probability function P (yjx 1 ; : : : ; x J ), this exponential sum reduces
+to a linear-time computation. For example, if P (yjx 1 ; : : : ; x J ) is an indicator func-
+tion for y = x 1 XOR x 2 XOR    XOR x J (a common function for error-correcting
+coding), the summation can be computed in linear time using a trellis (Frey and
+MacKay 1998). If the variables are real-valued and P (yjx 1 ; : : : ; x J ) is Gaussian
+with mean given by a linear function of x 1 ; : : : ; x J , the integration can be com-
+puted using linear algebra (c.f. Weiss and Freeman 2000; Frey 2000).
+In contrast, exact local computation for the sigmoid function, P (yjx 1 ; : : : ; x J ) =
+1=(1 + exp[  0
+P
+j  j x j ]), requires the full exponential sum. Barber (2000) con-
+siders approximating this sum using a central limit theorem approximation.
+In an \accumulator network", the probability of a child given its parents is computed
+by accumulating the inputs from the parents in a Markov chain or more generally
+a tree. (For simplicity, we use Markov chains in this paper.) Fig. 2a and b show
+how a layered Bayesian network can be redrawn as an accumulator network. Each
+accumulation variable (state variable in the accumulation chain) has just 2 parents,
+and the number of computations needed for the sum-product computations for
+each variable in the original network now scales with the number of parents and the
+maximum state size of the accumulation chain in the accumulator network.
+Fig. 2c shows the general form of accumulator network considered in this paper,
+which corresponds to a fully connected Bayes net on variables x 1 ; : : : ; xN . In this
+network, the variables are x 1 ; : : : ; xN and the accumulation variables for x i are
+s i;1 ; : : : ; s i;i 1 . The eect of variable x j on child x i is accumulated by s i;j . The
+joint distribution over the variables X = fx i : i = 1; : : : ; Ng and the accumulation
+variables S = fs i;j : i = 1; : : : ; N; j = 1; : : : ; i 1g is
+P (X; S) =
+N
+Y
+i=1
+h i 1
+Y
+j=1
+P (s i;j jx j ; s i;j 1 )
+
+P (x i js i;i 1 )
+i
+: (6)
+If x j is not a parent of x i in the original network, we set P (s i;j jx j ; s i;j 1 ) = 1 if
+s i;j = s i;j 1 and P (s i;j jx j ; s i;j 1 ) = 0 if s i;j 6= s i;j 1 .
+A well-known example of an accumulator network is the noisy-OR network (Pearl
+
+1988; Neal 1992). In this case, all variables are binary and we set
+P (s i;j = 1jx j ; s i;j 1 ) =
+8 <
+:
+1 if s i;j 1 = 1;
+p i;j if x j = 1 and s i;j 1 = 0;
+0 otherwise;
+(7)
+where p i;j is the probability that x j = 1 turns on the OR-chain.
+Using an accumulation chain whose state space size equals the number of congu-
+rations of the parent variables, we can produce an accumulator network that can
+model the same joint distributions on x 1 ; : : : ; xN as any Bayesian network.
+Inference in an accumulator network is performed by passing messages as described
+above, either in parallel, at random, or in a regular fashion, such as up the accumu-
+lation chains, left to the variables, right to the accumulation chains and down the
+accumulation chains, iteratively.
+Later, we give results for an accumulator network that extracts images of trans-
+lated, overlapping faces from an visual scene. The accumulation variables represent
+intensities of light rays at dierent depths in a layered 3-D scene.
+2.1 Learning accumulator networks
+To learn the conditional probability functions in an accumulator network, we ap-
+ply the sum-product algorithm for each training case to compute suÆcient statis-
+tics. Following Russell and Norvig (1995), the suÆcient statistic needed to up-
+date the conditional probability function P (s i;j jx j ; s i;j 1 ) for s i;j in Fig. 2c is
+P (s i;j ; x j ; s i;j 1 jobs). In particular,
+@ log P (obs)
+@P (s i;j jx j ; s i;j 1 ) = P (s i;j ; x j ; s i;j 1 jobs)
+P (s i;j jx j ; s i;j 1 ) : (8)
+P (s i;j ; x j ; s i;j 1 jobs) is approximated by normalizing the product of
+P (s i;j jx j ; s i;j 1 ) and the  and  messages arriving at s i;j . (This approxi-
+mation is exact if the graph is a tree.)
+The suÆcient statistics can be used for online learning or batch learning. If batch
+learning is used, the suÆcient statistics are averaged over the training set and
+then the conditional probability functions are modied. In fact, the conditional
+probability function P (s i;j jx j ; s i;j 1 ) can be set equal to the normalized form of
+the average suÆcient statistic, in which case learning performs approximate EM,
+where the E-step is approximated by the sum-product algorithm.
+3 The bars problem
+Fig. 3a shows the network structure for the binary bars problem and Fig. 3b shows
+30 training examples. For an N  N binary image, the network has 3 layers of
+binary variables: 1 top-layer variable (meant to select orientation); 2N middle-
+layer variables (mean to select bars); and N 2 bottom-layer image variables. For
+large N , performing exact inference is computationally intractable and hence the
+need for approximate inference.
+Accumulator networks enable eÆcient inference using probability propagation since
+local computations are made feasible. The topology of the accumulator network
+can be easily tailored to the bars problem, as described above.
+Given an accumulator network with the proper conditional probability tables,
+inference computes the probability of each bar and the probability of vertical
+
+(a) (b) (c)
+H 1 H 2 H 3 H 4 V 1 V 2 V 3 V 4
+O
+Pixels(Image)
+0 1 3 5 6 8 9
+0
+2
+4
+6
+8
+10
+12
+# of iterations
+KL
+Distance
+Figure 3: (a) Bayesian network for bars problem. (b) Examples of typical images. (c) KL
+divergence between approximate inference and exact inference after each iteration
+versus horizontal orientation for an input image. After each iteration of prob-
+ability propagation, messages are fused to produce estimates of these proba-
+bilities. Fig. 3c shows the Kullback Leibler divergence between these approx-
+imate probabilities and the exact probabilities after each iteration, for 5 in-
+put images. The gure also shows the most probable conguration found by
+approximate inference. In most cases, we found that probability propagation
+0 0.5 1 1.5 2 2.5 3 3.5 4 4.5
+x 10
+-18
+-16
+-14
+-12
+-10
+-8
+-6
+.05
+.075
+.1
+-5.3752
+# of sweeps
+Log-Likelihood
+in
+bits
+Optimum log-Likelihood
+Figure 4: Learning curves for learn-
+ing rates .05, .075 and .1
+correctly infers the presence of appropriate
+bars and the overall orientation of the bars.
+In cases of multiple interpretations of the im-
+age (e.g., Fig. 3c, image 4), probability prop-
+agation tended to nd appropriate interpre-
+tations, although the divergence between the
+approximate and exact inferences is larger.
+Starting with an accumulator network with
+random parameters, we trained the network
+as described above. Fig. 4 shows the online
+learning curves corresponding to dierent
+learning rates. The log-likelihood oscillates
+and although the optimum (horizontal line)
+is not reached, the results are encouraging.
+4 Accumulating light rays for layered vision
+We give results on an accumulator network that extracts image components from
+scenes constructed from dierent types of overlapping face at random positions.
+Suppose we divide up a 3-D scene into L layers and assume that one of O objects
+can sit in each layer in one of P positions. The total number of object-position
+combinations per layer is K = O  P . For notational convenience, we assume
+that each object-position pair is a dierent object modeled by an opaqueness map
+(probability that each pixel is opaque) and an appearance map (intensity of each
+pixel). We constrain the opaqueness and appearance maps of the same object in
+dierent positions to be the same, up to translation. Fig. 5a shows the appearance
+maps of 4 such objects (the rst one is a wall).
+In our model, p kn is the probability that the nth pixel of object k is opaque and
+w kn is the intensity of the nth pixel for object k. The input images are modeled
+by randomly picking an object in each of L layers, choosing whether each pixel in
+each layer is transparent or opaque, and accumulating light intensity by imaging
+the pixels through the layers, and then adding Gaussian noise.
+Fig. 6 shows the accumulator network for this model. z l 2 f1; : : : ; Kg is the index
+
+(a) (b) (c)
+Figure 5: (a) Learned appearance maps for a wall (all pixels dark and nearly opaque) and 3
+faces. (b) An image produced by combining the maps in (a) and adding noise. (c) Object-
+specic segmentation maps. The brightness of a pixel in the kth picture corresponds to the
+probability that the pixel is imaged by object k.
+of the object in the lth layer, where layer 1 is adjacent to the camera and layer L is
+farthest from the camera. y l
+n is the accumulated discrete intensity of the light ray
+for pixel n at layer l. y l
+n depends on the identity of the object in the current layer
+z l and the intensity of pixel n in the previous layer y l+1
+n . So,
+P (y l
+n jz l ; y l+1
+n ) =
+8 > > > > > <
+> > > > > :
+1 z l = 0; y l
+n = y l+1
+n
+1 z l > 0; y l
+n = w z l n = y l+1
+n
+p z l n z l > 0; y l
+n = w z l n 6= y l+1
+n
+1 p z l n z l > 0; y l
+n = y l+1
+n 6= w z l n
+0 otherwise:
+(9)
+Each condition corresponds to a dierent imaging operation at layer l for the light
+ray corresponding to pixel n. xn is the discretized intensity of pixel n, obtained
+from the light ray arriving at the camera, y 1
+n . P (x n jy 1
+n ) adds Gaussian noise to y 1
+n .
+x 1 x 2 x n x N
+z
+z 1
+L L L L
+1
+y y 2 y n N
+y
+L L L L
+1
+y y 2 y n N
+y
+­1 ­1 ­1 ­1
++1 +1 +1
++1
+1
+y y 2 y n N
+y
+1
+y y 2 y n N
+y
+1 1 1
+1
+1
+y y 2 y n N
+y
+l
+z L
+z +1
+­1
+z L
+Figure 6: An accumulator net-
+work for layered vision.
+After training the network on 200 labeled images,
+we applied iterative inference to identify and lo-
+cate image components. After each iteration, the
+message passed from y l
+n to z l is an estimate of the
+probability that the light ray for pixel n is imaged
+by object z l at layer l (i.e., not occluded by other
+objects). So, for each object at each layer, we have
+an n-pixel \probabilistic segmentation map". In
+Fig. 5c we show the 4 maps in layer 1 correspond-
+ing to the objects shown in Fig. 5a, obtained after
+12 iterations of the sum-product algorithm.
+One such set of segmentation maps can be drawn
+for each layer. For deeper layers, the maps hope-
+fully segment the part of the scene that sits behind
+the objects in the shallower layers. Fig. 7a shows
+the sets of segmentation maps corresponding to
+dierent layers, after each iteration of probability
+propagation, for the input image shown on the far
+right. After 1 iteration, the segmentation in the
+rst layer is quite poor, causing uncertain segmen-
+tation in deeper layers (except for the wall, which is mostly segmented properly in
+layer 2). As iterations increases, the algorithm converges to the correct segmenta-
+tion, where object 2 is in front, followed by objects 3, 4 and 1 (the wall).
+It may appear from the input image in Fig. 7a that another possible depth ordering
+is object 2 in front, followed by objects 4, 3 and 1 { i.e., objects 3 and 4 may be
+reversed. However, it turns out that if this were the order, a small amount of dark
+hair from the top of the horizontal head would be showing.
+We added an extremely large amount of noise the the image used above, to see what
+the algorithm would do when the two depth orders really are equally likely. Fig. 7b
+shows the noisy image and the series of segmentation maps produced at each layer
+
+(a) Layer 4 Layer 3 Layer 2 Layer 1
+(b) Layer 4 Layer 3 Layer 2 Layer 1
+Figure 7: (a) Probabilistic segmentation maps for each
+layer (column) after each iteration (row) of probability
+propagation for the image on the far right. (b) When a
+large amount of noise is added to the image, the network
+oscillates between interpretations.
+as the number of iterations
+increases. The segmenta-
+tion maps for layer 1 show
+that object 2 is correctly
+identied as being in the
+front.
+Quite surprisingly, the seg-
+mentation maps in layer 2
+oscillate between the two
+plausible interpretations of
+the scene { object 3 in front
+of object 4 and object 4 in
+front of object 3. Although
+we do not yet know how ro-
+bust these oscillations are,
+or how accurately they re-
+ect the probability masses
+in the dierent modes, this
+behavior is potentially very
+useful.
+References
+D. Barber 2000. Tractable
+belief propagation. The
+Learning Workshop, Snow-
+bird, UT.
+B. J. Frey and F. R. Kschis-
+chang 1996. Probability
+propagation and iterative de-
+coding. Proceedings of the
+34 th Allerton Conference on
+Communication, Control and
+Computing 1996, University
+of Illinois at Urbana.
+B. J. Frey and D. J. C.
+MacKay 1998. A revolution:
+Belief propagation in graphs with cycles. In M. I. Jordan, M. I. Kearns and S. A. Solla
+(eds) Advances in Neural Information Processing Systems 10, MIT Press, Cambridge MA.
+M. I. Jordan, Z. Ghahramani, T. S. Jaakkola and L. K. Saul 1999. An introduction to
+variational methods for graphical models. In M. I. Jordan (ed) Learning in Graphical
+Models, MIT Press, Cambridge, MA.
+R. McEliece, D. J. C. MacKay and J. Cheng 1998. Turbodecoding as an instance of Pearl's
+belief propagation algorithm. IEEE Journal on Selected Areas in Communications 16:2.
+K. P. Murphy, Y. Weiss and M. I. Jordan 1999. Loopy belief propagation for approximate
+inference: An empirical study. Proceedings of the Fifteenth Conference on Uncertainty in
+Articial Intelligence, Morgan Kaufmann, San Francisco, CA.
+J. Pearl 1988. Probabilistic Reasoning in Intelligent Systems. Morgan Kaufmann, San
+Mateo CA.
+S. Russell and P. Norvig 1995. Articial Intelligence: A Modern Approach. Prentice-Hall.
+Y. Weiss and W. T. Freeman 2000. Correctness of belief propagation in Gaussian graphical
+models of arbitrary topology. In S.A. Solla, T. K. Leen, and K.-R. Muller (eds) Advances
+in Neural Information Processing Systems 12, MIT Press.
+

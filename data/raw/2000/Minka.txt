@@ -1,0 +1,488 @@
+Automatic choice of dimensionality for PCA
+Thomas P. Minka
+MIT Media Lab
+20 Ames St, Cambridge, MA 02139
+tpminka@media.mit.edu
+Abstract
+A central issue in principal component analysis (PCA) is choosing the
+number of principal components to be retained. By interpreting PCA as
+density estimation, we show how to use Bayesian model selection to es­
+timate the true dimensionality of the data. The resulting estimate is sim­
+ple to compute yet guaranteed to pick the correct dimensionality, given
+enough data. The estimate involves an integral over the Steifel manifold
+of k­frames, which is difficult to compute exactly. But after choosing an
+appropriate parameterization and applying Laplace's method, an accu­
+rate and practical estimator is obtained. In simulations, it is convincingly
+better than cross­validation and other proposed algorithms, plus it runs
+much faster.
+1 Introduction
+Recovering the intrinsic dimensionality of a data set is a classic and fundamental problem
+in data analysis. A popular method for doing this is PCA or localized PCA. Modeling the
+data manifold with localized PCA dates back to [4]. Since then, the problem of spacing and
+sizing the local regions has been solved via the EM algorithm and split/merge techniques
+[2, 6, 14, 5].
+However, the task of dimensionality selection has not been solved in a satisfactory way.
+On the one hand we have crude methods based on eigenvalue thresholding [4] which are
+very fast, or we have iterative methods [1] which require excessive computing time. This
+paper resolves the situation by deriving a method which is both accurate and fast. It is
+an application of Bayesian model selection to the probabilistic PCA model developed by
+[12, 15].
+The new method operates exclusively on the eigenvalues of the data covariance matrix. In
+the local PCA context, these would be the eigenvalues of the local responsibility­weighted
+covariance matrix, as defined by [14]. The method can be used to fit different PCA models
+to different classes, for use in Bayesian classification [11].
+2 Probabilistic PCA
+This section reviews the results of [15]. The PCA model is that a d­dimensional vector x
+was generated from a smaller k­dimensional vector w by a linear transformation (H; m)
+
+plus a noise vector e: x = Hw + m + e. Both the noise and the principal component
+vector w are assumed spherical Gaussian:
+p(e)  N (0; vI d ) p(w)  N (0; I k ) (1)
+The observation x is therefore Gaussian itself:
+p(xjH; m; v)  N (m; HH T + vI) (2)
+The goal of PCA is to estimate the basis vectors H and the noise variance v from a data set
+D = fx 1 ; :::; xN g. The probability of the data set is
+p(DjH; m; v) = (2) Nd=2
+  HH T + vI
+  N=2
+exp(
+1
+2
+tr((HH T + vI) 1 S)) (3)
+S =
+X
+i
+(x i m)(x i m) T (4)
+As shown by [15], the maximum­likelihood estimates are:
+^
+m =
+1
+N
+X
+i
+x i ^ v =
+P d
+j=k+1  j
+d k
+^
+H = U( ^ vI k ) 1=2 R (5)
+where orthogonal matrix U contains the top k eigenvectors of S=N , diagonal matrix 
+contains the corresponding eigenvalues, and R is an arbitrary orthogonal matrix.
+3 Bayesian model selection
+model wins
+p(D | M)
+D
+constrained model
+flexible model
+flexible
+model wins
+constrained
+Figure 1: Why Bayesian model se­
+lection prefers simpler models
+Bayesian model selection scores models accord­
+ing to the probability they assign the observed
+data [9, 8]. It is completely analogous to Bayesian
+classification. It automatically encodes a pref­
+erence for simpler, more constrained models, as
+illustrated in figure 1. Simple models only fit
+a small fraction of data sets, but they assign
+correspondingly higher probability to those data
+sets. Flexible models spread themselves out more
+thinly.
+The probability of the data given the model is
+computed by integrating over the unknown pa­
+rameter values in that model:
+p(DjM) =
+Z
+
+p(Dj)p(jM)d (6)
+This quantity is called the evidence for model M . A useful property of Bayesian model
+selection is that it is guaranteed to select the true model, if it is among the candidates, as
+the size of the dataset grows to infinity.
+3.1 The evidence for probabilistic PCA
+For the PCA model, we want to select the subspace dimensionality k. To do this, we com­
+pute the probability of the data for each possible dimensionality and pick the maximum. For
+a given dimensionality, this requires integrating over all PCA parameters (m; H; v). First
+we need to define a prior density for these parameters. Assuming there is no information
+
+other than the data D, the prior should be as noninformative as possible. A noninformative
+prior for m is uniform, and with such a prior we can integrate out m analytically, leaving
+p(DjH; v) = N d=2 (2) (N 1)d=2
+  HH T + vI
+  (N 1)=2
+exp( 1
+2
+tr((HH T +vI) 1 S))
+(7)
+where S =
+X
+i
+(x i ^
+m)(x i ^
+m) T (8)
+Unlike m, H must have a proper prior since it varies in dimension for different models.
+Let H be decomposed just as in (5):
+H = U(L vI k ) 1=2 R U T U = I k R T R = I k (9)
+where L is diagonal with diagonal elements l i . The orthogonal matrix U is the basis, L is
+the scaling (corrected for noise), and R is a rotation within the subspace (which will turn
+out to be irrelevant). A conjugate prior for (U; L; R; v), parameterized by , is
+p(U; L; R; v) /
+  HH T + vI
+  (+2)=2
+exp(
+
+2 tr((HH T + vI) 1 )) (10)
+This distribution happens to factor into p(U)p(L)p(R)p(v), which means the variables are
+a­priori independent:
+p(L) / jLj (+2)=2
+exp(
+
+2
+tr(L 1 )) (11)
+p(v) / v (+2)(d k)=2 exp(
+(d k)
+2v
+) (12)
+p(U)p(R) = (constant---defined in (20)) (13)
+The hyperparameter  controls the sharpness of the prior. For a noninformative prior,
+ should be small, making the prior diffuse. Besides providing a convenient prior, the
+decomposition (9) is important for removing redundant degrees of freedom (R) and for
+separating H into independent components, as described in the next section.
+Combining the likelihood with the prior gives
+p(Djk) = c k
+Z   HH T + vI
+  n=2
+exp(
+1
+2
+tr((HH T + vI) 1 (S + I))) dUdLdv (14)
+n = N + 1 +  (15)
+The constant c k includes N d=2 and the normalizing terms for p(U), p(L), and p(v)
+(given in [10])---only p(U) will matter in the end. In this formula R has already been
+integrated out; the likelihood does not involve R so we just get a multiplicative factor of
+R
+R p(R) dR = 1.
+3.2 Laplace approximation
+Laplace's method is a powerful method for approximating integrals in Bayesian statistics
+[8]:
+Z
+f()d  f( ^
+)(2) rows(A)=2 jAj 1=2 (16)
+^  = argmax
+ f() A =
+ d 2 log f()
+d i d j
+
+= ^
+
+(17)
+The key to getting a good approximation is choosing a good parameterization for  =
+(U; L; v). Since l i and v are positive scale parameters, it is best to use l 0
+i = log(l i ) and
+
+v 0 = log(v). This results in
+^ l i =
+N i + 
+N 1 +  ^ v =
+N
+P d
+j=k+1  j
+n(d k) 2
+(18)
+d 2 log f()
+(dl 0
+i ) 2
+    = ^
+
+=
+N 1 + 
+2
+d 2 log f()
+(dv 0 ) 2
+    = ^ 
+=
+n(d k) 2
+2
+(19)
+The matrix U is an orthogonal k­frame and therefore lives on the Stiefel manifold [7],
+which is defined by condition (9). The dimension of the manifold is m = dk k(k + 1)=2,
+since we are imposing k(k + 1)=2 constraints on a d  k matrix. The prior density for U
+is the reciprocal of the area of the manifold [7]:
+p(U) = 2 k
+k
+Y
+i=1
+((d i + 1)=2) (d i+1)=2 (20)
+A useful parameterization of this manifold is given by the Euler vector representation:
+U = U d exp(Z)
+
+I k
+0
+
+(21)
+where U d is a fixed orthogonal matrix and Z is a skew­symmetric matrix of parameters,
+such as
+Z =
+" 0 z 12 z 13
+z 12 0 z 23
+z 13 z 23 0
+#
+(22)
+The first k rows of Z determine the first k columns of exp(Z), so the free parameters are z ij
+with i < j and i  k; the others are constant. This gives d(d 1)=2 (d k)(d k 1)=2 =
+m parameters, as desired. For example, in the case (d = 3; k = 1) the free parameters are
+z 12 and z 13 , which define a coordinate system for the sphere.
+As a function of U, the integrand is simply
+p(UjD; L; v) / exp( 1
+2
+tr((L 1 v 1 I)U T SU)) (23)
+The density is maximized when U contains the top k eigenvectors of S. However, the
+density is unchanged if we negate any column of U. This means that there are actually
+2 k different maxima, and we need to apply Laplace's method to each. Fortunately, these
+maxima are identical so can simply multiply (16) by 2 k to get the integral over the whole
+manifold. If we set U d to the eigenvectors of S:
+U T
+d SU d = N (24)
+then we just need to apply Laplace's method at Z = 0. As shown in [10], if we define the
+estimated eigenvalue matrix
+^
+ =
+ ^
+L 0
+0 ^
+vI d k
+
+(25)
+then the second differential at Z = 0 simplifies to
+d 2 log f()
+  Z=0 =
+k
+X
+i=1
+d
+X
+j=i+1
+( ^  1
+j
+^  1
+i )( i  j )Ndz 2
+ij (26)
+There are no cross derivatives; the Hessian matrix AZ is diagonal. So its determinant is
+the product of these second derivatives:
+jAZ j =
+k
+Y
+i=1
+d
+Y
+j=i+1
+( ^
+ 1
+j
+^  1
+i )( i  j )N (27)
+
+Laplace's method requires this to be nonsingular, so we must have k < N . The cross­
+derivatives between the parameters are all zero:
+d 2 log f()
+dl i dZ
+    = ^ 
+=
+d 2 log f()
+dvdZ
+    = ^
+
+=
+d 2 log f()
+dl i dv
+    = ^
+
+= 0 (28)
+so A is block diagonal and jAj = jAZ j jAL j jA v j. We know AL from (19), A v from (19),
+and AZ from (27). We now have all of the terms needed in (16), and so the evidence
+approximation is
+p(Djk)  2 k c k
+   ^
+L
+   n=2
+^
+v n(d k)=2 e nd=2 (2) (m+k+1)=2 jAZ j 1=2
+jAL j 1=2 jA v j 1=2
+(29)
+For model selection, the only terms that matter are those that strongly depend on k, and
+since  is small and N reasonably large we can simplify this to
+p(Djk)  p(U)
+0
+@ k
+Y
+j=1
+ j
+1
+A
+N=2
+^
+v N(d k)=2 (2) (m+k)=2 jAZ j 1=2 N k=2 (30)
+^ l i =  i ^ v =
+P d
+j=k+1  j
+d k (31)
+which is the recommended formula. Given the eigenvalues, the cost of computing p(Djk)
+is O(min(d; N)k), which is less than one loop over the data matrix.
+A simplification of Laplace's method is the BIC approximation [8]. This approximation
+drops all terms which do not grow with N , which in this case leaves only
+p(Djk) 
+0
+@ k
+Y
+j=1
+ j
+1
+A
+N=2
+^ v N(d k)=2 N (m+k)=2 (32)
+BIC is compared to Laplace in section 4.
+4 Results
+To test the performance of various algorithms for model selection, we sample data from a
+known model and see how often the correct dimensionality is recovered. The seven esti­
+mators implemented and tested in this study are Laplace's method (30), BIC (32), the two
+methods of [13] (called RR­N and RR­U), the algorithm in [3] (ER), the ARD algorithm
+of [1], and 5­fold cross­validation (CV). For cross­validation, the log­probability assigned
+to the held­out data is the scoring function. ER is the most similar to this paper, since it
+performs Bayesian model selection on the same model, but uses a different kind of ap­
+proximation combined with explicit numerical integration. RR­N and RR­U are maximum
+likelihood techniques on models slightly different than probabilistic PCA; the details are
+in [10]. ARD is an iterative estimation algorithm for H which sets columns to zero un­
+less they are supported by the data. The number of nonzero columns at convergence is the
+estimate of dimensionality.
+Most of these estimators work exclusively from the eigenvalues of the sample covariance
+matrix. The exceptions are RR­U, cross­validation, and ARD; the latter two require diag­
+onalizing a series of different matrices constructed from the data. In our implementation,
+the algorithms are ordered from fastest to slowest as RR­N, BIC, Laplace, cross­validation,
+RR­U, ARD, and ER (ER is slowest because of the numerical integrations required).
+
+The first experiment tests the data­rich case where
+N >> d. The data is generated from a 10­dimensional
+Gaussian distribution with 5 ``signal'' dimensions and
+5 noise dimensions. The eigenvalues of the true co­
+variance matrix are:
+Signal Noise
+10 8 6 4 2 1 (5) N = 100
+The number of times the correct dimensionality (k =
+5) was chosen over 60 replications is shown at right.
+The differences between ER, Laplace, and CV are not
+statistically significant. Results below the dashed line
+are worse than Laplace with a significance level of
+95%.
+ER Laplace CV BIC ARD RRN RRU
+0
+10
+20
+30
+40
+50
+60
+The second experiment tests the case of sparse data
+and low noise:
+Signal Noise
+10 8 6 4 2 0.1 (10) N = 10
+The results over 60 replications are shown at right.
+BIC and ER, which are derived from large N approx­
+imations, do poorly. Cross­validation also fails, be­
+cause it doesn't have enough data to work with.
+Laplace RRU ARD RRN CV ER BIC
+0
+10
+20
+30
+40
+50
+60
+The third experiment tests the case of high noise di­
+mensionality:
+Signal Noise
+10 8 6 4 2 0.25 (95) N = 60
+The ER algorithm was not run in this case because of
+its excessive computation time for large d.
+Laplace CV ARD RRU BIC RRN
+0
+10
+20
+30
+40
+50
+60
+The final experiment tests the robustness to having a
+non­Gaussian data distribution within the subspace.
+We start with four sound fragments of 100 samples
+each. To make things especially non­Gaussian, the val­
+ues in third fragment are squared and the values in the
+fourth fragment are cubed. All fragments are standard­
+ized to zero mean and unit variance. Gaussian noise in
+20 dimensions is added to get:
+Signal Noise
+4 sounds 0.5 (20) N = 100
+The results over 60 replications of the noise (the sig­
+nals were constant) are reported at right. Laplace ARD CV BIC RRN RRU ER
+0
+10
+20
+30
+40
+50
+60
+5 Discussion
+Bayesian model selection has been shown to provide excellent performance when the as­
+sumed model is correct or partially correct. The evaluation criterion was the number of
+times the correct dimensionality was chosen. It would also be useful to evaluate the trained
+model with respect to its performance on new data within an applied setting. In this case,
+
+Bayesian model averaging is more appropriate, and it is conceivable that a method like
+ARD, which encompasses a soft blend between different dimensionalities, might perform
+better by this criterion than selecting one dimensionality.
+It is important to remember that these estimators are for density estimation, i.e. accurate
+representation of the data, and are not necessarily appropriate for other purposes like re­
+ducing computation or extracting salient features. For example, on a database of 301 face
+images the Laplace evidence picked 120 dimensions, which is far more than one would
+use for feature extraction. (This result also suggests that probabilistic PCA is not a good
+generative model for face images.)
+References
+[1] C. Bishop. Bayesian PCA. In Neural Information Processing Systems 11, pages 382--388,
+1998.
+[2] C. Bregler and S. M. Omohundro. Surface learning with applications to lipreading. In NIPS,
+pages 43--50, 1994.
+[3] R. Everson and S. Roberts. Inferring the eigenvalues of covariance matrices from limited,
+noisy data. IEEE Trans Signal Processing, 48(7):2083--2091, 2000.
+http://www.robots.ox.ac.uk/”sjrob/Pubs/spectrum.ps.gz.
+[4] K. Fukunaga and D. Olsen. An algorithm for finding intrinsic dimensionality of data. IEEE
+Trans Computers, 20(2):176--183, 1971.
+[5] Z. Ghahramani and M. Beal. Variational inference for Bayesian mixtures of factor analysers.
+In Neural Information Processing Systems 12, 1999.
+[6] Z. Ghahramani and G. Hinton. The EM algorithm for mixtures of factor analyzers. Technical
+Report CRG­TR­96­1, University of Toronto, 1996.
+http://www.gatsby.ucl.ac.uk/”zoubin/papers.html.
+[7] A. James. Normal multivariate analysis and the orthogonal group. Annals of Mathematical
+Statistics, 25(1):40--75, 1954.
+[8] R. E. Kass and A. E. Raftery. Bayes factors and model uncertainty. Technical Report 254,
+University of Washington, 1993.
+http://www.stat.washington.edu/tech.reports/tr254.ps.
+[9] D. J. C. MacKay. Probable networks and plausible predictions --- a review of practical
+Bayesian methods for supervised neural networks. Network: Computation in Neural Systems,
+6:469--505, 1995.
+http://wol.ra.phy.cam.ac.uk/mackay/abstracts/network.html.
+[10] T. Minka. Automatic choice of dimensionality for PCA. Technical Report 514, MIT Media
+Lab Vision and Modeling Group, 1999.
+ftp://whitechapel.media.mit.edu/pub/tech­reports/TR­514­
+ABSTRACT.html.
+[11] B. Moghaddam, T. Jebara, and A. Pentland. Bayesian modeling of facial similarity. In Neural
+Information Processing Systems 11, pages 910--916, 1998.
+[12] B. Moghaddam and A. Pentland. Probabilistic visual learning for object representation. IEEE
+Trans Pattern Analysis and Machine Intelligence, 19(7):696--710, 1997.
+[13] J. J. Rajan and P. J. W. Rayner. Model order selection for the singular value decomposition and
+the discrete Karhunen­Lo’eve transform using a Bayesian approach. IEE Vision, Image and
+Signal Processing, 144(2):166--123, 1997.
+[14] M. E. Tipping and C. M. Bishop. Mixtures of probabilistic principal component analysers.
+Neural Computation, 11(2):443--482, 1999.
+http://citeseer.nj.nec.com/362314.html.
+[15] M. E. Tipping and C. M. Bishop. Probabilistic principal component analysis. J Royal
+Statistical Society B, 61(3), 1999.
+

@@ -1,0 +1,458 @@
+Feature Selection for SVMs
+J. Weston y , S. Mukherjee yy , O. Chapelle  , M. Pontil yy
+T. Poggio yy , V. Vapnik ;yyy
+y Barnhill BioInformatics.com, Savannah, Georgia, USA.
+yy CBCL MIT, Cambridge, Massachusetts, USA.
+ AT&T Research Laboratories, Red Bank, USA.
+yyy Royal Holloway, University of London, Egham, Surrey, UK.
+Abstract
+We introduce a method of feature selection for Support Vector Machines.
+The method is based upon finding those features which minimize bounds
+on the leave­one­out error. This search can be efficiently performed via
+gradient descent. The resulting algorithms are shown to be superior to
+some standard feature selection algorithms on both toy data and real­life
+problems of face recognition, pedestrian detection and analyzing DNA
+microarray data.
+1 Introduction
+In many supervised learning problems feature selection is important for a variety of rea­
+sons: generalization performance, running time requirements, and constraints and interpre­
+tational issues imposed by the problem itself.
+In classification problems we are given ` data points x i 2 R n labeled y 2 1 drawn i.i.d
+from a probability distribution P (x; y). We would like to select a subset of features while
+preserving or improving the discriminative ability of a classifier. As a brute force search
+of all possible features is a combinatorial problem one needs to take into account both the
+quality of solution and the computational expense of any given algorithm.
+Support vector machines (SVMs) have been extensively used as a classification tool with a
+great deal of success from object recognition [5, 11] to classification of cancer morpholo­
+gies [10] and a variety of other areas, see e.g [13] . In this article we introduce feature se­
+lection algorithms for SVMs. The methods are based on minimizing generalization bounds
+via gradient descent and are feasible to compute. This allows several new possibilities:
+one can speed up time critical applications (e.g object recognition) and one can perform
+feature discovery (e.g cancer diagnosis). We also show how SVMs can perform badly in
+the situation of many irrelevant features, a problem which is remedied by using our feature
+selection approach.
+The article is organized as follows. In section 2 we describe the feature selection problem,
+in section 3 we review SVMs and some of their generalization bounds and in section 4 we
+introduce the new SVM feature selection method. Section 5 then describes results on toy
+and real life data indicating the usefulness of our approach.
+
+2 The Feature Selection problem
+The feature selection problem can be addressed in the following two ways: (1) given a
+fixed m  n, find the m features that give the smallest expected generalization error; or
+(2) given a maximum allowable generalization error , find the smallest m. In both of
+these problems the expected generalization error is of course unknown, and thus must be
+estimated. In this article we will consider problem (1). Note that choices of m in problem
+(1) can usually can be reparameterized as choices of  in problem (2).
+Problem (1) is formulated as follows. Given a fixed set of functions y = f(x; ) we wish
+to find a preprocessing of the data x 7! (x  ),  2 f0; 1g n , and the parameters  of the
+function f that give the minimum value of
+(; ) =
+Z
+V (y; f((x  ); ))dP (x; y) (1)
+subject to jjjj 0 = m, where P (x; y) is unknown, x   = (x 1  1 ; : : : ; xnn ) denotes an
+elementwise product, V (; ) is a loss functional and jj  jj 0 is the 0­norm.
+In the literature one distinguishes between two types of method to solve this problem: the
+so­called filter and wrapper methods [2]. Filter methods are defined as a preprocessing step
+to induction that can remove irrelevant attributes before induction occurs, and thus wish to
+be valid for any set of functions f(x; ). For example one popular filter method is to use
+Pearson correlation coefficients.
+The wrapper method, on the other hand, is defined as a search through the space of feature
+subsets using the estimated accuracy from an induction algorithm as a measure of goodness
+of a particular feature subset. Thus, one approximates (; ) by minimizing
+ wrap (; ) = min
+
+ alg () (2)
+subject to  2 f0; 1g n where  alg is a learning algorithm trained on data preprocessed with
+fixed . Wrapper methods can provide more accurate solutions than filter methods [9],
+but in general are more computationally expensive since the induction algorithm  alg must
+be evaluated over each feature set (vector ) considered, typically using performance on a
+hold out set as a measure of goodness of fit.
+In this article we introduce a feature selection algorithm for SVMs that takes advantage
+of the performance increase of wrapper methods whilst avoiding their computational com­
+plexity. Note, some previous work on feature selection for SVMs does exist, however
+results have been limited to linear kernels [3, 7] or linear probabilistic models [8]. Our
+approach can be applied to nonlinear problems. In order to describe this algorithm, we first
+review the SVM method and some of its properties.
+3 Support Vector Learning
+Support Vector Machines [13] realize the following idea: they map x 2 R n into a high
+(possibly infinite) dimensional space and construct an optimal hyperplane in this space.
+Different mappings x 7! (x) 2 H construct different SVMs.
+The mapping () is performed by a kernel function K(; ) which defines an inner product
+in H. The decision function given by an SVM is thus:
+f(x) = w  (x) + b =
+X
+i
+ 0
+i y i K(x i ; x) + b: (3)
+The optimal hyperplane is the one with the maximal distance (in H space) to the closest im­
+age (x i ) from the training data (called the maximal margin). This reduces to maximizing
+
+the following optimization problem:
+W 2 () =
+`
+X
+i=1
+ i
+1
+2
+`
+X
+i;j=1
+ i  j y i y j K(x i ; x j ) (4)
+under constraints
+P `
+i=1  i y i = 0 and  i  0; i = 1; :::; `. For the non­separable case
+one can quadratically penalize errors with the modified kernel K   K + 1
+ I where I is
+the identity matrix and  a constant penalizing the training errors (see [4] for reasons for
+this choice).
+Suppose that the size of the maximal margin is M and the images (x 1 ); :::; (x ` ) of the
+training vectors are within a sphere of radius R. Then the following holds true [13].
+Theorem 1 If images of training data of size ` belonging to a sphere of size R are separa­
+ble with the corresponding margin M , then the expectation of the error probability has the
+bound
+EP err  1
+` E
+ R 2
+M 2
+
+= 1
+` E
+
+R 2 W 2 ( 0 )
+	
+; (5)
+where expectation is taken over sets of training data of size `.
+This theorem justifies the idea that the performance depends on the ratio EfR 2 =M 2 g and
+not simply on the large margin M , where R is controlled by the mapping function ().
+Other bounds also exist, in particular Vapnik and Chapelle [4] derived an estimate using
+the concept of the span of support vectors.
+Theorem 2 Under the assumption that the set of support vectors does not change when
+removing the example p
+EP ` 1
+err  1
+` E
+`
+X
+p=1
+	
+ 
+ 0
+p
+(K 1
+SV ) pp
+1
+!
+(6)
+where 	 is the step function, KSV is the matrix of dot products between support vectors,
+p ` 1
+err is the probability of test error for the machine trained on a sample of size ` 1 and
+the expectations are taken over the random choice of the sample.
+4 Feature Selection for SVMs
+In the problem of feature selection we wish to minimize equation (1) over  and . The
+support vector method attempts to find the function from the set f(x; w; b) = w  (x) + b
+that minimizes generalization error. We first enlarge the set of functions considered by the
+algorithm to f(x; w; b; ) = w  (x  ) + b. Note that the mapping   (x) = (x  )
+can be represented by choosing the kernel function K  in equations (3) and (4):
+K  (x; y) = K((x  ); (y  )) = (  (x)    (y)) (7)
+for any K. Thus for these kernels the bounds in Theorems (1) and (2) still hold. Hence, to
+minimize (; ) over  and  we minimize the wrapper functional  wrap in equation (2)
+where  alg is given by the equations (5) or (6) choosing a fixed value of  implemented by
+the kernel (7). Using equation (5) one minimizes over :
+R 2 W 2 () = R 2 ()W 2 ( 0 ; ) (8)
+where the radius R for kernel K  can be computed by maximizing (see, e.g [13]):
+R 2 () = max
+
+X
+i
+ i K  (x i ; x i )
+X
+i;j
+ i  j K  (x i ; x j ) (9)
+
+subject to
+P
+i  i = 1;  i  0; i = 1; : : : ; `, and W 2 ( 0 ; ) is defined by the maximum
+of functional (4) using kernel (7). In a similar way, one can minimize the span bound over
+ instead of equation (8).
+Finding the minimum of R 2 W 2 over  requires searching over all possible subsets of n
+features which is a combinatorial problem. To avoid this problem classical methods of
+search include greedily adding or removing features (forward or backward selection) and
+hill climbing. All of these methods are expensive to compute if n is large.
+As an alternative to these approaches we suggest the following method: approximate the
+binary valued vector  2 f0; 1g n ; with a real valued vector  2 R n . Then, to find the
+optimum value of  one can minimize R 2 W 2 , or some other differentiable criterion, by
+gradient descent. As explained in [4] the derivative of our criterion is:
+@R 2 W 2 ()
+@ k
+= R 2 ()
+@W 2 ( 0 ; )
+@ k
++W 2 ( 0 ; ) @R 2 ()
+@ k
+(10)
+@R 2 ()
+@ k
+=
+X
+i
+ 0
+i
+@K  (x i ; x j )
+@ k
+X
+i;j
+ 0
+i  0
+j y i y j
+@K  (x i ; x j )
+@ k
+(11)
+@W 2 ( 0 ; )
+@ k
+=
+X
+i;j
+ 0
+i  0
+j y i y j
+@K  (x i ; x j )
+@ k
+: (12)
+We estimate the minimum of (; ) by minimizing equation (8) in the space  2 R n
+using the gradients (10) with the following extra constraint which approximates integer
+programming:
+R 2 W 2 () + 
+X
+i
+( i ) p (13)
+subject to
+P
+i  i = m;  i  0; i = 1; : : : ; `.
+For large enough  as p ! 0 only m elements of  will be nonzero, approximating opti­
+mization problem (; ). One can further simplify computations by considering a step­
+wise approximation procedure to find m features. To do this one can minimize R 2 W 2 ()
+with  unconstrained. One then sets the q  n smallest values of  to zero, and repeats
+the minimization until only m nonzero elements of  remain. This can mean repeatedly
+training a SVM just a few times, which can be fast.
+5 Experiments
+5.1 Toy data
+We compared standard SVMs, our feature selection algorithms and three classical filter
+methods to select features followed by SVM training. The three filter methods chose the m
+largest features according to: Pearson correlation coefficients, the Fisher criterion score 1 ,
+and the Kolmogorov­Smirnov test 2 ). The Pearson coefficients and Fisher criterion cannot
+model nonlinear dependencies.
+In the two following artificial datasets our objective was to assess the ability of the algo­
+rithm to select a small number of target features in the presence of irrelevant and redundant
+features.
+1 F (r) =
+
+
+
+ +
+r  r
+ +
+r
+2
++ r
+2
+
+
+, where  
+r is the mean value for the r­th feature in the positive and negative
+classes and  
+r
+2
+is the standard deviation
+2 KS tst (r) =
+p
+` sup
+
+^
+PfX  fr g ^
+PfX  fr ; yr = 1g
+
+where fr denotes the r­th feature
+from each training example, and ^
+P is the corresponding empirical distribution.
+
+Linear problem Six dimensions of 202 were relevant. The probability of y = 1 or 1 was
+equal. The first three features fx 1 ; x 2 ; x 3 g were drawn as x i = yN(i; 1) and the second
+three features fx 4 ; x 5 ; x 6 g were drawn as x i = N(0; 1) with a probability of 0:7, otherwise
+the first three were drawn as x i = N(0; 1) and the second three as x i = yN(i 3; 1). The
+remaining features are noise x i = N(0; 20), i = 7; : : : ; 202.
+Nonlinear problem Two dimensions of 52 were relevant. The probability of y = 1 or 1
+was equal. The data are drawn from the following: if y = 1 then fx 1 ; x 2 g are drawn
+from N( 1 ; ) or N( 2 ; ) with equal probability,  1 = f 3
+4 ; 3g and  2 = f 3
+4 ; 3g and
+ = I , if y = 1 then fx 1 ; x 2 g are drawn again from two normal distributions with equal
+probability, with  1 = f3; 3g and  2 = f3; 3g and the same  as before. The rest of
+the features are noise x i = N(0; 20); i = 3; : : : ; 52.
+In the linear problem the first six features have redundancy and the rest of the features are
+irrelevant. In the nonlinear problem all but the first two features are irrelevant.
+We used a linear SVM for the linear problem and a second order polynomial kernel for the
+nonlinear problem. For the filter methods and the SVM with feature selection we selected
+the 2 best features.
+The results are shown in Figure (1) for various training set sizes, taking the average test
+error on 500 samples over 30 runs of each training set size. The Fisher score (not shown in
+graphs due to space constraints) performed almost identically to correlation coefficients.
+In both problems standard SVMs perform poorly: in the linear example using ` = 500
+points one obtains a test error of 13% for SVMs, which should be compared to a test error of
+3% with ` = 50 using our methods. Our SVM feature selection methods also outperformed
+the filter methods, with forward selection being marginally better than gradient descent.
+In the nonlinear problem, among the filter methods only the Kolmogorov­Smirnov test
+improved performance over standard SVMs.
+20 40 60 80 100
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7 Span-Bound & Forward Selection
+RW-Bound & Gradient
+Standard SVMs
+Correlation Coefficients
+Kolmogorov-Smirnov Test
+20 40 60 80 100
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7 Span-Bound & Forward Selection
+RW-Bound & Gradient
+Standard SVMs
+Correlation Coefficients
+Kolmogorov-Smirnov Test
+(a) (b)
+Figure 1: A comparison of feature selection methods on (a) a linear problem and (b) a
+nonlinear problem both with many irrelevant features. The x­axis is the number of training
+points, and the y­axis the test error as a fraction of test points.
+5.2 Real­life data
+For the following problems we compared minimizing R 2 W 2 via gradient descent to the
+Fisher criterion score.
+Face detection The face detection experiments described in this section are for the system
+introduced in [12, 5]. The training set consisted of 2; 429 positive images of frontal faces of
+
+size 19x19 and 13; 229 negative images not containing faces. The test set consisted of 105
+positive images and 2; 000; 000 negative images. A wavelet representation of these images
+[5] was used, which resulted in 1; 740 coefficients for each image.
+Performance of the system using all coefficients, 725 coefficients, and 120 coefficients is
+shown in the ROC curve in figure (2a). The best results were achieved using all features,
+however R 2 W 2 outperfomed the Fisher score. In this case feature selection was not useful
+for eliminating irrelevant features, but one could obtain a solution with comparable perfor­
+mance but reduced complexity, which could be important for time critical applications.
+Pedestrian detection The pedestrian detection experiments described in this section are
+for the system introduced in [11]. The training set consisted of 924 positive images of
+people of size 128x64 and 10; 044 negative images not containing pedestrians. The test set
+consisted of 124 positive images and 800; 000 negative images. A wavelet representation
+of these images [5, 11] was used, which resulted in 1; 326 coefficients for each image.
+Performance of the system using all coefficients and 120 coefficients is shown in the ROC
+curve in figure (2b). The results showed the same trends that were observed in the face
+recognition problem.
+10 -6 10 -5 10 -4
+0.6
+0.7
+0.8
+0.9
+1
+False Positive Rate
+Detection
+Rate
+10 -6 10 -5 10 -4
+0.2
+0.4
+0.6
+0.8
+1
+False Positive Rate
+Detection
+Rate
+10 -4 10 -3
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+False Positive Rate
+Detection
+Rate
+(a) (b)
+Figure 2: The solid line is using all features, the solid line with a circle is our feature
+selection method (minimizing R 2 W 2 by gradient descent) and the dotted line is the Fisher
+score. (a)The top ROC curves are for 725 features and the bottom one
+for 120 features for face detection. (b) ROC curves using all features and 120 features for
+pedestrian detection.
+Cancer morphology classification For DNA microarray data analysis one needs to deter­
+mine the relevant genes in discrimination as well as discriminate accurately. We look at
+two leukemia discrimination problems [6, 10] and a colon cancer problem [1] (see also [7]
+for a treatment of both of these problems).
+The first problem was classifying myeloid and lymphoblastic leukemias based on the ex­
+pression of 7129 genes. The training set consists of 38 examples and the test set of 34
+examples. Using all genes a linear SVM makes 1 error on the test set. Using 20 genes 0
+errors are made for R 2 W 2 and 3 errors are made using the Fisher score. Using 5 genes
+1 error is made for R 2 W 2 and 5 errors are made for the Fisher score. The method of [6]
+performs comparably to the Fisher score.
+The second problem was discriminating B versus T cells for lymphoblastic cells [6]. Stan­
+dard linear SVMs make 1 error for this problem. Using 5 genes 0 errors are made for
+R 2 W 2 and 3 errors are made using the Fisher score.
+
+In the colon cancer problem [1] 62 tissue samples probed by oligonucleotide arrays contain
+22 normal and 40 colon cancer tissues that must be discriminated based upon the expression
+of 2000 genes. Splitting the data into a training set of 50 and a test set of 12 in 50 separate
+trials we obtained a test error of 13% for standard linear SVMs. Taking 15 genes for each
+feature selection method we obtained 12.8% for R 2 W 2 , 17.0% for Pearson correlation
+coefficients, 19.3% for the Fisher score and 19.2% for the Kolmogorov­Smirnov test. Our
+method is only worse than the best filter method in 8 of the 50 trials.
+6 Conclusion
+In this article we have introduced a method to perform feature selection for SVMs. This
+method is computationally feasible for high dimensional datasets compared to existing
+wrapper methods, and experiments on a variety of toy and real datasets show superior
+performance to the filter methods tried. This method, amongst other applications, speeds up
+SVMs for time critical applications (e.g pedestrian detection), and makes possible feature
+discovery (e.g gene discovery). Secondly, in simple experiments we showed that SVMs can
+indeed suffer in high dimensional spaces where many features are irrelevant. Our method
+provides one way to circumvent this naturally occuring, complex problem.
+References
+[1] U. Alon, N. Barkai, D. Notterman, K. Gish, S. Ybarra, D. Mack, and A. Levine. Broad patterns
+of gene expression revealed by clustering analysis of tumor and normal colon cancer tissues
+probed by oligonucleotide arrays. Cell Biology, 96:6745--6750, 1999.
+[2] A. Blum and P. Langley. Selection of relevant features and examples in machine learning.
+Artificial Intelligence, 97:245--271,, 1997.
+[3] P. S. Bradley and O. L. Mangasarian. Feature selection via concave minimization and support
+vector machines. In Proc. 13th International Conference on Machine Learning, pages 82--90,
+San Francisco, CA, 1998.
+[4] O. Chapelle, V. Vapnik, O. Bousquet, and S. Mukherjee. Choosing kernel parameters for sup­
+port vector machines. Machine Learning, 2000.
+[5] T. Evgeniou, M. Pontil, C. Papageorgiou, and T. Poggio. Image representations for object
+detection using kernel classifiers. In Asian Conference on Computer Vision, 2000.
+[6] T. Golub, D. Slonim, P. Tamayo, C. Huard, M. Gaasenbeek, J. Mesirov, H. Coller, M. Loh,
+J. Downing, M. Caligiuri, C. D. Bloomfield, and E. S. Lander. Molecular classification of
+cancer: Class discovery and class prediction by gene expression monitoring. Science, 286:531--
+537, 1999.
+[7] I. Guyon, J. Weston, S. Barnhill, and V. Vapnik. Gene selection for cancer classification using
+support vector machines. Machine Learning, 2000.
+[8] T. Jebara and T. Jaakkola. Feature selection and dualities in maximum entropy discrimination.
+In Uncertainity In Artificial Intellegence, 2000.
+[9] J. Kohavi. Wrappers for feature subset selection. AIJ issue on relevance, 1995.
+[10] S. Mukherjee, P. Tamayo, D. Slonim, A. Verri, T. Golub, J. Mesirov, and T. Poggio. Support
+vector machine classification of microarray data. AI Memo 1677, Massachusetts Institute of
+Technology, 1999.
+[11] M. Oren, C. Papageorgiou, P. Sinha, E. Osuna, and T. Poggio. Pedestrian detection using
+wavelet templates. In Proc. Computer Vision and Pattern Recognition, pages 193--199, Puerto
+Rico, June 16--20 1997.
+[12] C. Papageorgiou, M. Oren, and T. Poggio. A general framework for object detection. In Inter­
+national Conference on Computer Vision, Bombay, India, January 1998.
+[13] V. Vapnik. Statistical Learning Theory. John Wiley and Sons, New York, 1998.
+

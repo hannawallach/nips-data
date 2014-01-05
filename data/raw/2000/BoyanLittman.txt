@@ -1,0 +1,536 @@
+Exact Solutions to Time-Dependent MDPs
+Justin A. Boyan 
+ITA Software
+Building 400
+One Kendall Square
+Cambridge, MA 02139
+jab@itasoftware.com
+Michael L. Littman
+AT&T Labs{Research
+and Duke University
+180 Park Ave. Room A275
+Florham Park, NJ 07932-0971 USA
+mlittman@research.att.com
+Abstract
+We describe an extension of the Markov decision process model in
+which a continuous time dimension is included in the state space.
+This allows for the representation and exact solution of a wide
+range of problems in which transitions or rewards vary over time.
+We examine problems based on route planning with public trans-
+portation and telescope observation scheduling.
+1 Introduction
+Imagine trying to plan a route from home to work that minimizes expected time.
+One approach is to use a tool such as \Mapquest", which annotates maps with
+information about estimated driving time, then applies a standard graph-search
+algorithm to produce a shortest route. Even if driving times are stochastic, the an-
+notations can be expected times, so this presents no additional challenge. However,
+consider what happens if we would like to include public transportation in our route
+planning. Buses, trains, and subways vary in their expected travel time according to
+the time of day : buses and subways come more frequently during rush hour; trains
+leave on or close to scheduled departure times. In fact, even highway driving times
+vary with time of day, with heavier tra∆c and longer travel times during rush hour.
+To formalize this problem, we require a model that includes both stochastic actions,
+as in a Markov decision process (mdp), and actions with time-dependent stochastic
+durations. There are a number of models that include some of these attributes:
+ Directed graphs with shortest path algorithms [2]: State transitions are deter-
+ministic; action durations are time independent (deterministic or stochastic).
+ Stochastic Time Dependent Networks (stdns) [6]: State transitions are deter-
+ministic; action durations are stochastic and can be time dependent.
+ Markov decision processes (mdps) [5]: State transitions are stochastic; action
+durations are deterministic.
+ Semi-Markov decision processes (smdps) [5]: State transitions are stochastic;
+action durations are stochastic, but not time dependent.
+ The work reported here was done while Boyan's a∆liation was with NASA Ames
+Research Center, Computational Sciences Division.
+
+In this paper, we introduce the Time-Dependent mdp (tmdp) model, which gener-
+alizes all these models by including both stochastic state transitions and stochastic,
+time-dependent action durations. At a high level, a tmdp is a special continuous-
+state mdp [5; 4] consisting of states with both a discrete component and a real-valued
+time component: hx; ti 2 X <.
+With absolute time as part of the state space, we can model a rich set of domain ob-
+jectives including minimizing expected time, maximizing the probability of making
+a deadline, or maximizing the dollar reward of a path subject to a time deadline.
+In fact, using the time dimension to represent other one-dimensional quantities,
+tmdps support planning with non-linear utilities [3] (e.g., risk-aversion), or with a
+continuous resource such as battery life or money.
+We dene tmdps and express their Bellman equations in a functional form that
+gives, at each state x, the one-step lookahead value at hx; ti for all times in parallel
+(Section 2). We use the term time-value function to denote a mapping from real-
+valued times to real-valued future reward. With appropriate restrictions on the form
+of the stochastic state-time transition function and reward function, we guarantee
+that the optimal time-value function at each state is a piecewise linear function of
+time, which can be represented exactly and computed by value iteration (Section 3).
+We conclude with empirical results on two domains (Section 4).
+2 General model
+x2
+x3
+6 7
+Drive on backroad
+µ3 Highway - rush hour
+3 3
+REL
+L P
+7 8
+5
+µ5
+5
+10 0 1 2 3 4
+12
+5
+REL
+L P
+2
+9
+8
+7
+2
+x1 µ2
+µ3
+a3
+µ1
+µ4
+µ5
+a1
+a2
+V
+10
+7 8 9 2
+12
+10
+12
+V 2
+3
+7 8 9 2
+4 5 6 7
+9 12
+10 0 1 2 3
+12
+Caught the 8am train
+µ2
+10
+Missed the 8am train
+µ1
+L
+7 8 9 2
+1 1
+REL
+P
+0 1 2 3 4 5 7
+6
+µ4 Highway - off peak
+7
+P
+0 2 3 6
+5
+4
+2
+12
+10
+9
+8
+7
+L 4
+1
+L
+ABS
+2
+2
+8 9
+7
+7 8 9 2
+12
+10
+P
+2
+4
+REL
+12
+10
+Work
+Home
+Figure 1: An illustrative route-planning example tmdp.
+Figure 1 depicts a small route-planning example that illustrates several distinguish-
+ing features of the tmdp model. The start state x 1 corresponds to being at home.
+From here, two actions are available: a 1 , taking the 8am train (a scheduled action);
+and a 2 , driving to work via highway then backroads (may be done at any time).
+Action a 1 has two possible outcomes, represented by  1 and  2 . Outcome  1
+(\Missed the 8am train") is active after 7:50am, whereas outcome  2 (\Caught the
+train") is active until 7:50am; this is governed by the likelihood functions L 1 and L 2
+in the model. These outcomes cause deterministic transitions to states x 1 and x 3 ,
+respectively, but take varying amounts of time. Time distributions in a tmdp may
+be either \relative" (rel) or \absolute" (abs). In the case of catching the train
+( 2 ), the distribution is absolute: the arrival time (shown in P 2 ) has mean 9:45am
+no matter what time before 7:50am the action was initiated. (Boarding the train
+earlier does not allow us to arrive at our destination earlier!) However, missing the
+train and returning to x 1 has a relative distribution: it deterministically takes 15
+minutes from our starting time (distribution P 1 ) to return home.
+
+The outcomes for driving (a 2 ) are  3 and  4 . Outcome  3 (\Highway { rush hour")
+is active with probability 1 during the interval 8am{9am, and with smaller proba-
+bility outside that interval, as shown by L 3 . Outcome  4 (\Highway { o peak")
+is complementary. Duration distributions P 3 and P 4 , both relative to the initiation
+time, show that driving times during rush hour are on average longer than those o
+peak. State x 2 is reached in either case.
+From state x 2 , only one action is available, a 3 . The corresponding outcome  5
+(\Drive on backroad") is insensitive to time of day and results in a deterministic
+transition to state x 3 with duration 1 hour. The reward function for arriving at
+work is +1 before 11am and falls linearly to zero between 11am and noon.
+The solution to a tmdp such as this is a policy mapping state-time pairs hx; ti to
+actions so as to maximize expected future reward. As is standard in mdp methods,
+our approach nds this policy via the value function V  . We represent the value
+function of a tmdp as a set of time-value functions, one per state: V i (t) gives the
+optimal expected future reward from state x i at time t. In our example of Figure 1,
+the time-value functions for x 3 and x 2 are shown as V 3 and V 2 . Because of the
+deterministic one-hour delay of  5 , V 2 is identical to V 3 shifted back one hour. This
+wholesale shifting of time-value functions is exploited by our solution algorithm.
+The tmdp model also allows a notion of \dawdling" in a state. This means the
+tmdp agent can remain in a state for as long as desired at a reward rate of K(x; t)
+per unit time before choosing an action. This makes it possible, for example, for an
+agent to wait at home for rush hour to end before driving to work.
+Formally, a tmdp consists of the following components:
+X discrete state space
+A discrete action space
+M discrete set of outcomes, each of the form  = hx 0
+ ; T  ; P i:
+x 0
+ 2 X : the resulting state
+T 2 fabs; relg: species the type of the resulting time distribution
+P (t 0 ) (if T  = abs): pdf over absolute arrival times of 
+P (∆) (if T  = rel): pdf over durations of 
+L L(jx; t; a) is the likelihood of outcome  given state x, time t, action a
+R R(; t; ∆) is the reward for outcome  at time t with duration ∆
+K K(x; t) is the reward rate for \dawdling" in state x at time t.
+We can dene the optimal value function for a tmdp in terms of these quantities
+with the following Bellman equations:
+V (x; t) = sup
+t 0 t
+Z t 0
+t
+K(x; s) ds + 
+V (x; t 0 )
+ value function (allowing dawdling)
+
+V (x; t) = max
+a2A
+Q(x; t; a) value function (immediate action)
+Q(x; t; a) =
+X
+2M
+L(jx; a; t)  U(; t) expected Q value over outcomes
+U(; t) =
+ R 1
+1 P  (t 0 ) [R(; t; t 0 t) + V (x 0
+ ; t 0 )]dt 0 (if T = abs)
+R 1
+1 P (t 0 t)[R(; t; t 0 t) + V (x 0
+ ; t 0 )]dt 0 (if T = rel):
+These equations follow straightforwardly from viewing the tmdp as an undiscounted
+continuous-time mdp. Note that the calculations of U(; t) are convolutions of the
+result-time pdf P with the lookahead value R + V . In the next section, we discuss
+a concrete way of representing and manipulating the continuous quantities that
+appear in these equations.
+
+3 Model with piecewise linear value functions
+In the general model, the time-value functions for each state can be arbitrarily
+complex and therefore impossible to represent exactly. In this section, we show how
+to restrict the model to allow value functions to be manipulated exactly.
+For each state, we represent its time-value function V i (t) as a piecewise linear func-
+tion of time. V i (t) is thus represented by a data structure consisting of a set of
+distinct times called breakpoints and, for each pair of consecutive breakpoints, the
+equation of a line dened over the corresponding interval.
+Why are piecewise linear functions an appropriate representation? Linear time-
+value functions provide an exact representation for minimum-time problems. Piece-
+wise time-value functions provide closure under the \max" operator.
+Rewards must be constrained to be piecewise linear functions of start and arrival
+times and action durations. We write R(; t; ∆) = R s (; t) +R a (; t + ∆) +R d (; ∆)
+where R s , R a , and R d are piecewise linear functions of start time, arrival time,
+and duration, respectively. In addition, the dawdling reward K and the outcome
+probability function L must be piecewise constant.
+The most signicant restriction needed for exact computation is that arrival and
+duration pdfs be discrete. This ensures closure under convolutions. In contrast,
+convolving a piecewise constant pdf (e.g., a uniform distribution) with a piecewise
+linear time-value function would in general produce a piecewise quadratic time-
+value function; further convolutions increase the degree with each iteration of value
+iteration. In Section 5 below we discuss how to relax this restriction.
+Given the restrictions just mentioned, all the operations used in the Bellman equa-
+tions from Section 2|namely, addition, multiplication, integration, supremum,
+maximization, and convolution|can be implemented exactly. The running time
+of each operation is linear in the representation size of the time-value functions
+involved. Seeding the process with an initial piecewise linear time-value function,
+we can carry out value iteration until convergence. In general, the running time
+from one iteration to the next can increase, as the number of linear \pieces" being
+manipulated grows; however, the representations grow only as complex as necessary
+to represent the value function V exactly.
+4 Experimental domains
+We present results on two domains: transportation planning and telescope schedul-
+ing. For comparison, we also implemented the natural alternative to the piecewise-
+linear technique: discretizing the time dimension and solving the problem as a stan-
+dard mdp. To apply the mdp method, three additional inputs must be specied:
+an earliest starting time, latest nishing time, and bin width. Since this paper's
+focus is on exact computations, we chose a discretization level corresponding to the
+resolution necessary for exact solution by the mdp at its grid points. An advantage
+of the mdp is that it is by construction acyclic, so it can be solved by just one sweep
+of standard value iteration, working backwards in time. The tmdp's advantage is
+that it directly manipulates entire linear segments of the time-value functions.
+4.1 Transportation planning
+Figure 2 illustrates an example tmdp for optimizing a commute from San Francisco
+to NASA Ames. The 14 discrete states model both location and observed tra∆c
+
+#6
+#5
+#4
+#3
+#2
+#1
+#7
+#8
+#13
+#12
+#11
+#10
+#9
+#0
+0000
+0000
+0000
+0000
+0000
+0000
+0000
+0000
+1111
+1111
+1111
+1111
+1111
+1111
+1111
+1111
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+0000
+0000
+0000
+0000
+0000
+0000
+0000
+0000
+1111
+1111
+1111
+1111
+1111
+1111
+1111
+1111
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+00000
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+11111
+01 01
+00
+00
+11
+11
+01
+01 0011 01
+0011
+Ames
+NASA
+US101
+Home
+& I-280
+Dolores
+Army &
+Dolores
+Army &
+Bayshore Station
+Station
+Bayshore
+22nd St
+US101 &
+Figure 2: The San Francisco to Ames commuting example
+≠0.2
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+6 7 8 9 10 11 12
+optimal
+value
+Q(x,a)
+Q≠functions at state 10 ("US101 & Bayshore / heavy traffic")
+action 0 ("drive to Ames")
+action 1 ("drive to Bayshore station")
+0
+1
+6 7 8 9 10 11 12
+action
+number
+time
+Optimal policy over time at state 10
+action 0 ("drive to Ames")
+action 1 ("drive to Bayshore station")
+Figure 3: The optimal Q-value functions and policy at state #10.
+
+conditions: shaded and unshaded circles represent heavy and light tra∆c, respec-
+tively. Observed transition times and tra∆c conditions are stochastic, and depend
+on both the time and tra∆c conditions at the originating location. At states 5,
+6, 11, and 12, the \catch the train" action induces an absolute arrival distribution
+reecting the train schedules.
+The domain objective is to arrive at Ames by 9:00am. We impose a linear penalty
+for arriving between 9 and noon, and an innite penalty for arriving after noon.
+There are also linear penalties on the number of minutes spent driving in light
+tra∆c, driving in heavy tra∆c, and riding on the train; the coe∆cients of these
+penalties can be adjusted to reect the commuter's tastes.
+Figure 3 presents the optimal time-value functions and policy for state #10,
+\US101&Bayshore / heavy tra∆c." There are two actions from this state, cor-
+responding to driving directly to Ames and driving to the train station to wait for
+the next train. Driving to the train station is preferred (has higher Q-value) at
+times that are close|but not too close!|to the departure times of the train.
+The full domain is solved in well under a second by both solvers (see Table 1). The
+optimal time-value functions in the solution comprise a total of 651 linear segments.
+4.2 Telescope observation scheduling
+Next, we consider the problem of scheduling astronomical targets for a telescope to
+maximize the scientic return of one night's viewing [1]. We are given N possible
+targets with associated coordinates, scientic value, and time window of visibility.
+Of course, we can view only one target at a time. We assume that the reward of
+an observation is proportional to the duration of viewing the target. Acquiring a
+target requires two steps of stochastic duration: moving the telescope, taking time
+roughly proportional to the distance traveled; and calibrating it on the new target.
+Previous approaches have dealt with this stochasticity heuristically, using a just-in-
+case scheduling approach [1]. Here, we model the stochasticity directly within the
+tmdp framework. The tmdp has N+1 states (corresponding to the N observations
+and \o") and N actions per state (corresponding to what to observe next). The
+Domain Solver Model
+states
+Value
+sweeps
+V 
+pieces
+Runtime
+(secs)
+SF-Commute piecewise vi 14 13 651 0.2
+exact grid vi 5054 1 5054 0.1
+Telescope-10 piecewise vi 11 5 186 0.1
+exact grid vi 14,311 1 14,311 1.3
+Telescope-25 piecewise vi 26 6 716 1.8
+exact grid vi 33,826 1 33,826 7.4
+Telescope-50 piecewise vi 51 6 1252 6.3
+exact grid vi 66,351 1 66,351 34.5
+Telescope-100 piecewise vi 101 4 2711 17.9
+exact grid vi 131,300 1 131,300 154.1
+Table 1: Summary of results. The three rightmost columns measure solution com-
+plexity in terms of the number of sweeps of value iteration before convergence;
+the number of distinct \pieces" or values in the optimal value function V  ; and
+the running time. Running times are the median of ve runs on an UltraSparc II
+(296MHz CPU, 256Mb RAM).
+
+dawdling reward rate K(x; t) encodes the scientic value of observing x at time t;
+that value is 0 at times when x is not visible. Relative duration distributions encode
+the inter-target distances and stochastic calibration times on each transition.
+We generated random target lists of sizes N=10, 25, 50, and 100. Visibility windows
+were constrained to be within a 13-hour night, specied with 0.01-hour precision.
+Thus, representing the exact solution with a grid required 1301 time bins per state.
+Table 1 shows comparative results of the piecewise-linear and grid-based solvers.
+5 Conclusions
+In sum, we have presented a new stochastic model for time-dependent mdps
+(tmdps), discussed applications, and shown that dynamic programming with piece-
+wise linear time-value functions can produce optimal policies e∆ciently. In initial
+comparisons with the alternative method of discretizing the time dimension, the
+tmdp approach was empirically faster, used signicantly less memory, and solved
+the problem exactly over continuous t 2 < rather than just at grid points.
+In our exact computation model, the requirement of discrete duration distributions
+seems particularly restrictive. We are currently investigating a way of using our
+exact algorithm to generate upper and lower bounds on the optimal solution for
+the case of arbitrary pdfs. This may allow the system to produce an optimal or
+provably near-optimal policy without having to identify all the twists and turns in
+the optimal time-value functions. Perhaps the most important advantage of the
+piecewise linear representation will turn out to be its amenability to bounding and
+approximation methods. We hope that such advances will enable the solution of
+city-sized route planning, more realistic telescope scheduling, and other practical
+time-dependent stochastic problems.
+Acknowledgments
+We thank Leslie Kaelbling, Rich Washington and NSF CAREER grant IRI-9702576.
+References
+[1] John Bresina, Mark Drummond, and Keith Swanson. Managing action du-
+ration uncertainty with just-in-case scheduling. In Decision-Theoretic Plan-
+ning: Papers from the 1994 Spring AAAI Symposium, pages 19{26, Stanford,
+CA, 1994. AAAI Press, Menlo Park, California. ISBN 0-929280-70-9. URL
+http://ic-www.arc.nasa.gov/ic/projects/xfr/jic/jic.html.
+[2] Thomas H. Cormen, Charles E. Leiserson, and Ronald L. Rivest. Introduction
+to Algorithms. The MIT Press, Cambridge, MA, 1990.
+[3] Sven Koenig and Reid G. Simmons. How to make reactive planners risk-
+sensitive. In Proceedings of the 2nd International Conference on Articial In-
+telligence Planning Systems, pages 293{304, 1994.
+[4] Harold J. Kushner and Paul G. Dupuis. Numerical Methods for Stochastic
+Control Problems in Continuous Time. Springer-Verlag, New York, 1992.
+[5] Martin L. Puterman. Markov Decision Processes|Discrete Stochastic Dynamic
+Programming. John Wiley & Sons, Inc., New York, NY, 1994.
+[6] Michael P. Wellman, Kenneth Larson, Matthew Ford, and Peter R. Wurman.
+Path planning under time-dependent uncertainty. In Proceedings of the 11th
+Conference on Uncertainty in Articial Intelligence, pages 532{539, 1995.
+

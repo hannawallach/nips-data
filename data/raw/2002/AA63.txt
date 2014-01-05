@@ -1,0 +1,633 @@
+Discriminative Learning for Label
+Sequences via Boosting
+Yasemin Altun, Thomas Hofmann and Mark Johnson 
+Department of Computer Science
+ Department of Cognitive and Linguistics Sciences
+Brown University, Providence, RI 02912
+faltun,thg@cs.brown.edu, Mark Johnson@brown.edu
+Abstract
+This paper investigates a boosting approach to discriminative
+learning of label sequences based on a sequence rank loss function.
+The proposed method combines many of the advantages of boost-
+ing schemes with the e∆ciency of dynamic programming methods
+and is attractive both, conceptually and computationally. In addi-
+tion, we also discuss alternative approaches based on the Hamming
+loss for label sequences. The sequence boosting algorithm oers an
+interesting alternative to methods based on HMMs and the more
+recently proposed Conditional Random Fields. Applications areas
+for the presented technique range from natural language processing
+and information extraction to computational biology. We include
+experiments on named entity recognition and part-of-speech tag-
+ging which demonstrate the validity and competitiveness of our
+approach.
+1 Introduction
+The problem of annotating or segmenting observation sequences arises in many
+applications across a variety of scientic disciplines, most prominently in natural
+language processing, speech recognition, and computational biology. Well-known
+applications include part-of-speech (POS) tagging, named entity classication, in-
+formation extraction, text segmentation and phoneme classication in text and
+speech processing [7] as well as problems like protein homology detection, secondary
+structure prediction or gene classication in computational biology [3].
+Up to now, the predominant formalism for modeling and predicting label sequences
+has been based on Hidden Markov Models (HMMs) and variations thereof. Yet,
+despite its success, generative probabilistic models { of which HMMs are a special
+case { have two major shortcomings, which this paper is not the rst one to point
+out. First, generative probabilistic models are typically trained using maximum
+likelihood estimation (MLE) for a joint sampling model of observation and label
+sequences. As has been emphasized frequently, MLE based on the joint probability
+model is inherently non-discriminative and thus may lead to suboptimal prediction
+accuracy. Secondly, e∆cient inference and learning in this setting often requires
+
+to make questionable conditional independence assumptions. More precisely, in the
+case of HMMs, it is assumed that the Markov blanket of the hidden label variable at
+time step t consists of the previous and next labels as well as the t-th observation.
+This implies that all dependencies on past and future observations are mediated
+through neighboring labels.
+In this paper, we investigate the use of discriminative learning methods for learning
+label sequences. This line of research continues previous approaches for learning
+conditional models, namely Conditional Random Fields (CRFs) [6], and discrim-
+inative re-ranking [1, 2]. CRFs have two main advantages compared to HMMs:
+They are trained discriminatively by maximizing a conditional (or pseudo-) likeli-
+hood criterion and they are more exible in modeling additional dependencies such
+as direct dependencies of the t-th label on past or future observations. However, we
+strongly believe there are two further lines of research that are worth pursuing and
+may oer additional benets or improvements.
+First of all, and this is the main emphasis of this paper, an exponential loss function
+such as the one used in boosting algorithms [9, 4] may be preferable to the logarith-
+mic loss function used in CRFs. In particular we will present a boosting algorithm
+that has the additional advantage of performing implicit feature selection, typically
+resulting in very sparse models. This is important for model regularization as well
+as for reasons of e∆ciency in high dimensional feature spaces. Secondly, we will
+also discuss the use of loss functions that explicitly minimize the zero/one loss on
+labels, i.e. the Hamming loss, as an alternative to loss functions based on ranking
+or predicting entire label sequences.
+2 Additive Models and Exponential Families
+Formally, learning label sequences is a generalization of the standard supervised clas-
+sication problem. The goal is to learn a discriminant function for sequences, i.e. a
+mapping from observation sequences X = (x 1 ; x 2 ; : : : ; x t ; : : :) to label sequences
+Y = (y 1 ; y 2 ; : : : ; y t ; : : :). The availability of a training set of labeled sequences
+X  f(X i ; Y i ) : i = 1; : : : ; ng to learn this mapping from data is assumed.
+In this paper, we focus on discriminant functions that can be written as additive
+models. The models under consideration take the following general form:
+F  (X; Y) =
+X
+t
+F  (X; Y; t); with F  (X; Y; t) =
+X
+k
+ k f k (X; Y; t) (1)
+Here f k denotes a (discrete) feature in the language of maximum entropy mod-
+eling, or a weak learner in the language of boosting. In the context of label se-
+quences f k will typically be either of the form f (1)
+k
+(x t+s ; y t ) (with s 2 f1; 0; 1g)
+or f (2)
+k
+(y t 1 ; y t ). The rst type of features will model dependencies between the
+observation sequence X and the t-th label in the sequence, while the second type
+will model inter-label dependencies between neighboring label variables. For ease
+of presentation, we will assume that all features are binary, i.e. each learner corre-
+sponds to an indicator function. A typical way of dening a set of weak learners is
+as follows:
+f (1)
+k
+(x t+s ; y t )  ∆(y t ; y(k)) k (x t+s ) (2)
+f (2)
+k
+(y t 1 ; y t )  ∆(y t ; y(k))∆(y t 1 ; 
+y(k)) : (3)
+where ∆ denotes the Kronecker-∆ and  k is a binary feature function that extracts
+a feature from an observation pattern; y(k) and 
+y(k) refer to the label values for
+which the weak learner becomes \active".
+
+There is a natural way to associate a conditional probability distribution over label
+sequences Y with an additive model F  by dening an exponential family for every
+xed observation sequence X
+P  (YjX)  exp [F  (X; Y)]
+Z  (X) ; Z  (X) 
+X
+Y
+exp [F  (X; Y)] : (4)
+This distribution is in exponential normal form and the parameters  are also called
+natural or canonical parameters. By performing the sum over the sequence index
+t, we can see that the corresponding su∆cient statistics are given by S k (X; Y) 
+P
+t f k (X; Y; t). These su∆cient statistics simply count the number of times the
+feature f k has been \active" along the labeled sequence (X; Y).
+3 Logarithmic Loss and Conditional Random Fields
+In CRFs, the log-loss of the model with parameters  w.r.t. a set of sequences X
+is dened as the negative sum of the conditional probabilities of each training label
+sequence given the observation sequence,
+H log (; X ) 
+X
+i
+log P  (Y i jX i ) =
+X
+i
+F  (X i ; Y i ) + log Z  (X i ) : (5)
+Although [6] has proposed a modication of improved iterative scaling for parameter
+estimation in CRFs, gradient-based methods such as conjugate gradient descent
+have often found to be more e∆cient for minimizing the convex loss function in
+Eq. (5) (cf. [8]). The gradient can be readily computed as
+r  H log =
+X
+i
+E
+
+S(X; Y)jX = X i
+
+S(X i ;Y i ); (6)
+where expectations are taken w.r.t. P  (YjX). The stationary equations then simply
+state that uniformly averaged over the training data, the observed su∆cient statis-
+tics should match their conditional expectations. Computationally, the evaluation
+of S(X i ; Y i ) is straightforward counting, while summing over all sequences Y to
+compute E
+
+S(X; Y)jX = X i
+ can be performed using dynamic programming, since
+the dependency structure between labels is a simple chain.
+4 Ranking Loss Functions for Label Sequences
+As an alternative to logarithmic loss functions, we propose to minimize an upper
+bound on the ranking loss [9] adapted to label sequences. The ranking loss of a
+discriminant function F  w.r.t. a set of training sequences is dened as
+H rnk (; X ) =
+X
+i
+X
+Y 6=Y i
+(F  (X i ; Y) F  (X i ; Y i )); (x) 
+
+0 for x < 0
+1 otherwise (7)
+which is simply the sum of the number of label sequences that are ranked higher than
+or equal to the true label sequence over all training sequences. It is straightforward
+to see (based on a term by term comparison) that an upper bound on the rank loss
+is given by the following exponential loss function
+H exp (; X ) 
+X
+i
+X
+Y 6=Y i
+exp
+
+F  (X i ; Y) F  (X i ; Y i )
+ =
+X
+i
+ 1
+P  (Y i jX i ) 1
+
+:(8)
+
+Interestingly this simply leads to a loss function that uses the inverse conditional
+probability of the true label sequence, if we dene this probability via the expo-
+nential form in Eq. (4). Notice that compared to [1], we include all sequences and
+not just the top N list generated by some external mechanism. As we will show
+shortly, an explicit summation is possible because of the availability of dynamic
+programming formulation to compute sums over all sequences e∆ciently.
+In order to derive gradient equations for the exponential loss we can simply make
+use of the elementary facts
+r  ( log P ()) = r  P ()
+P () ; and r 
+1
+P () = r  P ()
+P () 2 = r  ( log P ())
+P () : (9)
+Then it is easy to see that
+r  H exp (; X ) =
+X
+i
+E
+
+S(X; Y)jX = X i
+
+S(X i ;Y i )
+P  (Y i jX i ) : (10)
+The only dierence between Eq. (6) and Eq. (10) is the non-uniform weighting of
+dierent sequences by their inverse probability, hence putting more emphasis on
+training label sequences that receive a small overall (conditional) probability.
+5 Boosting Algorithm for Label Sequences
+As an alternative to a simple gradient method, we now turn to the derivation of
+a boosting algorithm, following the boosting formulation presented in [9]. Let us
+introduce a relative weight (or distribution) D(i; Y) for each label sequence Y
+w.r.t. a training instance (X i ; Y i ), i.e.
+P
+i
+P
+Y D(i; Y) = 1,
+D(i; Y)  exp
+
+F  (X i ; Y) F  (X i ; Y i )
+
+P
+j;
+P
+Y 0 6=Y j exp [F  (X j ; Y 0 ) F  (X j ; Y j )] ; for Y 6= Y i (11)
+= D(i)
+P  (YjX i )
+1 P  (Y i jX i ) ; D(i)  P  (Y i jX i ) 1 1
+P
+j
+[P  (Y j jX j ) 1 1] (12)
+In addition, we dene D(i; Y i ) = 0. Eq. (12) shows how we can split D(i; Y) into
+a relative weight for each training instance, given by D(i), and a relative weight of
+each sequence, given by the re-normalized conditional probability P  (YjX i ). Notice
+that D(i) ! 0 as we approach the perfect prediction case of P  (Y i jX i ) ! 1.
+We dene a boosting algorithm which in each round aims at minimizing the par-
+tition function or weight normalization constant Z k w.r.t. a weak learner f k and a
+corresponding optimal parameter increment 4 k
+Z k (4 k ) 
+X
+i
+D(i)
+X
+Y 6=Y i
+P  (YjX i )
+1 P  (Y i jX i ) exp
+
+4 k S k (X i ; Y) S k (X i ; Y i )
+
+(13)
+=
+X
+b
+  X
+i
+D(i)P (bjX i ; k)
+!
+exp [b4 k ] ; (14)
+where P  (bjX i ; k) =
+P
+Y2Y(b;X i ) P  (YjX i )=(1 P  (Y i jX i )) and Y(b; X i )  fY :
+Y 6= Y i ^ (S k (X i ; Y) S k (X i ; Y i )) = bg. This minimization problem is only
+tractable if the number of features is small, since a dynamic programming run
+with accumulators [6] for every feature seems to be required in order to compute
+
+the probabilities P  (bjX i ; k), i.e. the probability for the k-th feature to be active
+exactly b times, conditioned on the observation sequence X i .
+In cases, where this is intractable (and we assume this will be the case in most
+applications), one can instead minimize an upper bound on every Z k . The general
+idea is to exploit the convexity of the exponential function and to bound
+exp[x]  exp[x min ] x max x
+x max x min + exp[x max ] x x min
+x max x min ; (15)
+which is valid for every x 2 [x min ; x max ].
+We introduce the following shorthand notation u ik (Y)  S k (X i ; Y) S k (X i ; Y i ),
+u max
+ik
+ max Y 6=Y i u ik (Y), u max
+k
+= max i u max
+ik
+, u min
+ik
+ min Y 6=Y i u ik (Y), u min
+k
+
+min i u min
+ik
+and  i (Y)  P  (YjX i )=(1 P  (Y i jX i )) which allows us to rewrite
+Z k (4 k ) =
+X
+i
+D(i)
+X
+Y 6=Y i
+ i (Y) exp [4 k u ik (Y)] (16)
+
+X
+i
+D(i)
+X
+Y 6=Y i
+ i (Y)
+ u max
+ik u ik (Y)
+u max
+ik u min
+ik
+e 4ku min
+ik + u ik (Y) u min
+ik
+u max
+ik u min
+ik
+e 4ku max
+ik
+
+=
+X
+i
+D(i)
+
+r ik e 4ku min
+ik + (1 r ik )e 4ku max
+ik
+
+; where (17)
+r ik 
+X
+Y 6=Y i
+ i (Y) u max
+ik
+u ik (Y)
+u max
+ik
+u min
+ik
+(18)
+By taking the second derivative w.r.t. 4 k it is easy to verify that this is a convex
+function in 4 k which can be minimized with a simple line search.
+If one is willing to accept a looser bound, one can instead work with the inter-
+val [u min
+k
+; u max
+k
+] which is the union of the intervals [u min
+ik
+; u max
+ik
+] for every training
+sequence i and obtain the upper bound
+Z k (4 k )  r k e 4ku min
+k + (1 r k )e 4ku max
+k (19)
+r k 
+X
+i
+D(i)
+X
+Y 6=Y i
+ i (Y) u max
+k u ik (Y)
+u max
+k u min
+k
+(20)
+Which can be solved analytically
+4 k = 1
+u max
+k
+u min
+k
+log
+
+r k u min
+k
+(1 r k )u max
+k
+
+; (21)
+but will in general lead to more conservative step sizes.
+The nal boosting procedure picks at every round the feature for which the upper
+bound on Z k is minimal and then performs an update of  k    k +4 k . Of course,
+one might also use more elaborate techniques to nd the optimal 4 k , once f k
+has been selected, since the upper bound approximation may underestimate the
+optimal step sizes. It is important to see that the quantities involved (r ik and r k ,
+respectively) are simple expectations of su∆cient statistics that can be computed for
+all features simultaneously with a single dynamic programming run per sequence.
+6 Hamming Loss for Label Sequences
+In many applications one is primarily interested in the label-by-label loss or Ham-
+ming loss [9]. Here we investigate how to train models by minimizing an upper
+
+bound on the Hamming loss. The following logarithmic loss aims at maximizing
+the log-probability for each individual label and is given by
+F log (; X ) 
+X
+i
+X
+t
+log P  (y i
+t jX i ) =
+X
+i
+X
+t
+log
+X
+Y:y t =y i
+t
+P  (YjX i ) : (22)
+Again, focusing on gradient descent methods, the gradient is given by
+r  F log =
+X
+i
+X
+t
+E
+
+S(X; Y)jX = X i
+; y t = y i
+t
+ E
+
+S(X; Y)jX = X i
+
+(23)
+As can be seen, the expected su∆cient statistics are now compared not to their
+empirical values, but to their expected values, conditioned on a given label value
+y i
+t (and not the entire sequence Y i ). In order to evaluate these expectations, one
+can perform dynamic programming using the algorithm described in [5], which
+has (independently of our work) focused on the use of Hamming loss functions in
+the context of CRFs. This algorithm has the complexity of the forward-backward
+algorithm scaled by a constant.
+Similar to the log-loss case, one can dene an exponential loss function that corre-
+sponds to a margin-like quantity at every single label. We propose minimizing the
+following loss function
+F exp (; X ) =
+X
+i
+X
+t
+X
+Y
+exp
+2
+4 F  (X i ; Y) log
+X
+Y 0 ;y 0
+t =y i
+t
+exp
+
+F  (X i ; Y 0 )
+
+3
+5 (24)
+=
+X
+i;t
+P
+Y exp
+
+F  (X i ; Y)
+
+P
+Y;y t =y i
+t
+exp [F  (X i ; Y)] =
+X
+i;t
+P  (y i
+t
+jX i ; ) 1 (25)
+As a motivation, we point out that for the case of sequences of length 1, this
+will reduce to the standard multi-class exponential loss. Eectively in this model,
+the prediction of a label y t will mimic the probabilistic marginalization, i.e. ^
+y i
+t
+=
+arg max y F  (X i ; y; t), F  (X i ; y; t) = log
+P
+Y:y t =y exp
+
+F  (X i ; Y)
+ .
+Similar to the log-loss case, the gradient is given by
+r  F exp =
+X
+i;t
+E
+
+S(X; Y)jX = X i ; y t = y i
+t
+ E
+
+S(X i ; Y)jX = X i
+
+P  (y i
+t jX i ) (26)
+Again, we see the same dierences between the log-loss and the exponential loss, but
+this time for individual labels. Labels for which the marginal probability P  (y t
+i
+jX i )
+is small are accentuated in the exponential loss. The computational complexity for
+computing r  F exp and r  F log is practically the same. We have not been able to
+derive a boosting formulation for this loss function, mainly because it cannot be
+written as a sum of exponential terms. We have thus resorted to conjugate gradient
+descent methods for minimizing F exp in our experiments.
+7 Experimental Results
+7.1 Named Entity Recognition
+Named Entity Recognition (NER), a subtask of Information Extraction, is the task
+of nding the phrases that contain person, location and organization names, times
+and quantities. Each word is tagged with the type of the name as well as its position
+in the name phrase (i.e. whether it is the rst item of the phrase or not) in order
+to represent the boundary information.
+
+We used a Spanish corpus which was provided for the Special Session of CoNLL2002
+on NER. The data is a collection of news wire articles and is tagged for person
+names, organizations, locations and miscellaneous names.
+We used simple binary features to ask questions about the word being tagged, as
+well as the previous tag (i.e. HMM features). An example feature would be: Is the
+current word='Clinton' and the tag='Person-Beginning'?. We also used features to
+ask detailed questions (i.e. spelling features) about the current word (e.g.: Is the
+current word capitalized and the tag='Location-Intermediate'?) and the neighbor-
+ing words. These questions cannot be asked (in a principled way) in a generative
+HMM model. We ran experiments comparing the dierent loss functions optimized
+with the conjugate gradient method and the boosting algorithm. We designed
+three sets of features: HMM features (=S1), S1 and detailed features of the cur-
+rent word (=S2), and S2 and detailed features of the neighboring words (=S3).
+Feature Objective
+Set log exp boost
+S1 H 6.60 6.95 8.05
+F 6.73 7.33 -
+S2 H 6.72 7.03 6.93
+F 6.67 7.49 -
+S3 H 6.15 5.84 6.77
+F 5.90 5.10 -
+Table 1: Test error of the Spanish cor-
+pus for named entity recognition.
+The results summarized in Table 1
+demonstrate the competitiveness of the
+proposed loss functions with respect to
+H log . We observe that with dierent
+sets of features, the ordering of the per-
+formance of the loss functions changes.
+Boosting performs worse than the conju-
+gate gradient when only HMM features
+are used, since there is not much infor-
+mation in the features other than the
+identity of the word to be labeled. Con-
+sequently, the boosting algorithm needs
+to include almost all weak learners in
+the ensemble and cannot exploit feature
+sparseness. When there are more de-
+tailed features, the boosting algorithm is competitive with the conjugate gradient
+method, but has the advantage of generating sparser models. The conjugate gradi-
+ent method uses all of the available features, whereas boosting uses only about 10%
+of the features.
+7.2 Part of Speech Tagging
+Feature Objective
+Set log exp boost
+S1 H 4.69 5.04 10.58
+F 4.88 4.96 -
+S2 H 4.37 4.74 5.09
+F 4.71 4.90 -
+Table 2: Test error of the Penn Tree-
+Bank corpus for POS
+We used the Penn TreeBank corpus for
+the part-of-speech tagging experiments.
+The features were similar to the fea-
+ture sets S1 and S2 described above in
+the context of NER. Table 2 summarizes
+the experimental results obtained on this
+task. It can be seen that the test er-
+rors obtained by dierent loss functions
+lie within a relatively small range. Qual-
+itatively the behavior of the dierent op-
+timization methods is comparable to the
+NER experiments.
+7.3 General Comments
+Even with the tighter bound in the boosting formulation, the same features are
+selected many times, because of the conservative estimate of the step size for pa-
+rameter updates. We expect to speed up the convergence of the boosting algorithm
+
+by using a more sophisticated line search mechanism to compute the optimal step
+length, a conjecture that will be addressed in future work.
+Although we did not use real-valued features in our experiments, we observed that
+including real-valued features in a conjugate gradient formulation is a challenge,
+whereas it is very natural to have such features in a boosting algorithm.
+We noticed in our experiments that dening a distribution over the training in-
+stances using the inverse conditional probability creates problems in the boosting
+formulation for data sets that are highly unbalanced in terms of the length of the
+training sequences. To overcome this problem, we divided the sentences into pieces
+such that the variation in the length of the sentences is small. The conjugate gra-
+dient optimization, on the other hand, did not appear to suer from this problem.
+8 Conclusion and Future Work
+This paper makes two contributions to the problem of learning label sequences.
+First, we have presented an e∆cient algorithm for discriminative learning of label
+sequences that combines boosting with dynamic programming. The algorithm com-
+pares favorably with the best previous approach, Conditional Random Fields, and
+oers additional benets such as model sparseness. Secondly, we have discussed the
+use of methods that optimize a label-by-label loss and have shown that these meth-
+ods bear promise for further improving classication accuracy. Our future work will
+investigate the performance (in both accuracy and computational expenses) of the
+dierent loss functions in dierent conditions (e.g. noise level, size of the feature
+set).
+Acknowledgments
+This work was sponsored by an NSF-ITR grant, award number IIS-0085940.
+References
+[1] M. Collins. Discriminative reranking for natural language parsing. In Proceedings 17th
+International Conference on Machine Learning, pages 175{182. Morgan Kaufmann,
+San Francisco, CA, 2000.
+[2] M. Collins. Ranking algorithms for named{entity extraction: Boosting and the voted
+perceptron. In Proceedings 40th Annual Meeting of the Association for Computational
+Linguistics (ACL), pages 489{496, 2002.
+[3] R. Durbin, S. Eddy, A. Krogh, and G. Mitchison. Biological Sequence Analysis: Prob-
+abilistic Models of Proteins and Nucleic Acids. Cambridge University Press, 1998.
+[4] J. Friedman, T. Hastie, and R. Tibshirani. Additive logistic regression: a statistical
+view of boosting. Annals of Statistics, 28:337{374, 2000.
+[5] S. Kakade, Y.W. Teh, and S. Roweis. An alternative objective function for Markovian
+elds. In Proceedings 19th International Conference on Machine Learning, 2002.
+[6] J. Laerty, A. McCallum, and F. Pereira. Conditional random elds: Probabilistic
+models for segmenting and labeling sequence data. In Proc. 18th International Conf. on
+Machine Learning, pages 282{289. Morgan Kaufmann, San Francisco, CA, 2001.
+[7] C. Manning and H. Schutze. Foundations of Statistical Natural Language Processing.
+MIT Press, 1999.
+[8] T. Minka. Algorithms for maximum-likelihood logistic regression. Technical report,
+CMU, Department of Statistics, TR 758, 2001.
+[9] R. Schapire and Y. Singer. Improved boosting algorithms using condence-rated pre-
+dictions. Machine Learning, 37(3):297{336, 1999.
+

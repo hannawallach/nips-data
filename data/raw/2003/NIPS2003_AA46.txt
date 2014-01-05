@@ -1,0 +1,400 @@
+Linear Response for Approximate Inference
+
+Max Welling Department of Computer Science University of Toronto Toronto M5S 3G4 Canada welling@cs.utoronto.ca Yee Whye Teh Computer Science Division University of California at Berkeley Berkeley CA94720 USA ywteh@eecs.berkeley.edu
+
+Abstract Belief propagation on cyclic graphs is an efficient algorithm for computing approximate marginal probability distributions over single nodes and neighboring nodes in the graph. In this paper we propose two new algorithms for approximating joint probabilities of arbitrary pairs of nodes and prove a number of desirable properties that these estimates fulfill. The first algorithm is a propagation algorithm which is shown to converge if belief propagation converges to a stable fixed point. The second algorithm is based on matrix inversion. Experiments compare a number of competing methods.
+
+1 Introduction Belief propagation (BP) has become an important tool for approximate inference on graphs with cycles. Especially in the field of "error correction decoding", it has brought performance very close to the Shannon limit. BP was studied in a number of papers which have gradually increased our understanding of the convergence properties and accuracy of the algorithm. In particular, recent developments show that the stable fixed points are local minima of the Bethe free energy [10, 1], which paved the way for more accurate "generalized belief propagation" algorithms and convergent alternatives to BP [11, 6]. Despite its success, BP does not provide a prescription to compute joint probabilities over pairs of non-neighboring nodes in the graph. When the graph is a tree, there is a single chain connecting any two nodes, and dynamic programming can be used to efficiently integrate out the internal variables. However, when cycles exist, it is not clear what approximate procedure is appropriate. It is precisely this problem that we will address in this paper. We show that the required estimates can be obtained by computing the "sensitivity" of the node marginals to small changes in the node potentials. Based on this idea, we present two algorithms to estimate the joint probabilities of arbitrary pairs of nodes. These results are interesting in the inference domain but may also have future applications to learning graphical models from data. For instance, information about dependencies between random variables is relevant for learning the structure of a graph and the parameters encoding the interactions.
+
+
+2 Belief Propagation on Factor Graphs
+
+Let V index a collection of random variables {Xi}i V and let xi denote values of Xi. For
+
+a subset of nodes   V let X = {Xi}i be the variable associated with that subset, and
+
+
+
+x be values of X. Let A be a family of such subsets of V . The probability distribution . over X = XV is assumed to have the following form,
+
+PX(X = x) = 1 Z (x) i(xi) (1)
+
+A iV
+
+where Z is the normalization constant (the partition function) and ,i are positive potential functions defined on subsets and single nodes respectively. In the following we will . write P(x) = PX(X = x) for notational simplicity. The decomposition of (1) is consistent with a factor graph with function nodes over X and variables nodes Xi. For each i  V
+
+denote its neighbors by Ni = {  A :  simply N = {i  }. i} and for each subset  its neighbors are
+
+Factor graphs are a convenient representation for structured probabilistic models and subsume undirected graphical models and acyclic directed graphical models [3]. Further, there is a simple message passing algorithm for approximate inference that generalizes the belief propagation algorithms on both undirected and acyclic directed graphical models, ni(xi)  i(xi) mi(xi) mi(xi)  (x) nj(xj) (2)
+
+Ni\ x \i jN\i
+
+where ni(xi) represents a message from variable node i to factor node  and vice versa for message mi(xi). Marginal distributions over factor nodes and variable nodes are expressed in terms of these messages as follows,
+
+b(x) = 1  (x) ni(xi) bi(xi) = 1 i i(xi) mi(xi) (3)
+
+iN Ni
+
+where i, are normalization constants. It was recently established in [10, 1] that stable fixed points of these update equations correspond to local minima of the Bethe-Gibbs free energy given by,
+
+GBP({bBP,bBP}) = i  bBP(x)log 
+
+bBP(x) 
+
+(x)
+
++ bBP(xi)log i
+
+bBP(xi)ci i
+
+i(xi)
+
+(4)
+
+ x i xi
+
+with ci = 1 - |Ni| and the marginals are subject to the following local constraints:
+
+bBP(x) = bBP(xi),  i b(x) = 1,   A, i   (5)
+
+x \i x
+
+Since only local constraints are enforced it is no longer guaranteed that the set of marginals {bBP,bBP} are consistent with a single joint distribution B(x). 3 Linear Response In the following we will be interested in computing estimates of joint probability distributions for arbitrary pairs of nodes. We propose a method based on the linear response theorem. The idea is to study changes in the system when we perturb single node potentials,
+
+i 
+
+log i(xi) = log i (xi) + i(xi) 0 (6)
+
+
+The superscript 0
+
+indicates unperturbed quantities in (6) and the following. Let  = {i}
+
+and define the cumulant generating function of P(X) (up to a constant) as, F() = -log (x) i (xi)ei(
+
+0 xi)
+
+x A iV
+
+Differentiating F() with respect to  gives the cumulants of P(x),
+
+- F() j(xj) = pj(xj)
+
+= pj(xj) i(xi)
+
+=0
+
+(7)
+
+2F() i(xi)j(xj)
+
+=0
+
+pij(xi,xj) - pi(xi)pj(xj) if i = j
+
+- =
+
+(8) (9)
+
+=0 pi(xi)xi,xj - pi(xi)pj(xj) if i = j
+
+where pi,pij are single and pairwise marginals of P(x). Expressions for higher order cumulants can be derived by taking further derivatives of -F(). Notice from (9) that the covariance estimates are obtained by studying the perturbations in pj(xj) as we vary i(xi). This is not practical in general since calculating pj(xj) itself is intractable. Instead, we consider perturbations of approximate marginal distributions {bj}. In the following we will assume that bj(xj; ) (with the dependence on  made explicit) are the beliefs at a local minimum of the BP-Gibbs free energy (subject to constraints).
+
+In analogy to (9), let Cij(xi,xj) = bj(xj;) i(xi) =0 be the linear response estimated covari-
+
+ance, and define the linear response estimated joint pairwise marginal as bLR(xi,xj) = b0i(xi)b0j(xj) + Cij(xi,xj)
+
+ij (10)
+
+where b0i (xi) = bi(xi;  = 0). We will show that bLR and Cij satisfy a number of important . ij
+
+properties which make them suitable as approximations of joint marginals and covariances. First we show that Cij(xi,xj) can be interpreted as the Hessian of a well-behaved convex function. Let C be the set of beliefs that satisfy the constraints (5). The approximate marginals {b0i } along with the joint marginals {b0} form a local minimum of the BetheGibbs free energy (subject to b0 = {b0i ,b0}  C). Assume that b0 is a strict local minimum . of GBP (the strict local minimality is in fact attained if we use loopy belief propagation [1]). That is, there is an open domain D containing b0 such that GBP(b0) < GBP(b) for each b  D  C\b0. Now we can define
+
+G() = inf GBP(b) -
+
+bDC i,xi bi(xi)i(xi) (11)
+
+G() is a concave function since it is the infimum of a set of linear functions in . Further G(0) = GBP(b0). Since b0 is a strict local minimum when  = 0, small perturbations in  will result in small perturbations in b0, so that G is well-behaved on an open neighborhood
+
+around  = 0. Differentiating G(), we get
+
+Cij(xi,xj) = bj(xj;) i(xi)
+
+G() j(xj)
+
+= -
+
+= -bj(xj;) so we now have 2G()
+
+i(xi)j(xj) =0
+
+(12) =0
+
+In essence, we can interpret G() as a local convex dual of GBP(b) (by restricting attention to D). Since GBP is an approximation to the exact Gibbs free energy [8], which is in turn dual to F() [4], G() can be seen as an approximation to F() for small values of . For that reason we can take its second derivatives Cij(xi,xj) as approximations to the exact covariances (which are second derivatives of -F()). Theorem 1 The approximate covariance satisfies the following symmetry: Cij(xi,xj) = Cji(xj,xi) (13)
+
+
+Proof: The covariances are second derivatives of -G() at  = 0 so we can interchange the order of the derivatives since G() is well-behaved on a neighborhood around  = 0. Theorem 2 The approximate covariance satisfies the following "marginalization" conditions for each xi,xj: Cij(xi,xj) = Cij(xi,xj) = 0 (14)
+
+xi xj
+
+As a result the approximate joint marginals satisfy local marginalization constraints:
+
+bLR(xi,xj) = b0j(xj) ij bLR(xi,xj) = b0i(xi) ij (15)
+
+xi xj
+
+Proof: Using the definition of Cij(xi,xj) and marginalization constraints for b0j,
+
+Cij(xi,xj) =
+
+The constraint
+
+bj(xj;) i(xi)  =
+
+xj bj(xj;)
+
+= 1 = 0
+
+i(xi) =0
+
+ i(xi) (16)
+
+=0 =0 xj xj
+
+xi
+
+Cij(xi,xj) = 0 follows from the symmetry (13), while the corre-
+
+sponding marginalization (15) follows from (14) and the definition of bLR. ij
+
+Since -F() is convex, its Hessian matrix with entries given in (9) is positive semi-definite. Similarly, since the approximate covariances Cij(xi,xj) are second derivatives of a convex function -G(), we have: Theorem 3 The matrix formed from the approximate covariances Cij(xi,xj) by varying i and xi over the rows and varying j,xj over the columns is positive semi-definite. Using the above results we can reinterpret the linear response correction as a "projection" of the (only locally consistent) beliefs {b0i ,b0} onto a set of beliefs {b0i ,bLR} that is both
+
+ij
+
+locally consistent (theorem 2) and satisfies the global constraint of being positive semidefinite (theorem 3)1. 4 Propagating Perturbations for Linear Response Recall from (10) that we need the first derivative of bi(xi; ) with respect to j(xj) at  = 0. This does not automatically imply that we need an analytic expression for bi(xi; ) in terms of . In this section we show how we may compute these first derivatives by expanding all quantities and equations up to first order in  and keeping track of first order dependencies. First we assume that belief propagation has converged to a stable fixed point. We expand the beliefs and messages up to first order as2
+
+bi(xi;) = b0i(xi) 1 + ni(xi) = n0i(xi) 1 + mi(xi) = m0i(xi) 1 +
+
+j,yj
+
+Rij(xi,yj)j(yj) (17)
+
+Ni,k(xi,yk)k(yk) (18)
+
+k,yk
+
+Mi,k(xi,yk)k(yk) (19)
+
+1 2
+
+k,yk In extreme cases it is however possible that some entries of bLR become negative. The unconventional form of this expansion will make subsequent derivations more transparent.
+
+ij
+
+
+The "response matrices" Rij,Ni,j,Mi,j measure the sensitivities of the corresponding logarithms of beliefs and messages to changes in the log potentials log j(yj) at node j. Next, inserting the expansions (6,18,19) into the belief propagation equations (2) and matching first order terms, we arrive at the following update equations for the "supermessages" Mi,k(xi,yk) and Ni,k(xi,yk), Ni,k(xi,yk)  ikxiyk + Mi,k(xi,yk) (20)
+
+Ni\
+
+(x) m0i(xi) Mi,k(xi,yk) 
+
+x
+
+n0j(xj) Nj,k(xj,yk) (21)
+
+\i jN\i jN\i
+
+The super-messages are initialized at Mi,k = Ni,k = 0 and updated using (20,21) until convergence. Just as for belief propagation, where messages are normalized to avoid numerical over or under flow, after each update the super-messages are "normalized" as follows, Mi,k(xi,yk)  Mi,k(xi,yk) - Mi,k(xi,yk) (22)
+
+xi
+
+and similarly for Ni,k. After the above fixed point equations have converged, we compute the response matrix Rij(xi,xj) by again inserting the expansions (6,17,19) into (3) and matching first order terms, Rij(xi,xj) = ijxixj + Mi,j(xi,xj) (23)
+
+Ni
+
+The constraints (14) (which follow from the normalization of bi(xi; ) and b0i (xi)) translate
+
+into
+
+xi i
+
+b0(xi)Rij(xi,yj) = 0 and it is not hard to verify that the following shift can be
+
+applied to accomplish this, Rij(xi,yj)  Rij(xi,yj) - Finally, combining (17) with (12), we get
+
+b0i(xi)Rij(xi,yj) (24)
+
+xi
+
+Cij(xi,xj) = b0i(xi)Rij(xi,xj) (25)
+
+Theorem 4 If the factor graph has no loops then the linear response estimates defined in (25) are exact. Moreover, there exists a scheduling of the super-messages such that the algorithm converges after just one iteration (i.e. every message is updated just once). Sketch of Proof: Both results follow from the fact that belief propagation on tree structured factor graphs computes the exact single node marginals for arbitrary . Since the supermessages are the first order terms of the BP updates with arbitrary , we can invoke the exact linear response theorem given by (8) and (9) to claim that the algorithm converges to the exact joint pairwise marginal distributions. For graphs with cycles, BP is not guaranteed to converge. We can however still prove the following strong result. Theorem 5 If the messages {m0i(xi),n0i(xi)} have converged to a stable fixed point, then the update equations for the super-messages (20,21,22) will also converge to a unique stable fixed point, using any scheduling of the super-messages. Sketch of Proof3: We first note that the updates (20,21,22) form a linear system of equations which can only have one stable fixed point. The existence and stability of this fixed
+
+3 For a more detailed proof of the above two theorems we refer to [9].
+
+
+point is proven by observing that the first order term is identical to the one obtained from a linear expansion of the BP equations (2) around its stable fixed point. Finally, the SteinRosenberg theorem guarantees that any scheduling will converge to the same fixed point.
+
+5 Inverting Matrices for Linear Response In this section we describe an alternative method to compute
+
+i(xi) bk(xk)
+
+bi(xi) k(xk) by first computing
+
+and then inverting the matrix formed by flattened {i,xi} into a row index and
+
+{k,xk} into a column index. This method is a direct extension of [2]. The intuition is that while perturbations in a single i(xi) affect the whole system, perturbations in a single bi(xi) (while keeping the others fixed) affect each subsystem   A independently (see
+
+[8]). This makes it easier to compute
+
+i(xi) bk(xk)
+
+then to compute
+
+bi(xi) k(xk)
+
+.
+
+First we propose minimal representations for bi, i and the messages. We assume that for each node i there is a distinguished value xi = 0. Set i(0) = 0 while functionally define is invertible and its inverse gives us the desired covariances for xi,xk = 0. Values for xi = 0 or xk = 0 can then be computed using (14). We will also need minimal representations for all i and xi = 0. The i's can be interpreted as Lagrange multipliers to enforce the consistency constraints (5) [10]. We will use these multipliers instead of the messages in this section. Re-expressing the fixed point equations (2,3) in terms of bi's and i's only, and introducing the perturbations i, we get:
+
+bi(0) = 1- xi=0 bi(xi). Now the matrix formed by i(xi) bk(xk) for each i,k and xi,xk = 0
+
+for the messages. This can be achieved by defining new quantities i(xi) = log ni(xi) ni(0)
+
+bi(xi) bi(0) ci = i(xi)ei( i(0) xi)
+
+x \i
+
+x
+
+e- i(xi) for all i,xi = 0 (26)
+
+Ni
+
+(x) jN ej(
+
+bi(xi) =
+
+(x) jN ej(
+
+xj) xj)
+
+for all i,  Ni,xi = 0 (27)
+
+Differentiating the logarithm of (26) with respect to bk(xk), we get
+
+i(xi) bk(xk) = ciik xixk bi(xi) + 1 bi(0) + i(xi) bk(xk)
+
+(28)
+
+Ni
+
+remembering that bi(0) is a function of bi(xi), xi = 0. Notice that we need values for
+
+i(xi) bk(xk)
+
+in order to solve for
+
+i(xi) bk(xk)
+
+. Since perturbations in bk(xk) (while keeping other
+
+bj's fixed) do not affect nodes not directly connected to k, we have
+
+i(xi) bk(xk)
+
+= 0 for
+
+k  . When k  , these can in turn be obtained by solving, for each , a matrix inverse. Differentiating (27) by bk(xk), we obtain
+
+ikxixk = Cij(xi,xj)j( 
+
+j xj=0
+
+b(xi,xj) - bi(xi)bj(xj)
+
+xj) bk(xk) (29)
+
+ Cij(xi,xj) =
+
+if i=j
+
+(30)
+
+bi(xi)xixj - bi(xi)bj(xj) if i=j
+
+for each i,k  N and xi,xk = 0. Flattening the indices in (29) (varying i,xi over rows and k,xk over columns), the LHS becomes the identity matrix, while the RHS is a product
+
+
+Neighbors
+
+MF+LR
+
+Next-to-Nearest Neighbors Distant Nodes
+
+BP+LR
+
+-2
+
+10 C=0
+
+-2
+
+10 C=0
+
+BP
+
+-4
+
+10 C=0 MF+LR
+
+-3
+
+10 BP+LR
+
+Conditioning -4 10
+
+BP+LR Conditioning Conditioning MF+LR
+
+-4
+
+10 covariances covariances covariances
+
+-6
+
+10
+
+error -5 10 error error -6
+
+10
+
+0.5 1
+
+(a)
+
+edge 1.5 2 0.5 1edge
+
+(b)
+
+1.5 2 0.5 1
+
+(c)
+
+edge 1.5 2
+
+Figure 1: L1-error in covariances for MF+LR, BP, BP+LR and "conditioning". Dashed line is baseline (C = 0). The results are separately plotted for neighboring nodes (a), next-to-nearest neighboring nodes (b) and the remaining nodes (c). of two matrices. The first is a covariance matrix C where the ijth block is Cij(xi,xj); tives are given as elements of the inverse covariance matrix C . Finally, plugging the us the desired approximate covariances over the whole graph. Interestingly, the method only requires access to the beliefs at the local minimum, not to the potentials or Lagrange multipliers. 6 Experiment The accuracy of the estimated covariances Cij(xi,xj) in the LR approximation was studied on a 6×6 square grid with only nearest neighbors connected and 3 states per node. The solid curves in figure 1 represent the error in the estimates for: 1) mean field + LR approximation [2, 9], 2) BP estimates for neighboring nodes with bEDGE = b in equation (3), 3) BP+LR and 4) "conditioning", where bij(xi,xj) = bi (xi|xj) bBP(xj) and bi (xi|xj) is computed by running BP N · D times with xj clamped at a specific state (this has the same computational complexity as BP+LR). C was computed as Cij = bij - bibj, with {bi,bj} the marginals of bij, and symmetrizing the result. The error was computed as the absolute difference between the estimated and the true values, averaged over pairs of nodes and their possible states, and averaged over 25 random draws of the network. An instantiation of a network was generated by randomly drawing the logarithm of the edge potentials from a zero mean Gaussian with a standard deviation ranging between [0, 2]. The node potentials were set to 1. From these experiments we conclude that "conditioning" and BP+LR have similar accuracy and significantly outperform MF+LR and BP, while "conditioning" performs slightly better than BP+LR. The latter does however satisfy some desirable properties which are violated by conditioning (see section 7 for further discussion). 7 Discussion In this paper we propose to estimate covariances as follows: first observe that the log partition function is the cumulant generating function, next define its conjugate dual ­ the Gibbs free energy ­ and approximate it, finally transform back to obtain a local convex approximation to the log partition function, from which the covariances can be estimated. The computational complexity of the iterative linear response algorithm scales as O(N ·
+
+
+
+. Hence the derivawhile the second matrix consists of all the desired derivatives j(xj) bk(xk)
+
+-1
+
+and inverting that matrix will now give values of j(xj) bk(xk) into (28) now gives i(xi) bk(xk)
+
+|j j |j
+
+
+E · D3) per iteration (N = #nodes, E = #edges, D = #states per node). The noniterative algorithm scales slightly worse, O(N3 · D3), but is based on a matrix inverse for which very efficient implementations exist. A question that remains open is whether we can improve the efficiency of the iterative algorithm when we are only interested in the joint distributions of neighboring nodes. There are still a number of generalizations worth mentioning. Firstly, the same ideas can be applied to the MF approximation [9] and the Kikuchi approximation (see also [5]). Secondly, the presented method easily generalizes to the computation of higher order cumulants. Thirdly, when applying the same techniques to Gaussian random fields, a propagation algorithm results that computes the inverse of the weight matrix exactly [9]. In the case of more general continuous random field models we are investigating whether linear response algorithms can be applied to the fixed points of expectation propagation. The most important distinguishing feature between the proposed LR algorithm and the conditioning procedure described in section 6 is the fact that the covariance estimate is automatically positive semi-definite. Indeed the idea to include global constraints such as positive semi-definiteness in approximate inference algorithms was proposed in [7]. Other differences include automatic consistency between joint pairwise marginals from LR and node marginals from BP (not true for conditioning) and a convergence proof for the LR algorithm (absent for conditioning, but not observed to be a problem experimentally). Finally, the non-iterative algorithm is applicable to all local minima in the Bethe-Gibbs free energy, even those that correspond to unstable fixed points of BP. Acknowledgements We would like to thank Martin Wainwright for discussion. MW would like to thank Geoffrey Hinton for support. YWT would like to thank Mike Jordan for support. References [1] T. Heskes. Stable fixed points of loopy belief propagation are minima of the bethe free energy. In Advances in Neural Information Processing Systems, volume 15, Vancouver, CA, 2003. [2] H.J. Kappen and F.B. Rodriguez. Efficient learning in Boltzmann machines using linear response theory. Neural Computation, 10:1137­1156, 1998. [3] F.R. Kschischang, B. Frey, and H.A. Loeliger. Factor graphs and the sum-product algorithm. IEEE Transactions on Information Theory, 47(2):498­519, 2001. [4] M. Opper and O. Winther. From naive mean field theory to the TAP equations. In Advanced Mean Field Methods ­ Theory and Practice. MIT Press, 2001. [5] K. Tanaka. Probabilistic inference by means of cluster variation method and linear response theory. IEICE Transactions in Information and Systems, E86-D(7):1228­1242, 2003. [6] Y.W. Teh and M. Welling. The unified propagation and scaling algorithm. In Advances in Neural Information Processing Systems, 2001. [7] M.J. Wainwright and M.I. Jordan. Semidefinite relaxations for approximate inference on graphs with cycles. Technical report, Computer Science Division, University of California Berkeley, 2003. Rep. No. UCB/CSD-3-1226. [8] M. Welling and Y.W. Teh. Approximate inference in boltzmann machines. Artificial Intelligence, 143:19­50, 2003. [9] M. Welling and Y.W. Teh. Linear response algorithms for approximate inference in graphical models. Neural Computation, 16:197­221, 2004. [10] J.S. Yedidia, W. Freeman, and Y. Weiss. Generalized belief propagation. In Advances in Neural Information Processing Systems, volume 13, 2000. [11] A.L. Yuille. CCCP algorithms to minimize the Bethe and Kikuchi free energies: Convergent alternatives to belief propagation. Neural Computation, 14(7):1691­1722, 2002.
+
+

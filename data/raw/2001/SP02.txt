@@ -1,0 +1,545 @@
+Speech Recognition using SVMs
+Nathan Smith
+Cambridge University
+Engineering Dept
+Cambridge, CB2 1PZ, U.K.
+nds1002@eng.cam.ac.uk
+Mark Gales
+Cambridge University
+Engineering Dept
+Cambridge, CB2 1PZ, U.K.
+mjfg@eng.cam.ac.uk
+Abstract
+An important issue in applying SVMs to speech recognition is the
+ability to classify variable length sequences. This paper presents
+extensions to a standard scheme for handling this variable length
+data, the Fisher score. A more useful mapping is introduced based
+on the likelihood-ratio. The score-space dened by this mapping
+avoids some limitations of the Fisher score. Class-conditional gen-
+erative models are directly incorporated into the denition of the
+score-space. The mapping, and appropriate normalisation schemes,
+are evaluated on a speaker-independent isolated letter task where
+the new mapping outperforms both the Fisher score and HMMs
+trained to maximise likelihood.
+1 Introduction
+Speech recognition is a complex, dynamic classication task. State-of-the-art sys-
+tems use Hidden Markov Models (HMMs), either trained to maximise likelihood or
+discriminatively, to achieve good levels of performance. One of the reasons for the
+popularity of HMMs is that they readily handle the variable length data sequences
+which result from variations in word sequence, speaker rate and accent. Support
+Vector Machines (SVMs) [1] are a powerful, discriminatively-trained technique that
+have been shown to work well on a variety of tasks. However they are typically only
+applied to static binary classication tasks. This paper examines the application
+of SVMs to speech recognition. There are two major problems to address. First,
+how to handle the variable length sequences. Second, how to handle multi-class
+decisions. This paper only concentrates on dealing with variable length sequences.
+It develops our earlier research in [2] and is detailed more fully in [7]. A similar
+approach for protein classication is adopted in [3].
+There have been a variety of methods proposed to map variable length sequences
+to vectors of xed dimension. These include vector averaging and selecting a `rep-
+resentative' number of observations from each utterance. However, these methods
+may discard useful information. This paper adopts an approach similar to that of
+[4] which makes use of all the available data. Their scheme uses generative prob-
+ability models of the data to dene a mapping into a xed dimension space, the
+Fisher score-space. When incorporated within an SVM kernel, the kernel is known
+as the Fisher kernel. Relevant regularisation issues are discussed in [5]. This paper
+
+examines the suitability of the Fisher kernel for classication in speech recognition
+and proposes an alternative, more useful, kernel. In addition some normalisation
+issues associated with using this kernel for speech recognition are addressed.
+Initially a general framework for dening alternative score-spaces is required. First,
+dene an observation sequence as O = (o 1 ; : : : o t ; : : : o T ) where o t 2 R D , and a set
+of generative probability models of the observation sequences as P = fp k (Oj k )g,
+where  k is the vector of parameters for the kth member of the set. The observation
+sequence O can be mapped into a vector of xed dimension [4],
+' f
+^
+F
+(O) = ' ^
+F f fp k (Oj k )g
+ (1)
+f() is the score-argument and is a function of the members of the set of generative
+models P . ' ^
+F is the score-mapping and is dened using a score-operator ^
+F . ' f
+^
+F (O)
+is the score and occupies the xed-dimension score-space. Our investigation of
+score-spaces falls into three divisions. What are the best generative models, score-
+arguments and score-operators to use?
+2 Score-spaces
+As HMMs have proved successful in speech recognition, they are a natural choice
+as the generative models for this task. In particular HMMs with state output
+distributions formed by Gaussian mixture models. There is also the choice of the
+score-argument. For a two-class problem, let p i (Oj i ) represent a generative model,
+where i = fg; 1; 2g (g denotes the global 2-class generative model, and 1 and 2 denote
+the class-conditional generative models for the two competing classes). Previous
+schemes have used the log of a single generative model, ln p i (Oj i ) representing
+either both classes as in the original Fisher score (i = g) [4], or one of the classes
+(i = 1 or 2) [6]. This score-space is termed the likelihood score-space, ' lik
+^
+F
+(O).
+The score-space proposed in this paper uses the log of the ratio of the two class-
+conditional generative models, ln(p 1 (Oj 1 )=p 2 (Oj 2 )) where  = [ >
+1 ;  >
+2 ] > . The
+corresponding score-space is called the likelihood-ratio score-space, ' lr
+^
+F (O). Thus,
+' lik
+^
+F (O) = ' ^
+F ln p i (Oj i ) (2)
+' lr
+^
+F (O) = ' ^
+F ln
+ p 1 (Oj 1 )
+p 2 (Oj 2 )
+
+(3)
+The likelihood-ratio score-space can be shown to avoid some of the limitations of
+the likelihood score-space, and may be viewed as a generalisation of the standard
+generative model classier. These issues will be discussed later.
+Having proposed forms for the generative models and score-arguments, the score-
+operators must be selected. The original score-operator in [4] was the 1st-order
+derivative operator applied to HMMs with discrete output distributions. Consider
+a continuous density HMM with N emitting states, j 2 f1 : : : Ng. Each state,
+j, has an output distribution formed by a mixture of K Gaussian components,
+N ( jk ;  jk ) where k 2 f1 : : : Kg. Each component has parameters of weight w jk ,
+mean  jk and covariance  jk . The 1st-order derivatives of the log probability of
+the sequence O with respect to the model parameters are given below 1 , where the
+derivative operator has been dened to give column vectors,
+r jk
+ln p(Oj) =
+T
+X
+t=1
+ jk (t)S >
+[t;jk] (4)
+1 For fuller details of the derivations see [2].
+
+r vec( jk ) ln p(Oj) =
+T
+X
+t=1
+ jk (t) 1
+2
+
+[vec( 1
+jk )] > + fS
+[t;jk]
+ S [t;jk] g
+ >
+(5)
+rw jk
+ln p(Oj) =
+T
+X
+t=1
+ jk (t)
+ 1
+w jk
+ j1 (t)
+w j1  jk (t)
+
+(6)
+where S [t;jk] = (o t  jk ) >  1
+jk (7)
+ jk (t) is the posterior probability of component k of state j at time t. Assuming
+the HMM is left-to-right with no skips and assuming that a state only appears once
+in the HMM (i.e. there is no state-tying), then the 1st-order derivative for the
+self-transition probability for state j, a jj , is,
+r a jj
+ln p(Oj) =
+T
+X
+t=1
+  j (t)
+a jj
+1
+Ta jj (1 a jj )
+
+(8)
+The 1st-order derivatives for each Gaussian parameter and self-transition probabil-
+ity in the HMM can be spliced together into a `super-vector' which is the score 2 .
+From the denitions above, the score for an utterance is a weighted sum of scores
+for individual observations. If the scores for the same utterance spoken at dierent
+speaking rates were calculated, they would lie in dierent regions of score-space
+simply because of diering numbers of observations. To ease the task of the classier
+in score-space, the score-space may be normalised by the number of observations,
+called sequence length normalisation. Duration information can be retained in the
+derivatives of the transition probabilities. One method of normalisation redenes
+score-spaces using generative models trained to maximise a modied log likelihood
+function, l n (Oj). Consider that state j has entry time  j and duration d j (both in
+numbers of observations) and output probability b j (o t ) for observation o t [7]. So,
+l n (Oj) =
+N
+X
+j=1
+1
+d j
+
+(d j 1) ln a jj + ln a j(j+1) +
+ j +d j 1
+X
+t= j
+ln b j (o t )
+ 
+(9)
+It is not possible to maximise l n (Oj) using the EM algorithm. Hill-climbing tech-
+niques could be used. However, in this paper, a simpler normalisation method is
+employed. The generative models are trained to maximise the standard likelihood
+function. Rather than dene the score-space using standard state posteriors  j (t)
+(the posterior probability of state j at time t), it is dened on state posteriors nor-
+malised by the total state occupancy over the utterance. The standard component
+posteriors  jk (t) are replaced in Equations 4 to 6 and 8 by their normalised form
+^
+ jk (t),
+^  jk (t) =  j (t)
+P T
+=1  j ()
+ 
+w jk N (o t ;  jk ;  jk )
+P K
+i=1 w ji N (o t ;  ji ;  ji )
+!
+(10)
+In eect, each derivative is divided by the sum of state posteriors. This is preferred
+to division by the total number of observations T which assumes that when the
+utterance length varies, the occupation of every state in the state sequence is scaled
+by the same ratio. This is not necessarily the case for speech.
+The nature of the score-space aects the discriminative power of classiers built
+in the score-space. For example, the likelihood score-space dened on a two-class
+2 Due to the sum to unity constraints, one of the weight parameters in each Gaussian
+mixture is discarded from the denition of the super-vector, as are the forward transitions
+in the left-to-right HMM with no skips.
+
+generative model is susceptible to wrap-around [7]. This occurs when two dierent
+locations in acoustic-space map to a single point in score-subspace. As an example,
+consider two classes modelled by two widely-spaced Gaussians. If an observation
+is generated at the peak of the rst Gaussian, then the derivative relative to the
+mean of that Gaussian is zero because S [t;jk] is zero (see Equation 4). However, the
+derivative relative to the mean of the distant second Gaussian is also zero because
+of a zero component posterior  jk (t). A similar problem occurs with an observation
+generated at the peak of the second Gaussian. This ambiguity in mapping two
+possible locations in acoustic-space to the zero of the score-subspace of the means
+represents a wrapping of the acoustic space onto this subspace. This also occurs
+in the subspace of the variances. Thus wrap-around can increase class confusion.
+A likelihood-ratio score-space dened on these two Gaussians does not suer wrap-
+around since the component posteriors for each Gaussian are forced to unity.
+So far, only 1st-order derivative score-operators have been considered. It is pos-
+sible to include the zeroth, 2nd and higher-order derivatives. Of course there is
+an interaction between the score-operator and the score-argument. For example,
+the zeroth-order derivative for the likelihood score-space is expected to be less use-
+ful than its counter-part in the likelihood-ratio score-space because of its greater
+sensitivity to acoustic conditions. A principled approach to using derivatives in
+score-spaces would be useful. Consider the simple case of true class-conditional
+generative models p 1 (Oj 1 ) and p 2 (Oj 2 ) with respective estimates of the same
+functional form p 1 (Oj ^
+ 1 ) and p 2 (Oj ^  2 ). Expressing the true models as Taylor se-
+ries expansions about the parameter estimates ^
+ 1 and ^  2 (see [7] for more details,
+and [3]),
+ln p i (Oj i ) = ln p i (Oj ^
+ i ) + ( i ^  i ) > r ^
+ i
+ln p i (Oj ^  i )
++ 1
+2 ( i
+^
+ i ) > [r ^
+ i
+r >
+^
+ i
+ln p i (Oj ^  i )]( i
+^  i ) +O  i () 3
+
+= w >
+i [1; r >
+^
+ i
+; vec(r ^
+ i
+r >
+^
+ i
+) > : : : ] > ln p i (Oj ^
+ i ) (11)
+The output from the operator in square brackets is an innite number of derivatives
+arranged as a column vector. w i is also a column vector. The expressions for the
+two true models can be incorporated into an optimal minimum Bayes error decision
+rule as follows, where ^  = [ ^  >
+1 ; ^  >
+2 ] > , w = [w >
+1 ; w >
+2 ] > , and b encodes the class
+priors,
+ln p 1 (Oj 1 ) ln p 2 (Oj 2 ) + b = 0
+w >
+1 [1; r >
+^
+1 ; vec(r ^
+1 r >
+^
+ 1
+) > : : : ] > ln p 1 (Oj ^  1 )
+w >
+2 [1; r >
+^
+2
+; vec(r ^
+ 2
+r >
+^ 2
+) > : : : ] > ln p 2 (Oj ^
+ 2 ) + b = 0
+w > [1; r >
+^
+
+; vec(r ^
+ r >
+^
+
+) > : : : ] > ln p 1 (Oj ^
+ 1 )
+p 2 (Oj ^
+ 2 )
++ b = 0
+w > ' lr (O) + b = 0 (12)
+' lr (O) is a score in the likelihood-ratio score-space formed by an innite number of
+derivatives with respect to the parameter estimates ^
+. Therefore, the optimal deci-
+sion rule can be recovered by constructing a well-trained linear classier in ' lr (O).
+In this case, the standard SVM margin can be interpreted as the log posterior mar-
+gin. This justies the use of the likelihood-ratio score-space and encourages the
+use of higher-order derivatives. However, most HMMs used in speech recognition
+are 1st-order Markov processes but speech is a high-order or innite-order Markov
+
+process. Therefore, a linear decision boundary in the likelihood-ratio score-space de-
+ned on 1st-order Markov model estimates is unlikely to be su∆cient for recovering
+the optimal decision rule due to model incorrectness. However, powerful non-linear
+classiers may be trained in such a likelihood-ratio score-space to try to compensate
+for model incorrectness and approximate the optimal decision rule. SVMs with non-
+linear kernels such as polynomials or Gaussian Radial Basis Functions (GRBFs) may
+be used. Although gains are expected from incorporating higher-order derivatives
+into the score-space, the size of the score-space dramatically increases. Therefore,
+practical systems may truncate the likelihood-ratio score-space after the 1st-order
+derivatives, and hence use linear approximations to the Taylor series expansions 3 .
+However, an example of a 2nd-order derivative is r jk
+r >
+ jk
+ln p(Oj)
+
+,
+r jk
+r >
+ jk
+ln p(Oj)
+
+
+T
+X
+t=1
+ jk (t) 1
+jk (13)
+For simplicity the component posterior  jk (t) is assumed independent of  jk . Once
+the score-space has been dened, an SVM classier can be built in the score-space.
+If standard linear, polynomial or GRBF kernels are used in the score-space, then
+the space is assumed to have a Euclidean metric tensor. Therefore, the score-space
+should rst be whitened (i.e. decorrelated and scaled) before the standard kernels
+are applied. Failure to perform such score-space normalisation for a linear kernel
+in score-space results in a kernel similar to the Plain kernel [5]. This is expected
+to perform poorly when dierent dimensions of score-space have dierent dynamic
+ranges [2]. Simple scaling has been found to be a reasonable approximation to
+full whitening and avoids inverting large matrices in [2] (though for classication
+of single observations rather than sequences, on a dierent database). The Fisher
+kernel in [4] uses the Fisher Information matrix to normalise the score-space. This
+is only an acceptable normalisation for a likelihood score-space under conditions
+that give a zero expectation in score-space. The appropriate SVM kernel to use
+between two utterances O i and O j in the normalised score-space is therefore the
+Normalised kernel, kN (O i ; O j ) (where  sc is the covariance matrix in score-space),
+kN (O i ; O j ) = ' f
+^
+F
+(O i ) >  1
+sc ' f
+^
+F
+(O j ) (14)
+3 Experimental Results
+The ISOLET speaker-independent isolated letter database [8] was used for eval-
+uation. The data was coded at a 10 msec frame rate with a 25.6 msec window-
+size. The data was parameterised into 39-dimensional feature vectors including 12
+MFCCs and a log energy term with corresponding delta and acceleration parame-
+ters. 240 utterances per letter from isoletf1,2,3,4g were used for training and
+60 utterances per letter from isolet5 for testing. There was no overlap between
+the training and test speakers. Two sets of letters were tested, the highly con-
+fusible E-set, fB C D E G P T V Zg, and the full 26 letters. The baseline HMM
+system was well-trained to maximise likelihood. Each letter was modelled by a
+10-emitting state left-to-right continuous density HMM with no skips, and silence
+by a single emitting-state HMM with no skips. Each state output distribution had
+the same number of Gaussian components with diagonal covariance matrices. The
+models were tested using a Viterbi recogniser constrained to a silence-letter-silence
+network.
+3 It is useful to note that a linear decision boundary, with zero bias, constructed in a
+single-dimensional likelihood-ratio score-space formed by the zeroth-order derivative oper-
+ator would, under equal class priors, give the standard minimum Bayes error classier.
+
+The baseline HMMs were used as generative models for SVM kernels. A modi-
+ed version of SV M light Version 3.02 [9] was used to train 1v1 SVM classiers
+on each possible class pairing. The sequence length normalisation in Equation 10,
+and simple scaling for score-space normalisation, were used during training and
+testing. Linear kernels were used in the normalised score-space, since they gave
+better performance than GRBFs of variable width and polynomial kernels of de-
+gree 2 (including homogeneous, inhomogeneous, and inhomogeneous with zero-mean
+score-space). The linear kernel did not require parameter-tuning and, in initial ex-
+periments, was found to be fairly insensitive to variations in the SVM trade-o
+parameter C. C was xed at 100, and biased hyperplanes were permitted. A va-
+riety of score-subspaces were examined. The abbreviations m, v, w and t refer to
+the score-subspaces r jk
+ln p i (Oj i ), r vec( jk ) ln p i (Oj i ), rw jk
+ln p i (Oj i ) and
+r a jj
+ln p i (Oj i ) respectively. l refers to the log likelihood ln p i (Oj i ) and r to the
+log likelihood-ratio ln[p 2 (Oj 2 )=p 1 (Oj 1 )]. The binary SVM classication results
+(and, as a baseline, the binary HMM results) were combined to obtain a single
+classication for each utterance. This was done using a simple majority voting
+scheme among the full set of 1v1 binary classiers (for tied letters, the relevant 1v1
+classiers were inspected and then, if necessary, random selection performed [2]).
+Table 1: Error-rates for HMM baselines and SVM score-spaces (E-set)
+Num comp. HMM SVM score-space
+per class min. Bayes majority lik-ratio lik lik
+per state error voting (stat. sign.) (1-class) (2-class)
+1 11.3 11.3 6.9 (99.8%) 7.6 6.1
+2 8.7 8.7 5.0 (98.9%) 6.3 9.3
+4 6.7 6.7 5.7 (13.6%) 8.0 23.2
+6 7.2 7.2 6.1 (59.5%) 7.8 30.6
+Table 1 compares the baseline HMM and SVM classiers as the complexity of the
+generative models was varied. Statistical signicance condence levels are given in
+brackets comparing the baseline HMM and SVM classiers with the same gener-
+ative models, where 95% was taken as a signicant result (condence levels were
+dened by (100 P ), where P was given by McNemar's Test and was the per-
+centage probability that the two classiers had the same error rates and dierences
+were simply due to random error; for this, a decision by random selection for tied
+letters was assigned to an `undecided' class [7]). The baseline HMMs were com-
+parable to reported results on the E-set for dierent databases [10]. The majority
+voting scheme gave the same performance as the minimum Bayes error scheme,
+indicating that majority voting was an acceptable multi-class scheme for the E-set
+experiments. For the SVMs, each likelihood-ratio score-space was dened using its
+competing class-conditional generative models and projected into a mr score-space.
+Each likelihood (1-class) score-space was dened using only the generative model
+for the rst of its two classes, and projected into a ml score-space. Each likelihood
+(2-class) score-space was dened using a generative model for both of its classes,
+and projected into a ml score-space (the original Fisher score, which is a projection
+into its m score-subspace, was also tested but was found to yield slightly higher error
+rates). SVMs built using the likelihood-ratio score-space achieved lower error rates
+than HMM systems, as low as 5.0%. The likelihood (1-class) score-space performed
+slightly worse than the likelihood-ratio score-space because it contained about half
+the information and did not contain the log likelihood-ratio. In both cases, the
+optimum number of components in the generative models was 2 per state, possibly
+reecting the gender division within each class. The likelihood (2-class) score-space
+performed poorly possibly because of wrap-around. However, there was an excep-
+
+tion for generative models with 1 component per class per state (in total the models
+had 2 components per state since they modelled both classes). The 2 components
+per state did not generally reect the gender division in the 2-class data, as rst
+supposed, but the class division. A possible explanation is that each Gaussian com-
+ponent modelled a class with bi-modal distribution caused by gender dierences.
+Most of the data modelled did not sit at the peaks of the two Gaussians and was
+not mapped to the ambiguous zero in score-subspace. Hence there was still su∆-
+cient class discrimination in score-space [7]. This task was too small to fully assess
+possible decorrelation in error structure between HMM and SVM classiers [6].
+Without scaling for score-space normalisation, the error-rate for the likelihood-ratio
+score-space dened on models with 2 components per state increased from 5.0% to
+11.1%. Some likelihood-ratio mr score-spaces were then augmented with 2nd-order
+derivatives r jk
+(r >
+ jk
+ln p(Oj)). The resulting classiers showed increases in error
+rate. The disappointing performance was probably due to the simplicity of the task,
+the independence assumption between component posteriors and component means,
+and the eect of noise with so few training scores in such large score-spaces.
+It is known that some dimensions of feature-space are noisy and degrade classi-
+cation performance. For this reason, experiments were performed which selected
+subsets of the likelihood-ratio score-space and then built SVM classiers in those
+score-subspaces. First, the score-subspaces were selected by parameter type. Error
+rates for the resulting classiers, otherwise identical to the baseline SVMs, are de-
+tailed in Table 2. Again, the generative models were class-conditional HMMs with
+2 components per state. The log likelihood-ratio was shown to be a powerful dis-
+criminating feature 4 . Increasing the number of dimensions in score-space allowed
+more discriminative classiers. There was more discrimination, or less noise, in the
+derivatives of the component means than the component variances. As expected
+in a dynamic task, the derivatives of the transitions were also useful since they
+contained some duration information.
+Table 2: Error rates for subspaces of the likelihood-ratio score-space (E-set)
+score-space error rate, % score-space
+dimensionality
+r 8.5 1
+v 7.2 1560
+m 5.2 1560
+mv 5.0 3120
+mvt 4.4 3140
+wmvtr 4.1 3161
+Next, subsets of the mr and wmvtr score-spaces were selected according to dimen-
+sions with highest Fisher-ratios [7]. The lowest error rates for the mr and wmvtr
+score-spaces were respectively 3.7% at 200 dimensions and 3.2% at 500 dimensions
+(respectively signicant at 99.1% and 99.7% condence levels relative to the best
+HMM system with 4 components per state). Generally, adding the most discrimina-
+tive dimensions lowered error-rate until less discriminative dimensions were added.
+For most binary classiers, the most discriminative dimension was the log likelihood-
+ratio. As expected for the E-set, the most discriminative dimensions were dependent
+on initial HMM states. The low-order MFCCs and log energy term were the most
+important coe∆cients. Static, delta and acceleration streams were all useful.
+4 The error rate at 8.5% diered from that for the HMM baseline at 8.7% because of
+the non-zero bias for the SVMs.
+
+The HMM and SVM classiers were run on the full alphabet. The best HMM clas-
+sier, with 4 components per state, gave 3.4% error rate. Computational expense
+precluded a full optimisation of the SVM classier. However, generative models
+with 2 components per state and a wmvtr score-space pruned to 500 dimensions by
+Fisher-ratios, gave a lower error rate of 2.1% (signicant at a 99.0% condence level
+relative to the HMM system). Preliminary experiments evaluating sequence length
+normalisation on the full alphabet and E-set are detailed in [7].
+4 Conclusions
+In this work, SVMs have been successfully applied to the classication of speech
+data. The paper has concentrated on the nature of the score-space when handling
+variable length speech sequences. The standard likelihood score-space of the Fisher
+kernel has been extended to the likelihood-ratio score-space, and normalisation
+schemes introduced. The new score-space avoids some of the limitations of the
+Fisher score-space, and incorporates the class-conditional generative models directly
+into the SVM classier. The dierent score-spaces have been compared on a speaker-
+independent isolated letter task. The likelihood-ratio score-space out-performed the
+likelihood score-spaces and HMMs trained to maximise likelihood.
+Acknowledgements
+N. Smith would like to thank EPSRC; his CASE sponsor, the Speech Group at IBM
+U.K. Laboratories; and Thorsten Joachims, University of Dortmund, for SV M light .
+References
+[1] V. Vapnik. The Nature of Statistical Learning Theory. Springer-Verlag, 1995.
+[2] N. Smith, M. Gales, and M. Niranjan. Data-dependent kernels in SVM classication
+of speech patterns. Tech. Report CUED/F-INFENG/TR.387, Cambridge University
+Eng.Dept., April 2001.
+[3] K. Tsuda et al. A New Discriminative Kernel from Probabilistic Models. In T.G.
+Dietterich, S. Becker and Z. Ghahramani, editors Advances in Neural Information
+Processing Systems 14, MIT Press, 2002.
+[4] T. Jaakkola and D. Haussler. Exploiting Generative Models in Discriminative Clas-
+siers. In M.S. Kearns, S.A. Solla, and D.A. Cohn, editors, Advances in Neural
+Information Processing Systems 11. MIT Press, 1999.
+[5] N. Oliver, B. Scholkopf, and A. Smola. Advances in Large-Margin Classiers, chapter
+Natural Regularization from Generative Models. MIT Press, 2000.
+[6] S. Fine, J. Navratil, and R. Gopinath. A hybrid GMM/SVM approach to speaker iden-
+tication. In Proceedings, volume 1, International Conference on Acoustics, Speech,
+and Signal Processing, May 2001. Utah, USA.
+[7] N. Smith and M. Gales. Using SVMs to classify variable length speech patterns. Tech.
+Report CUED/F-INFENG/TR.412, Cambridge University Eng.Dept., June 2001.
+[8] M. Fanty and R. Cole. Spoken Letter Recognition. In R.P. Lippmann, J.E. Moody,
+and D.S. Touretzky, editors, Neural Information Processing Systems 3, pages 220{226.
+Morgan Kaufmann Publishers, 1991.
+[9] T. Joachims. Making Large-Scale SVM Learning Practical. In B. Scholkopf,
+C. Burges, and A. Smola, editors, Advances in Kernel Methods - Support Vector
+Learning. MIT-Press, 1999.
+[10] P.C. Loizou and A.S. Spanias. High-Performance Alphabet Recognition. IEEE Trans-
+actions on Speech and Audio Processing, 4(6):430{445, Nov. 1996.
+

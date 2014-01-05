@@ -1,0 +1,220 @@
+Charting a Manifold
+
+Matthew Brand Mitsubishi Electric Research Labs 201 Broadway, Cambridge MA 02139 USA www.merl.com/people/brand/
+
+Abstract We construct a nonlinear mapping from a high-dimensional sample space to a low-dimensional vector space, effectively recovering a Cartesian coordinate system for the manifold from which the data is sampled. The mapping preserves local geometric relations in the manifold and is pseudo-invertible. We show how to estimate the intrinsic dimensionality of the manifold from samples, decompose the sample data into locally linear low-dimensional patches, merge these patches into a single lowdimensional coordinate system, and compute forward and reverse mappings between the sample and coordinate spaces. The objective functions are convex and their solutions are given in closed form. 1 Nonlinear dimensionality reduction (NLDR) by charting Charting is the problem of assigning a low-dimensional coordinate system to data points in a high-dimensional sample space. It is presumed that the data lies on or near a lowdimensional manifold embedded in the sample space, and that there exists a 1-to-1 smooth nonlinear transform between the manifold and a low-dimensional vector space. The datamodeler's goal is to estimate smooth continuous mappings between the sample and coordinate spaces. Often this analysis will shed light on the intrinsic variables of the datagenerating phenomenon, for example, revealing perceptual or configuration spaces. Our goal is to find a mapping--expressed as a kernel-based mixture of linear projections-- that minimizes information loss about the density and relative locations of sample points. This constraint is expressed in a posterior that combines a standard gaussian mixture model (GMM) likelihood function with a prior that penalizes uncertainty due to inconsistent projections in the mixture. Section 3 develops a special case where this posterior is unimodal and maximizable in closed form, yielding a GMM whose covariances reveal a patchwork of overlapping locally linear subspaces that cover the manifold. Section 4 shows that for this (or any) GMM and a choice of reduced dimension d, there is a unique, closed-form solution for a minimally distorting merger of the subspaces into a d-dimensional coordinate space, as well as an reverse mapping defining the surface of the manifold in the sample space. The intrinsic dimensionality d of the data manifold can be estimated from the growth process of point-to-point distances. In analogy to differential geometry, we call the subspaces "charts" and their merger the "connection." Section 5 considers example problems where these methods are used to untie knots, unroll and untwist sheets, and visualize video data. 1.1 Background Topology-neutral NLDR algorithms can be divided into those that compute mappings, and
+
+
+those that directly compute low-dimensional embeddings. The field has its roots in mapping algorithms: DeMers and Cottrell [3] proposed using auto-encoding neural networks with a hidden layer " bottleneck," effectively casting dimensionality reduction as a compression problem. Hastie defined principal curves [5] as nonparametric 1D curves that pass through the center of " nearby" data points. A rich literature has grown up around properly regularizing this approach and extending it to surfaces. Smola and colleagues [10] analyzed the NLDR problem in the broader framework of regularized quantization methods. More recent advances aim for embeddings: Gomes and Mojsilovic [4] treat manifold completion as an anisotropic diffusion problem, iteratively expanding points until they connect to their neighbors. The ISOMAP algorithm [12] represents remote distances as sums of a trusted set of distances between immediate neighbors, then uses multidimensional scaling to compute a low-dimensional embedding that minimally distorts all distances. The locally linear embedding algorithm (LLE) [9] represents each point as a weighted combination of a trusted set of nearest neighbors, then computes a minimally distorting low-dimensional barycentric embedding. They have complementary strengths: ISOMAP handles holes well but can fail if the data hull is nonconvex [12]; and vice versa for LLE [9]. Both offer embeddings without mappings. It has been noted that trusted-set methods are vulnerable to noise because they consider the subset of point-to-point relationships that has the lowest signal-to-noise ratio; small changes to the trusted set can induce large changes in the set of constraints on the embedding, making solutions unstable [1]. In a return to mapping, Roweis and colleagues [8] proposed global coordination-- learning a mixture of locally linear projections from sample to coordinate space. They constructed a posterior that penalizes distortions in the mapping, and gave a expectation-maximization (EM) training rule. Innovative use of variational methods highlighted the difficulty of even hill-climbing their multimodal posterior. Like [2, 7, 6, 8], the method we develop below is a decomposition of the manifold into locally linear neighborhoods. It bears closest relation to global coordination [8], although by a different construction of the problem, we avoid hill-climbing a spiky posterior and instead develop a closed-form solution. 2 Estimating locally linear scale and intrinsic dimensionality We begin with matrix of sample points Y = [y1,···,yN], yn  RD populating a D. dimensional sample space, and a conjecture that these points are samples from a manifold M of intrinsic dimensionality d < D. We seek a mapping onto a vector space G(Y)  X = [x1,···,xN], xn  Rd and 1-to-1 reverse mapping G-1(X)  Y such that local relations between nearby points are preserved (this will be formalized below). The map G should be non-catastrophic, that is, without folds: Parallel lines on the manifold in RD should map to continuous smooth non-intersecting curves in Rd. This guarantees that linear operations on X such as interpolation will have reasonable analogues on Y. Smoothness means that at some scale r the mapping from a neighborhood on M to Rd is effectively linear. Consider a ball of radius r centered on a data point and containing n(r) data points. The count n(r) grows as rd, but only at the locally linear scale; the grow rate is inflated by isotropic noise at smaller scales and by embedding curvature at larger scales. . To estimate r, we look at how the r-ball grows as points are added to it, tracking c(r) = all directions with equal probability. At the scale at which curvature becomes significant, c(r) < 1/d, because the manifold is no longer perpendicular to the surface of the ball, so the ball does not have to grow as fast to accommodate new points. At the locally linear scale, the process peaks at c(r) = 1/d, because points are distributed only in the directions of the manifold's local tangent space. The maximum of c(r) therefore gives an estimate of both the scale and the local dimensionality of the manifold (see figure 1), provided that the ball hasn't expanded to a manifold boundary-- boundaries have lower dimension than
+
+.
+
+d d logn(r) logr. At noise scales, c(r)  1/D < 1/d, because noise has distributed points in
+
+
+Scale behavior of a 1D manifold in 2-space samples noise scale locally linear scale curvature scale 101 Point-count growth process on a 2D manifold in 3-space radial growth process 1D hypothesis 2D hypothesis 3D hypothesis
+
+scale)
+
+(log
+
+radius
+
+100
+
+2 101
+
+102 #points (log scale) 103
+
+Figure 1: Point growth processes. LEFT: At the locally linear scale, the number of points in an r-ball grows as rd; at noise and curvature scales it grows faster. RIGHT: Using the point-count growth process to find the intrinsic dimensionality of a 2D manifold nonlinearly embedded in 3-space (see figure 2). Lines of slope /3, /2, and 1 are fitted to sections of the
+
+1 1
+
+logr/lognr curve. For neighborhoods of radius r  1 with roughly n  10 points, the slope peaks at /2 indicating a dimensionality of d = 2. Below that, the data appears 3D because
+
+1
+
+it is dominated by noise (except for n  D points); above, the data appears >2D because of manifold curvature. As the r-ball expands to cover the entire data-set the dimensionality appears to drop to 1 as the process begins to track the 1D edges of the 2D sheet. the manifold. For low-dimensional manifolds such as sheets, the boundary submanifolds (edges and corners) are very small relative to the full manifold, so the boundary effect is typically limited to a small rise in c(r) as r approaches the scale of the entire data set. In practice, our code simply expands an r-ball at every point and looks for the first peak in c(r), averaged over many nearby r-balls. One can estimate d and r globally or per-point. 3 Charting the data In the charting step we find a soft partitioning of the data into locally linear low-dimensional neighborhoods, as a prelude to computing the connection that gives the global lowdimensional embedding. To minimize information loss in the connection, we require that the data points project into a subspace associated with each neighborhood with (1) minimal loss of local variance and (2) maximal agreement of the projections of nearby points into nearby neighborhoods. Criterion (1) is served by maximizing the likelihood function of a Gaussian mixture model (GMM) density fitted to the data:
+
+p(yi|µ,) = j p(yi|µj,j) pj = j N (yi;µj,j) pj . . (1)
+
+Each gaussian component defines a local neighborhood centered around µj with axes defined by the eigenvectors of j. The amount of data variance along each axis is indicated by the eigenvalues of j; if the data manifold is locally linear in the vicinity of the µj, all but the d dominant eigenvalues will be near-zero, implying that the associated eigenvectors constitute the optimal variance-preserving local coordinate system. To some degree likelihood maximization will naturally realize this property: It requires that the GMM components shrink in volume to fit the data as tightly as possible, which is best achieved by positioning the components so that they " pancake" onto locally flat collections of datapoints. However, this state of affairs is easily violated by degenerate (zero-variance) GMM components or components fitted to overly small enough locales where the data density off the manifold is comparable to density on the manifold (e.g., at the noise scale). Consequently a prior is needed.
+
+
+Criterion (2) implies that neighboring partitions should have dominant axes that span similar subspaces, since disagreement (large subspace angles) would lead to inconsistent projections of a point and therefore uncertainty about its location in a low-dimensional coordinate space. The principal insight is that criterion (2) is exactly the cost of coding the location of a point in one neighborhood when it is generated by another neighborhood-- the cross-entropy between the gaussian models defining the two neighborhoods:
+
+D(N1 N2)
+
+= =
+
+dyN (y;µ1,1)log N (y; µ1,1) N (y; µ2,2)
+
+(log |-12| + trace(-11) + (µ2-µ1) -1(µ2-µ1) - D)/2. 1 2 2 (2)
+
+Roughly speaking, the terms in (2) measure differences in size, orientation, and position, respectively, of two coordinate frames located at the means µ1,µ2 with axes specified by the eigenvectors of 1,2. All three terms decline to zero as the overlap between the two frames is maximized. To maximize consistency between adjacent neighborhoods, we form the prior p(µ,) = exp[-i=j mi(µj)D(Ni Nj)], where mi(µj) is a measure of co-locality. . Unlike global coordination [8], we are not asking that the dominant axes in neighboring charts are aligned-- only that they span nearly the same subspace. This is a much easier objective to satisfy, and it contains a useful special case where the posterior p(µ,|Y)  i p(yi|µ,)p(µ,) is unimodal and can be maximized in closed form: Let us associate a gaussian neighborhood with each data-point, setting µi = yi; take all neighborhoods to be a priori equally probable, setting pi = 1/N; and let the co-locality measure be determined from some local kernel. For example, in this paper we use mi(µj)  N (µj;µi,2), with the scale parameter  specifying the expected size of a neighborhood on the manifold in sample space. A reasonable choice is  = r/2, so that 2erf(2) > 99.5% of the density of mi(µj) is contained in the area around yi where the manifold is expected to be locally linear. With uniform pi and µi, mi(µj) and fixed, the MAP estimates of the GMM covariances are
+
+i = mi(µj)
+
+j
+
+(y j - µi)(y j - µi) + (µ j - µi)(µ j - µi) +  j mi(µj)
+
+j
+
+(3) .
+
+Note that each covariance i is dependent on all other j. The MAP estimators for all covariances can be arranged into a set of fully constrained linear equations and solved exactly for their mutually optimal values. This key step brings nonlocal information about the manifold's shape into the local description of each neighborhood, ensuring that adjoining neighborhoods have similar covariances and small angles between their respective subspaces. Even if a local subset of data points are dense in a direction perpendicular to the manifold, the prior encourages the local chart to orient parallel to the manifold as part of a globally optimal solution, protecting against a pathology noted in [8]. Equation (3) is easily adapted to give a reduced number of charts and/or charts centered on local centroids. 4 Connecting the charts We now build a connection for set of charts specified as an arbitrary nondegenerate GMM. A GMM gives a soft partitioning of the dataset into neighborhoods of mean µk and covariance k. The optimal variance-preserving low-dimensional coordinate system for each neighborhood derives from its weighted principal component analysis, which is exactly specified by the eigenvectors of its covariance matrix: Eigendecompose VkkVk  k with eigenvalues in descending order on the diagonal of k and let Wk = [Id,0]Vk be. the operator . projecting points into the kth local chart, such that local chart coordinate uki = Wk(yi -µk) . and Uk = [uk1,···,ukN] holds the local coordinates of all points. Our goal is to sew together all charts into a globally consistent low-dimensional coordinate
+
+system. For each chart there will be a low-dimensional affine transform Gk  R(d +1)×d
+
+
+that projects Uk into the global coordinate space. Summing over all charts, the weighted average of the projections of point yi into the low-dimensional vector space is
+
+. x|y = Gj
+
+j
+
+Wj(y-µj) 1 pj (y)
+
+|y  . xi|yi = Gj
+
+j
+
+uji 1 pj (yi), |y (4)
+
+where pk (y)  pkN (y;µk,k), k pk (y) = 1 is the probability that chart k generates |y |y
+
+point y. As pointed out in [8], if a point has nonzero probabilities in two charts, then there should be affine transforms of those two charts that map the point to the same place in a global coordinate space. We set this up as a weighted least-squares problem:
+
+2
+
+. G = [G1,···,GK] = arg min 
+
+i
+
+pk (yi)pj (yi) Gk |y |y -Gj . (5) Gk,Gj uki 1 uji 1
+
+F
+
+Equation (5) generates a homogeneous set of equations that determines a solution up to an affine transform of G. There are two solution methods. First, let us temporarily anchor one neighborhood at the origin to fix this indeterminacy. This adds the constraint G1 = [I,0] .
+
+. To solve, define indicator matrix Fk = [0,···,0,I,0,···,0] trix occupying the kth block, such that Gk = GFk. with the identity ma.
+
+Let the diagonal of Pk =
+
+diag([pk (y1),···,pk|y(yN)]) record the per-point posteriors of chart k. The squared error |y
+
+of the connection is then a sum of of all patch-to-anchor and patch-to-patch inconsistencies:
+
+2
+
+E =. 
+
+k
+
+(GUk - U1 0 )PkP1 + 
+
+j=k
+
+(GU j - GUk)P jPk 2 F ; . Uk = Fk Uk 1
+
+F
+
+. (6)
+
+Setting dE/dG = 0 and solving to minimize convex E gives
+
+-1
+
+G = UkPk Pj 2 2 j=k
+
+k
+
+Uk - UkPkPjUj 2 2
+
+j=k
+
+UkPkP1 2 2
+
+k
+
+U1 0 . (7)
+
+We now remove the dependence on a reference neighborhood G1 by rewriting equation 5,
+
+G = argmin j
+
+where Q = j .
+
+G =k
+
+=k (GU j - GUk)P jPk 2 F = GQ 2 F = trace(GQQ G ) , (8)
+
+Uj -Uk PjPk . If we require that GG = I to prevent degenerate
+
+solutions, then equation (8) is solved (up to rotation in coordinate space) by setting G to the eigenvectors associated with the smallest eigenvalues of QQ . The eigenvectors can be computed efficiently without explicitly forming QQ ; other numerical efficiencies obtain by zeroing any vanishingly small probabilities in each Pk, yielding a sparse eigenproblem. A more interesting strategy is to numerically condition the problem by calculating the trailing eigenvectors of QQ + 1. It can be shown that this maximizes the posterior whose unit-norm rows are also zero-mean. This maximizes variance in each row of G and thereby spreads the projected points broadly and evenly over coordinate space. The solutions for MAP charts (equation (5)) and connection (equation (8)) can be applied to any well-fitted mixture of gaussians/factors1/PCAs density model; thus large eigenproblems can be avoided by connecting just a small number of charts that cover the data.
+
+p(G|Q)  p(Q|G)p(G)  e- GQ 2 F e- G1 , where the prior p(G) favors a mapping G
+
+1 We thank reviewers for calling our attention to Teh & Roweis ([11]-- in this volume), which
+
+shows how to connect a set of given local dimensionality reducers in a generalized eigenvalue problem that is related to equation (8).
+
+
+)deknil( LLE, n=5 LLE, n=6 LLE, n=7
+
+original data embedding, XY view XYZ view weiv
+
+atad Z X
+
+tesbus
+
+strahclacolfo LLE, n=8 LLE, n=9 LLE, n=10
+
+weiv
+
+Y X
+
+modnar charting
+
+(projection onto coordinate space)
+
+reconstruction (back-projected coordinate grid)
+
+charting best Isomap
+
+best LLE (regularized)
+
+Figure 2: The twisted curl problem. LEFT: Comparison of charting, ISOMAP, & LLE. 400 points are randomly sampled from the manifold with noise. Charting is the only method that recovers the original space without catastrophes (folding), albeit with some shear. RIGHT: The manifold is regularly sampled (with noise) to illustrate the forward and backward projections. Samples are shown linked into lines to help visualize the manifold structure. Coordinate axes of a random selection of charts are shown as bold lines. Connecting subsets of charts such as this will also give good mappings. The upper right quadrant shows various LLE results. At bottom we show the charting solution and the reconstructed (back-projected) manifold, which smooths out the noise. Once the connection is solved, equation (4) gives the forward projection of any point y down into coordinate space. There are several numerically distinct candidates for the backprojection: posterior mean, mode, or exact inverse. In general, there may not be a unique posterior mode and the exact inverse is not solvable in closed form (this is also true of [8]). Note that chart-wise projection defines a complementary density in coordinate space
+
+px|k(x) = N (x;Gk 0 1 , Gk [Id, 0]k[Id, 0] 0 0 0 Gk ). (9)
+
+Let p(y|x,k), used to map x into subspace k on the surface of the manifold, be a Dirac delta function whose mean is a linear function of x. Then the posterior mean back-projection is obtained by integrating out uncertainty over which chart generates x:
+
++
+
+y|x = 
+
+k
+
+pk (x) |x µk +Wk Gk I 0 x-Gk 0 1 , (10)
+
+where (·)+ denotes pseudo-inverse. In general, a back-projecting map should not reconstruct the original points. Instead, equation (10) generates a surface that passes through the weighted average of the µi of all the neighborhoods in which yi has nonzero probability, much like a principal curve passes through the center of each local group of points. 5 Experiments Synthetic examples: 400 2D points were randomly sampled from a 2D square and embedded in 3D via a curl and twist, then contaminated with gaussian noise. Even if noiselessly sampled, this manifold cannot be " unrolled" without distortion. In addition, the outer curl is sampled much less densely than the inner curl. With an order of magnitude fewer points, higher noise levels, no possibility of an isometric mapping, and uneven sampling, this is arguably a much more challenging problem than the " swiss roll" and " s-curve" problems featured in [12, 9, 8, 1]. Figure 2LEFT contrasts the (unique) output of charting and the best outputs obtained from ISOMAP and LLE (considering all neighborhood sizes between 2 and 20 points). ISOMAP and LLE show catastrophic folding; we had to change LLE's
+
+
+a. data, xy view b. data, yz view c. local charts d. 2D embedding
+
+e. 1D embedding etanidro D1 true manifold arc length
+
+Figure 3: Untying a trefoil knot ( ) by charting. 900 noisy samples from a 3D-embedded
+
+1D manifold are shown as connected dots in front (a) and side (b) views. A subset of charts is shown in (c). Solving for the 2D connection gives the " unknot" in (d). After removing some points to cut the knot, charting gives a 1D embedding which we plot against true manifold arc length in (e); monotonicity (modulo noise) indicates correctness. Three principal degrees of freedom recovered from raw jittered images pose scale expression images synthesized via backprojection of straight lines in coordinate space Figure 4: Modeling the manifold of facial images from raw video. Each row contains images synthesized by back-projecting an axis-parallel straight line in coordinate space onto the manifold in image space. Blurry images correspond to points on the manifold whose neighborhoods contain few if any nearby data points. regularization in order to coax out nondegenerate (>1D) solutions. Although charting is not designed for isometry, after affine transform the forward-projected points disagree with the original points with an RMS error of only 1.0429, lower than the best LLE (3.1423) or best ISOMAP (1.1424, not shown). Figure 2RIGHT shows the same problem where points are sampled regularly from a grid, with noise added before and after embedding. Figure 3 shows a similar treatment of a 1D line that was threaded into a 3D trefoil knot, contaminated with gaussian noise, and then " untied" via charting. Video: We obtained a 1965-frame video sequence (courtesy S. Roweis and B. Frey) of 20 × 28-pixel images in which B.F. strikes a variety of poses and expressions. The video is heavily contaminated with synthetic camera jitters. We used raw images, though image processing could have removed this and other uninteresting sources of variation. We took a 500-frame subsequence and left-right mirrored it to obtain 1000 points in 20×28 = 560D image space. The point-growth process peaked just above d = 3 dimensions. We solved for 25 charts, each centered on a random point, and a 3D connection. The recovered degrees of freedom-- recognizable as pose, scale, and expression-- are visualized in figure 4.
+
+original data stereographic map to 3D fishbowl charting
+
+Figure 5: Flattening a fishbowl. From the left: Original 2000×2D points; their stereographic mapping to a 3D fishbowl; its 2D embedding recovered using 500 charts; and the stereographic map. Fewer charts lead to isometric mappings that fold the bowl (not shown).
+
+
+Conformality: Some manifolds can be flattened conformally (preserving local angles) but not isometrically. Figure 5 shows that if the data is finely charted, the connection behaves more conformally than isometrically. This problem was suggested by J. Tenenbaum. 6 Discussion Charting breaks kernel-based NLDR into two subproblems: (1) Finding a set of datacovering locally linear neighborhoods (" charts") such that adjoining neighborhoods span maximally similar subspaces, and (2) computing a minimal-distortion merger (" connection") of all charts. The solution to (1) is optimal w.r.t. the estimated scale of local linearity r; the solution to (2) is optimal w.r.t. the solution to (1) and the desired dimensionality d. Both problems have Bayesian settings. By offloading the nonlinearity onto the kernels, we obtain least-squares problems and closed form solutions. This scheme is also attractive because large eigenproblems can be avoided by using a reduced set of charts. The dependence on r, like trusted-set methods, is a potential source of solution instability. In practice the point-growth estimate seems fairly robust to data perturbations (to be expected if the data density changes slowly over a manifold of integral Hausdorff dimension), while the use of a soft neighborhood partitioning appears to make charting solutions reasonably stable to variations in r. Eigenvalue stability analyses may prove useful here. Ultimately, we would prefer to integrate r out. In contrast, use of d appears to be a virtue: Unlike other eigenvector-based methods, the best d-dimensional embedding is not merely a linear projection of the best d + 1-dimensional embedding; a unique distortion is found for each value of d that maximizes the information content of its embedding. Why does charting performs well on datasets where the signal-to-noise ratio confounds recent state-of-the-art methods? Two reasons may be adduced: (1) Nonlocal information is used to construct both the system of local charts and their global connection. (2) The mapping only preserves the component of local point-to-point distances that project onto the manifold; relationships perpendicular to the manifold are discarded. Thus charting uses global shape information to suppress noise in the constraints that determine the mapping. Acknowledgments Thanks to J. Buhmann, S. Makar, S. Roweis, J. Tenenbaum, and anonymous reviewers for insightful comments and suggested " challenge" problems. References [1] M. Balasubramanian and E. L. Schwartz. The IsoMap algorithm and topological stability. Science, 295(5552):7, January 2002. [2] C. Bregler and S. Omohundro. Nonlinear image interpolation using manifold learning. In NIPS­7, 1995. [3] D. DeMers and G. Cottrell. Nonlinear dimensionality reduction. In NIPS­5, 1993. [4] J. Gomes and A. Mojsilovic. A variational approach to recovering a manifold from sample points. In ECCV, 2002. [5] T. Hastie and W. Stuetzle. Principal curves. J. Am. Statistical Assoc, 84(406):502­516, 1989. [6] G. Hinton, P. Dayan, and M. Revow. Modeling the manifolds of handwritten digits. IEEE Trans. Neural Networks, 8, 1997. [7] N. Kambhatla and T. Leen. Dimensionality reduction by local principal component analysis. Neural Computation, 9, 1997. [8] S. Roweis, L. Saul, and G. Hinton. Global coordination of linear models. In NIPS­13, 2002. [9] S. T. Roweis and L. K. Saul. Nonlinear dimensionality reduction by locally linear embedding. Science, 290:2323­2326, December 22 2000. [10] A. Smola, S. Mika, B. Schölkopf, and R. Williamson. Regularized principal manifolds. Machine Learning, 1999. [11] Y. W. Teh and S. T. Roweis. Automatic alignment of hidden representations. In NIPS­15, 2003. [12] J. B. Tenenbaum, V. de Silva, and J. C. Langford. A global geometric framework for nonlinear dimensionality reduction. Science, 290:2319­2323, December 22 2000.
+
+

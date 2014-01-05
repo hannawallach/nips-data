@@ -1,0 +1,416 @@
+A Rotation and Translation Invariant Discrete
+Saliency Network
+Lance R. Williams
+Dept. of Computer Science
+Univ. of New Mexico
+Albuquerque, NM 87131
+John W. Zweck
+Dept. of CS and EE
+Univ. of Maryland Baltimore County
+Baltimore, MD 21250
+Abstract
+We describe a neural network which enhances and completes salient
+closed contours. Our work is different from all previous work in three
+important ways. First, like the input provided to V1 by LGN, the in­
+put to our computation is isotropic. That is, the input is composed of
+spots not edges. Second, our network computes a well defined function
+of the input based on a distribution of closed contours characterized by
+a random process. Third, even though our computation is implemented
+in a discrete network, its output is invariant to continuous rotations and
+translations of the input pattern.
+1 Introduction
+There is a long history of research on neural networks inspired by the structure of visual
+cortex whose functions have been described as contour completion, saliency enhancement,
+orientation sharpening, or segmentation[6, 7, 8, 9, 12]. A similiar network has been pro­
+posed as a model of visual hallucinations[1]. In this paper, we describe a neural network
+which enhances and completes salient closed contours. Our work is different from all pre­
+vious work in three important ways. First, like the input provided to V1 by LGN, the input
+to our computation is isotropic. That is, the input is composed of spots not edges. Second,
+our network computes a well defined function of the input based on a distribution of closed
+contours characterized by a random process. Third, even though our computation is imple­
+mented in a discrete network, its output is invariant to continuous rotations and translations
+of the input pattern.
+There are two important properties which a computation must possess if it is to be invariant
+to rotations and translations, i.e., Euclidean invariant. First, the input, the output, and all
+intermediate representations must be Euclidean invariant. Second, all transformations of
+these representations must also be Euclidean invariant. The models described in [6, 7, 8,
+9, 12] are not Euclidean invariant, first and foremost, because their input representations
+are not Euclidean invariant. That is, not all rotations and translations of the input can be
+represented equally well. This problem is often skirted by researchers by choosing input
+patterns which match particular choices of sampling rate and phase. For example, Li [7]
+used only six samples in orientation (including 0 Æ ) and Heitger and von der Heydt[5] only
+twelve (including 0 Æ , 60 Æ and 120 Æ ). Li's first test pattern was a dashed line of orientation,
+0 Æ , while Heitger and von der Heydt used a Kanizsa Triangle with sides of 0 Æ , 60 Æ , and
+
+120 Æ orientation. There is no reason to believe that the experimental results they showed
+would be similiar if the input patterns were rotated by as little as 5 Æ . To our knowledge, no
+researcher in this area has ever commented on this problem before.
+2 A continuum formulation of the saliency problem
+The following section reviews the continuum formulation of the contour completion and
+saliency problem as described in Williams and Thornber[11].
+2.1 Shape distribution
+Mumford[3] observed that the probability distribution of object boundary shapes could be
+modeled by a Fokker­Planck equation of the following form:
+@p
+@t = cos  @p
+@x sin  @p
+@y +
+ 2
+2
+@ 2 p
+@ 2
+1
+ p: (1)
+where p(~x;  ; t) is the probability that a particle is located at position, ~x = (x; y), and
+is moving in direction, , at time, t. This partial differential equation can be viewed as
+a set of independent advection equations in x and y (the first and second terms) coupled
+in the  dimension by the diffusion equation (the third term). The advection equations
+translate probability mass in direction, , with unit speed, while the diffusion term models
+the Brownian motion in direction, with diffusion parameter, . The combined effect of
+these three terms is that particles tend to travel in straight lines, but over time they drift to
+the left or right by an amount proportional to  2 . Finally, the effect of the fourth term is
+that particles decay over time, with a half­life given by the decay constant,  .
+2.2 The propagators
+The Green's function, G(~x;  ; t 1 j ~u;  ; t 0 ), gives the probability that a particle observed at
+position, ~u, and direction, , at time, t 0 , will later be observed at position, ~x, and direction,
+, at time, t 1 . It is the solution, p(~x;  ; t 1 ), of the Fokker­Planck initial value problem with
+initial value, p(~x;  ; t 0 ) = Æ(~x ~u)Æ( ) where Æ is the Dirac delta function. The
+Green's function is used to define two propagators. The long­time propagator:
+P 0 (~x;  j ~u; ) =
+R 1
+0 dt (t) G(~x;  ; t j ~u;  ; 0) (2)
+gives the probability that (~x; ) and (~u; ) are distinct edges from the boundary of a single
+object. 1 The short­time propagator:
+P 1 (~x;  j ~u; ) =
+R 1
+0 dt [1 (t)] G(~x;  ; t j ~u;  ; 0) (3)
+gives the probability that (~x; ) and (~u; ) are from the boundary of a single object but are
+really the same edge. In both of these propagators, (:) is a cut­off function with (0) = 0
+and lim t!1 (t) = 1:
+(t) = 1
+2
+
+1 + 2
+ atan 
+ t
+ 
+
+: (4)
+The cut­off function is characterized by three parameters, , , and . The parameter, ,
+specifies where the cut­off is and  specifies how hard hard it is. The parameter, , is the
+scale of the edge detection process.
+1 We assume that the probability that two edges are the same depends only on the distance between
+them, and that (j~x ~uj)  (t) for particles travelling at unit speed.
+
+2.3 Eigenfunctions
+The integral linear operator, Q(:), combines three sources of information: 1) the probability
+that two edges belong to the same object; 2) the probability that the two edges are distinct;
+and 3) the probability that the two edges exist. It is defined as follows:
+Q(~x;  j ~u; ) = b(~x) 1
+2 P 0 (~x;  j ~u; )b(~u) 1
+2 (5)
+where the input bias function, b(~x), gives the probability that an edge exists at ~x. As
+described in Williams and Thornber[11], the right and left eigenfunctions, s(:) and  s(:),
+of Q(:) with largest positive real eigenvalue, , play a central role in the computation of
+saliency:
+s(~x; ) =
+R R R
+R 2 S 1
+d~ud Q(~x;  j ~u; )s(~u; ) (6)
+s(~x; ) =
+R R R
+R 2 S 1 d~ud  s(~u; )Q(~u;  j ~x; ): (7)
+Because Q(:) is invariant under a transformation which reverses the order and direction of
+its arguments:
+Q(~x;  j ~u; ) = Q(~u;  +  j ~x;  + ) (8)
+the right and left eigenfunctions are related as follows:
+ s(~x; ) = s(~x;  + ): (9)
+2.4 Stochastic completion field
+The magnitude of the stochastic completion field, c(~u; ), equals the probability that a
+closed contour satisfying a subset of the constraints exists at (~u; ). It is the sum of three
+terms:
+c(~u; ) =
+p 0 (~u; )p 0 (~u; ) + p 0 (~u; )p 1 (~u; ) + p 1 (~u; )p 0 (~u; )
+
+R R R
+R 2 S 1
+d~xd s(~x; )s(~x; )
+(10)
+where pm (~u; ) is a source field, and 
+pm (~u; ) is a sink field:
+pm (~u; ) =
+R R R
+R 2 S 1
+d~xd Pm (~u;  j ~x; )b(~x) 1
+2 s(~x; ) (11)
+
+pm (~u; ) =
+R R R
+R 2 S 1 d~xd 
+s(~x; )b(~x) 1
+2 Pm (~x;  j ~u; ): (12)
+The purpose of writing c(~u; ) in this way is to remove the contribution, p 1 (~u; )p 1 (~u; ),
+of closed contours at scales smaller than  which would otherwise dominate the com­
+pletion field. Given the above expression for the completion field, it is clear that the key
+problem is computing the eigenfunction, s(:), of Q(:) with largest positive real eigenvalue.
+To accomplish this, we can use the well known power method (see [4]). In this case, the
+power method involves repeated application of the linear operator, Q(:), to the function,
+s(:), followed by normalization:
+s m+1 (~x; ) =
+R R R
+R 2 S 1 d~ud Q(~x; j~u; )s m (~u; )
+R R R
+R 2 S 1
+R R R
+R 2 S 1
+d~xdd~ud Q(~x; j~u; )s m (~u; ) : (13)
+In the limit, as m gets very large, s (m+1) (~x; ) converges to the eigenfunction of Q(:), with
+largest positive real eigenvalue. We observe that the above computation can be considered
+a continuous state, discrete time, recurrent neural network.
+3 A discrete implementation of the continuum formulation
+The continuous functions comprising the state of the computation are represented as
+weighted sums of a finite set of shiftable­twistable basis functions. The weights form the
+coefficient vectors for the functions. The computation we describe is biologically plausible
+in the sense that all transformations of state are effected by linear transformations (or other
+vector parallel operations) on the coefficient vectors.
+
+3.1 Shiftable­twistable bases
+The input and output of the above computation are functions defined on the continuous
+space, R 2  S 1 , of positions in the plane, R 2 , and directions in the circle, S 1 . For such
+computations, the important symmetry is determined by those transformations, T ~x 0 ; 0
+, of
+R 2  S 1 , which perform a shift in R 2 by ~x 0 , followed by a twist in R 2  S 1 through an
+angle,  0 . A twist through an angle,  0 , consists of two parts: (1) a rotation, R 0 , of R 2
+and (2) a translation in S 1 , both by  0 . The symmetry, T ~x 0 ; 0
+, which is called a shift­twist
+transformation, is given by the formula,
+T (~x 0 ; 0 ) (~x; ) = (R 0 (~x ~x 0 ) ;   0 ): (14)
+A visual computation, C, on R 2  S 1 is called shift­twist invariant if, for all (~x 0 ;  0 ) 2
+R 2 S 1 , a shift­twist of the input by (~x 0 ;  0 ) produces an identical shift­twist of the output.
+This property can be depicted in the following commutative diagram:
+b(~x; ) C
+! c(~x; )
+# T ~x 0 ; 0
+# T ~x 0 ; 0
+b(R 0 (~x ~x 0 );   0 ) C
+! c(R 0 (~x ~x 0 );   0 )
+where b(:) is the input, c(:), is the output, C
+! is the computation, and T ~x 0 ; 0
+! is the shift­
+twist transformation. Correspondingly, we define a shiftable­twistable basis 2 of functions
+on R 2 S 1 to be a set of functions on R 2 S 1 with the property that whenever a function,
+f(~x; ), is in their span, then so is f(T ~x 0 ; 0
+(~x; )), for every choice of (~x 0 ;  0 ) in R 2 S 1 .
+As such, the notion of a shiftable­twistable basis on R 2 S 1 generalizes that of a shiftable­
+steerable basis on R 2 [2, 10].
+Shiftable­twistable bases can be constructed as follows. Let 	(~x; ) be a function on R 2 
+S 1 which is periodic (with period X) in both spatial variables, ~x. In analogy with the
+definition of a shiftable­steerable function on R 2 , we say that 	 is shiftable­twistable on
+R 2  S 1 if there are integers, K and M , and interpolation functions, a ~ k;m (~x 0 ;  0 ), such
+that for each (~x 0 ;  0 ) 2 R 2  S 1 , the shift­twist of 	 by (~x 0 ;  0 ) is a linear combination
+of a finite number of basic shift­twists of 	 by amounts ( ~ k; m  ), i.e., if
+	(T ~x 0 ; 0
+(~x; )) =
+P
+~ k;m a ~ k;m (~x 0 ;  0 )	(T ~ k;m 
+(~x; )): (15)
+Here  = X=K is the basic shift amount and   = 2=M is the basic twist amount.
+The sum in equation (15) is taken over all pairs of integers, ~ k = (k x ; k y ), in the range,
+0  k x ; k y < K, and all integers, m, in the range, 0  m < M .
+The Gaussian­Fourier basis is the product of a shiftable­steerable basis of Gaussians in ~x
+and a Fourier series basis in . For the experiments in this paper, the standard deviation of
+the Gaussian basis function, g(~x) = 1
+ e k~xk 2 =2 2
+, equals the basic shift amount, . We
+regard g(~x) as a periodic function of period, X , which is chosen to be much larger than
+, so that g(X=2; X=2) and its derivatives are essentially zero. For each frequency, !, and
+shift amount,  (where K = X= is an integer), we define the Gaussian­Fourier basis
+functions, 	 ~ k;! , by
+	 ~ k;! (~x; ) = g(~x ~ k) e i! : (16)
+Zweck and Williams[13] showed that the Gaussian­Fourier basis is shiftable­twistable.
+2 We use this terminology even though the basis functions need not be linearly independent.
+
+3.2 Power method update formula
+Suppose that s (m) (~x; ) can be represented in the Gaussian­Fourier basis as
+s (m) (~x; ) =
+P
+~ k;! s (m)
+~ k;! 	 ~ k;! (~x; ): (17)
+The vector, s (m) , with components, s (m)
+~ k;!
+, will be called the coefficient vector of s (m) (~x; ).
+In the next two sections, we demonstrate how the following integral linear transform:
+s (m+1) (~x; ) =
+R R R
+R 2 S 1
+d~ud P 0 (~x;  j ~u; )b(~u)s (m) (~u; ) (18)
+(i.e., the basic step in the power method) can be implemented as a discrete linear transform
+in a Gaussian­Fourier shiftable­twistable basis:
+s (m+1) = PBs (m) : (19)
+3.3 The propagation operator P
+In practice, we do not explicitly represent the matrix, P. Instead we compute the necessary
+matrix­vector product using the advection­diffusion­decayoperator in the Gaussian­Fourier
+shiftable­twistable basis, A Æ D, described in detail in Zweck and Williams[13]:
+s (m+1) = PBs (m)  lim
+n!1
+p (m;n) (20)
+where p (m;0) = q (m;0) = Bs (m) and where:
+p (m;n+1) = p (n) + (nt) q (m;n+1) (21)
+q (m;n+1) = (A Æ D) q (m;n) : (22)
+In the shiftable­twistable basis, the advection operator, A, is a discrete convolution:
+q (m;n+ 1
+2 )
+~ `; =
+P
+~ k;! ^ a ~ ` ~ k; ! (t) q (m;n)
+~ k;! (23)
+with the following kernel:
+^ a ~ k; (t) = 1
+2
+R 2
+0 a ~ k (t[cos ; sin ] T ) exp( i) d (24)
+where the a ~ k are sinc functions. Let N be the number of Fourier series frequencies, !, used
+in the shiftable­twistable basis, and let  = 2=N . The diffusion­decay operator, D, is a
+diagonal matrix:
+q (m;n+1)
+~ k;! = e t= (e i! + (1 2) + e i! ) q (m;n+ 1
+2 )
+~ k;!
+(25)
+where  =  2
+2
+t
+() 2
+.
+3.4 The bias operator B
+In the continuum, the bias operator effects a multiplication of the function, s(~x), by the in­
+put bias function, b(~x). Our aim is to identify an equivalent linear operator in the shiftable­
+twistable basis. Suppose that both s and b are represented in a Gaussian basis, g ~ k (~x). Their
+product is:
+b(~x)s(~x) =
+P
+~ k s ~ k g ~ k (~x) 
+P
+~ ` b ~ ` g ~ ` (~x) =
+P
+~ k
+P
+~ ` s ~ k b ~ ` g ~ k (~x)g ~ ` (~x): (26)
+Now, the product of two Gaussian basis functions, g ~ k and g ~ ` , is a Gaussian of smaller vari­
+ance which cannot be represented in the Gaussian basis, g ~ k . Because b(~x)s(~x) is a linear
+
+combination of the products of pairs of Gaussian basis functions, it cannot be represented
+in the Gaussian basis either. However, we observe that the convolution of b(~x)s(~x) and
+a Gaussian, h(~x)  [b(~x) s(~x)], where h(~x) = 1
+ 2  e jj~xjj 2 = 2
+, can be represented in the
+Gaussian basis. It follows that there exists a matrix, B, such that:
+h(~x)  [b(~x) s(~x)] =
+P
+~ k [Bs] ~ k g ~ k (~x): (27)
+The formula for the matrix, B, is derived by first completing the square in the exponent of
+the product of two Gaussians to obtain:
+g(~x  ~ k)g(~x  ~ ` ) = g(
+p
+2(~x 
+2 ( ~ k + ~ ` )))g( 
+p
+2 ( ~ k ~ ` )): (28)
+This product is then convolved with h to obtain a function, f(~x), which is a shift of the
+Gaussian basis function, g(~x). Finally we use the shiftability formula:
+g(~x ~x 0 ) =
+P
+~ k a ~ k (~x 0 )g ~ k (~x) (29)
+where a ~ k are the interpolation functions, g ~ k (~x) equals g(~x  ~ k), and  = X=K is the
+shift amount, to express f(~x) in the Gaussian basis. The result is:
+B ~ k; ~ ` =
+P
+~ i b ~ i exp(jj ~ i ~ ` jj 2 =4)a ~ k (( ~ i + ~ ` )=2): (30)
+4 Experimental results
+In our experiments the Gaussian­Fourier basis consisted of K = 192 translates (in each
+spatial dimension) of a Gaussian (of period, X = 70:0), and N = 92 harmonic signals in
+the orientation dimension. The standard deviation of the Gaussian was set equal to the shift
+amount,  = X=K. For illustration purposes, all functions were rendered at a resolution of
+256  256. The diffusion parameter, , equaled 0:1473, and the decay constant,  , equaled
+12:5. The time step, t, used to solve the Fokker­Planck equation in the basis equaled
+=2. The parameters for the cut­off function used to eliminate self­loops were  = 4 and
+ = 15.
+In the first experiment, the input bias function, b(~x), consisted of twenty randomly posi­
+tioned spots and twenty spots on the boundary of an avocado. The positions of the spots
+are real valued, i.e., they do not lie on the grid of basis functions. See Fig. 1 (left). The
+stochastic completion field computed using 32 iterations of the power method is shown in
+Fig. 1 (right).
+In the second experiment, the input bias function from the first experiment was rotated by
+45 Æ and translated by half the distance between the centers of adjacent basis functions,
+b(R 45 Æ(~ x [ 
+2 ; 
+2 ] T )). See Fig. 2 (left). The stochastic completion field is identical (up
+to rotation and translation) to the one computed in the first experiment. This demonstrates
+the Euclidean invariance of the computation. See Fig. 2 (right). The estimate of the largest
+positive real eigenvalue, , as a function of m, the power method iteration is shown in Fig.
+3.
+5 Conclusion
+We described a neural network which enhances and completes salient closed contours.
+Even though the computation is implemented in a discrete network, its output is invariant
+under continuous rotations and translations of the input pattern.
+References
+[1] Cowan, J.D., Neurodynamics and Brain Mechanisms, Cognition, Computation and
+Consciousness, Ito, M., Miyashita, Y. and Rolls, E., (Eds.), Oxford UP, 1997.
+
+Figure 1: Left: The input bias function, b(~x). Twenty randomly positioned spots were
+added to twenty spots on the boundary of an avocado. The positions are real valued, i.e.,
+they do not lie on the grid of basis functions. Right: The stochastic completion field,
+R
+S 1
+c(~u; ) d, computed using 192  192  92 basis functions.
+Figure 2: Left: The input bias function from Fig. 1, rotated by 45 Æ and translated by
+half the distance between the centers of adjacent basis functions, b(R 45 Æ(~ x [ 
+2 ; 
+2 ] T )).
+Right: The stochastic completion field, is identical (up to rotation and translation) to the
+one shown in Fig. 1. This demonstrates the Euclidean invariance of the computation.
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+0.12
+0.14
+0.16
+0 5 10 15 20 25 30 35
+Figure 3: The estimate of the largest positive real eigenvalue, , as a function of m, the
+power method iteration. Both the final value and all intermediate values are identical in the
+rotated and non­rotated cases.
+[2] Freeman, W., and Adelson, E., The Design and Use of Steerable Filters, IEEE Trans­
+actions on Pattern Analysis and Machine Intelligence 13 (9), pp.891­906, 1991.
+[3] Mumford, D., Elastica and Computer Vision, Algebraic Geometry and Its Applica­
+tions, Chandrajit Bajaj (ed.), Springer­Verlag, New York, 1994.
+[4] Golub, G.H. and C.F. Van Loan, Matrix Computations, Baltimore, MD, Johns Hop­
+kins Univ. Press, 1996.
+[5] Heitger, R. and von der Heydt, R., A Computational Model of Neural Contour Pro­
+cessing, Figure­ground and Illusory Contours, Proc. of 4th Intl. Conf. on Computer
+Vision, Berlin, Germany, 1993.
+[6] Iverson, L., Toward Discrete Geometric Models for Early Vision, Ph.D. dissertation,
+McGill University, 1993.
+[7] Li, Z., A Neural Model of Contour Integration in Primary Visual Cortex, Neural
+Computation 10(4), pp. 903­940, 1998.
+[8] Parent, P., and Zucker, S.W., Trace Inference, Curvature Consistency and Curve
+Detection, IEEE Transactions on Pattern Analysis and Machine Intelligence 11, pp.
+823­889, 1989.
+[9] Shashua, A. and Ullman, S., Structural Saliency: The Detection of Globally Salient
+Structures Using a Locally Connected Network, 2nd Intl. Conf. on Computer Vision,
+Clearwater, FL, pp. 321­327, 1988.
+[10] Simoncelli, E., Freeman, W., Adelson E. and Heeger, D., Shiftable Multiscale Trans­
+forms, IEEE Trans. Information Theory 38(2), pp. 587­607, 1992.
+[11] Williams, L.R., and Thornber, K.K., Orientation, Scale, and Discontinuity as Emer­
+gent Properties of Illusory Contour Shape, Neural Computation 13(8), pp. 1683­
+1711, 2001.
+[12] Yen, S. and Finkel, L., Salient Contour Extraction by Temporal Binding in a
+Cortically­Based Network, Neural Information Processing Systems 9, Denver, CO,
+1996.
+[13] Zweck, J., and Williams, L., Euclidean Group Invariant Computation of Stochastic
+Completion Fields Using Shiftable­Twistable Functions, Proc. European Conf. on
+Computer Vision (ECCV '00), Dublin, Ireland, 2000.
+

@@ -1,0 +1,372 @@
+Measure Based Regularization
+
+Olivier Bousquet, Olivier Chapelle, Matthias Hein Max Planck Institute for Biological Cybernetics, 72076 T¨ubingen, Germany {first.last}@tuebingen.mpg.de
+
+Abstract We address in this paper the question of how the knowledge of the marginal distribution P (x) can be incorporated in a learning algorithm. We suggest three theoretical methods for taking into account this distribution for regularization and provide links to existing graph-based semi-supervised learning algorithms. We also propose practical implementations. Introduction
+
+1
+
+Most existing learning algorithms perform a trade-off between fit of the data and 'complexity' of the solution. The way this complexity is defined varies from one algorithm to the other and is usually referred to as a prior probability or a regularizer. The choice of this term amounts to having a preference for certain solutions and there is no a priori best such choice since it depends on the learning problem to be addressed. This means that the right choice should be dictated by prior knowledge or assumptions about the problem or the class of problems to which the algorithm is to be applied. Let us consider the binary classification setting. A typical assumption that is (at least implicitly) used in many learning algorithms is the following Two points that are close in input space should have the same label. One possible way to enforce this assumption is to look for a decision function which is consistent with the training data and which does not change too much between neighboring points. This can be done in a regularization setting, using the Lipschitz norm as a regularizer. For differentiable functions, the Lipschitz norm of a function is the supremum of the norm of the gradient. It is thus natural to consider algorithms of the form
+
+min sup f(x)
+
+f
+
+x
+
+under constraints yif(xi)  1. (1)
+
+Performing such a minimization on the set of linear functions leads to the maximum decision function is one of the solutions of the above optimization problem when margin solution (since the gradient x  w, x is w), whereas the 1-nearest neighbor the set of functions is unconstrained [13]. Although very useful because widely applicable, the above assumption is sometimes too weak. Indeed, most 'real-world' learning problems have more structure than what this assumption captures. For example, most data is located in regions where
+
+
+the label is constant (clusters) and regions where the label is not well-defined are typically of low density. This can be formulated via the so-called cluster assumption: Two points that are connected by a line that goes through high density regions should have the same label Another related way of stating this assumption is to say that the decision boundary should lie in regions of low density. Our goal is to propose possible implementations of this assumption. It is important to notice that in the context of supervised learning, the knowledge of the joint probability P (x, y) is enough to achieve perfect classification (taking arg maxy P (x, y) as decision function), while in semi-supervised learning, even if one knows the distribution P (x) of the instances, there is no unique or optimal way of using it. We will thus try to propose a principled approach to this problem. A similar attempt was made in [10] but in a probabilistic context, where the decision function was modeled by a conditional probability distribution, while here we consider arbitrary real-valued functions and use the standard regularization approach. We will use three methods for obtaining regularizers that depend on the distribution P (x) of the data. In section 2 we suggest to modify the regularizer in a general way by weighting it with the data density. Then in section 3 we adopt a geometric approach where we suggest to modify the distances in input space (in a local manner) to take into account the density (i.e. we stretch or blow up the space depending on the density). The third approach presented in section 4 builds on spectral methods. The idea is to look for the analogue of graph-based spectral methods when the amount of available data is infinite. We show that these three approaches are related in various ways and in particular we clarify the asymptotic behavior of graph-based regularization. Finally, in section 5 we give a practical method for implementing one of the proposed regularizers and show its application on a toy problem. 2 Density based regularization The first approach we propose is to start with a gradient-based regularizer like f which penalizes large variations of the function. Now, to implement the cluster assumption one has to penalize more the variations of the function in high density regions and less in low density regions. A natural way of doing this is to replace f by p f where p is the density of the marginal distribution P . More generally, instead of the gradient, one can can consider a regularization map L : RX  (R+)X , where L(f)(x) is a measure of the smoothness of the function f at the point x, and then consider the following regularization term (f) = L(f)(p) , (2) where  is a strictly increasing function. An interesting case is when the norm in (2) is chosen as the L2 norm. Then, (f) can be the norm of a Reproducing Kernel Hilbert Space (RKHS), which means that there exist an Hilbert space H and a kernel function k : X 2  R such that f, f = (f) and = f(x). (3) The reason for using an RKHS norm is the so-called representer theorem [5]: the function minimizing the corresponding regularized loss can be expressed as a linear combination of the kernel function evaluated at the labeled points.
+
+H f, k(x, ·) H
+
+
+However, it is not straightforward to find the kernel associated with an RKHS norm. In general, one has to solve equation (3). For instance, in the case L(f) = (f 2 + [3] that the corresponding kernel is the Laplacian one, k(x, y) = exp(- x - y )
+
+f 2 )1 /2 and without taking the density into account ( = 1), it has been shown in
+
+L1
+
+with associated inner product f, g = f, g + f,
+
+into account, this inner product becomes
+
+f, g = f, 2(p)g H L2
+
+H L2
+
++ f, 2(p)
+
+g g
+
+L2
+
+. Taking the density .
+
+L2
+
+we find that k must satisfy Plugging g = k(x, .) in above and expressing that (3) should be valid for all f  H, 2(p)k(x, .) - (2(p) k(x, .)) = (x - .), where  is the Dirac delta function. However, solving this differential equation is not an easy task for arbitrary p. Since finding the kernel function associated to a regularizer is, in general, a difficult problem, we propose to perform the minimization of the regularized loss on a fixed set of basis functions, i.e. f is expressed as a linear combination of functions i. f(x) = ii(x) + b. (4)
+
+l
+
+i=1
+
+We will present in section 5 a practical implementation of this approach. 3 Density based change of geometry We now try to adopt a geometric point of view. First we translate the cluster assumption into a geometric statement, then we explore how to enforce it by changing the geometry of our underlying space. A similar approach was recently proposed by Vincent and Bengio [12]. We will see that there exists such a change of geometry which leads to the same type of regularizer that was proposed in section 2. Recall that the cluster assumption states that points are likely to be in the same class if they can be connected by a path through high density regions. Naturally this means that we have to weight paths according to the density they are going through. This leads to introducing a new distance measure on the input space (typically Rd) defined as the length of the shortest weighted path connecting two points. With this new distance, we simply have to enforce that close points have the same label (we thus recover the standard assumption). Let us make this more precise. We consider the euclidean space Rd as a flat Riemannian manifold with metric tensor , denoted by (Rn, ). A Riemannian manifold (M, g) is also a metric space with the following path (or geodesic) distance: d(x, y) = inf{L()| : [a, b]  M, (a) = x, (b) = y}
+
+
+
+where  is a piecewise smooth curve and L() is the length of the curve given by L() = gij((t)) i jdt (5)
+
+b
+
+a
+
+We now want to change the metric  of Rd such that the new distance is the weighted path distance corresponding to the cluster assumption. The only information we have is the local density p(x), which is a scalar at every point and as such can only lead to an isotropic transformation in the tangent space TxM. Therefore we consider the following conformal transformation of the metric 
+
+ij  gij = 1 (p(x)) ij (6)
+
+
+where  is a strictly increasing function. We denote by (Rd, g) the distorted euclidean space. Note that this kind of transformation also changes the volume ele-
+
+ment
+
+gdx1 . . . dxd, where g is the determinant of gij.
+
+dx1 . . . dxd  gdx1 . . . dxd =  (p)d/2 dx1 1 . . . dxd (7)
+
+In the following we will choose (x) = x, which is the simplest choice which gives the desired properties. The distance structure of the transformed space implements now the cluster assumption, since we see from (5) that all paths get weighted by the inverse density. Therefore we can use any metric based classification method and it will automatically take into account the density of the data. For example the nearest neighbor classifier in the new distance is equivalent to the Lipschitz regularization (1) weighted with the density proposed in the last section. However, implementing such a method requires to compute the geodesic distance in (Rd, g), which is non trivial for arbitrary densities p. We suggest the following approximation which is similar in spirit to the approach in [11]. Since we have a global chart of Rd we can give for each neighborhood B (x) in the euclidean space the following upper and lower bounds for the geodesic distance: inf (8)
+
+zB (x)
+
+1 p(z) x - y  d(x,y)  sup
+
+zB (x)
+
+1 p(z) x - y , y  B (x)
+
+Then we choose a real and set for each x the distance to all points in a p(x)-1 neighborhood of x as d(x, y) = p( x+ )-1 be approximated by the shortest path along the obtained graph.
+
+y /2
+
+2
+
+/2 -
+
+x - y . The geodesic distance can then
+
+We now show the relationship to the the regularization based approach of the prethe measure  and by µ the standard Lebesgue measure on Rd. Let us consider modifying this regularizer according to section 2 (by changing the underlying meaLebesgue measure µ which can be done by integrating on the manifold with re-
+
+vious section. We denote by · L2(Rd,g,) the L2 norm in (Rd, g) with respect to
+
+the regularizer f 2 L2(Rd,,µ) which is the standard L2 norm of the gradient. Now
+
+sure) gives S(f) = f 2 L2(Rd,,P ) . On the distorted space (Rd, g) we keep the
+
+spect to the density  =
+
+1g = pd/2, which cancels then with the volume element
+
+gdx1 . . . dxd = dx1 . . . dxd. Since we have on (Rd, g), get equivalence of S(f).
+
+S(f) = f 2 L2(Rd,,P ) = p(x)ij
+
+f 2 = p(x)ij
+
+f f
+
+we
+
+xi xj
+
+Rd
+
+f f xi xj dx1 . . . dxd = f 2 L2(Rd,g,µ) (9)
+
+This shows that modifying the measure and keeping the geometry, or modifying the geometry and keeping the Lebesgue measure leads to the same regularizer S(f). However, there is a structural difference between the spaces (Rd, , P ) and (Rd, g, µ) even if S(f) is the same. Indeed, for regularization operators corresponding to higher order derivatives the above correspondence is not valid any more. 4 Link with Spectral Techniques Recently, there has been a lot of interest in spectral techniques for non linear dimension reduction, clustering or semi-supervised learning. The general idea of these approaches is to construct an adjacency graph on the (unlabeled) points whose weights are given by a matrix W . Then the first eigenvectors of a modified version
+
+
+of W give a more suitable representation of the points (taking into account their manifold and/or cluster structure). An instance of such an approach and related references are given in [1] where the authors propose to use the following regularizer
+
+1 2
+
+m
+
+(fi - fj)2Wij = f (D - W )f, (10)
+
+i,j=1
+
+where fi is the value of the function at point xi (the index ranges over labeled and a function of the distance between xi and xj, for example Wij = K( xi - xj /t). Given a sample x1, . . . , xm of m i.i.d. instances sampled according to P (x), it is possible to rewrite (10) after normalization as the following random variable
+
+unlabeled points), D is a diagonal matrix with Dii = j Wij and Wij is chosen as
+
+Uf =
+
+1 2m(m - 1) (f(xi) - f(xj))2K( xi - xj /t) .
+
+i,j
+
+Under the assumption that f and K are bounded, the result of [4] (see Inequality (5.7) in this paper, which applies to U-statistics) gives P [Uf  E [Uf ] + t]  e-mt2/C2 , where C is a constant which does not depend on n and t. This shows that for each fixed function, the normalized regularizer Uf converges towards its expectation when the sample size increases. Moreover, one can check that
+
+E [Uf ] = 1 2 (f(x) - f(y))2K( x - y /t)dP (x)dP (y) . (11)
+
+This is the term that should be used as a regularizer if one knows the whole distribution since it is the limit of (10)1. The following proposition relates the regularizer (11) to the one defined in (2). Proposition 4.1 If p is a density which is Lipschitz continuous and K is a contin-
+
+d
+
+with bounded hessian uous function on R+ such that x2+ K(x)  L2, then for any function f  C2(Rd)
+
+lim
+
+t0
+
+=
+
+d C t2+
+
+d
+
+f(x) 2
+
+(f(x) - f(y))2K( x - y /t)p(x)p(y)dxdy p2(x)dx, (12) (13)
+
+where C =
+
+Proof:
+
+Rd x 2 K( x ) dx.
+
+Let's fix x. Writing a Taylor-Lagrange expansion of f and p around x in
+
+terms of h = (y - x)/t gives (f(x) - f(y))2K
+
+= =
+
+(t
+
+x - y t p(y)dy
+
+f(x), h + O(t2 h 2 ))2K( h )(p(x) + O(t h )tddh
+
+td+2p(x) f(x), h 2 K( h )dh + O(td+3) , (14)
+
+1 We have shown that the convergence of Uf towards E [Uf ] happens for each fixed f but
+
+this convergence can be uniform over a set of functions, provided this set is small enough.
+
+
+To f(x)
+
+conclude the
+
+hh K( h )dh
+
+proof, f(x) we =
+
+rewrite
+
+f(x)
+
+2
+
+C d .
+
+this The last last
+
+integral
+
+equality
+
+as
+
+comes
+
+from the fact that, by symmetry considerations, hh K( h )dh is equal to a
+
+constant (let's call it C2) times the identity matrix and this constant can be computed by C2d = trace hh K( h )dh = trace h hK( h )dh = C. Note that different K lead to different affinity matrices: if we choose K(x) = exp(-leads2), we get a gaussian RBF affinity matrix as used in [7], whereas K(x) = x2/ Sowe have proved that if one takes the limit of the regularizer (10) when the sample size goes to infinity and the scale parameter t goes to 0 (with appropriate scaling), one obtains the regularizer
+
+1x 1 to an unweighted neighboring graph (at size t) [1].
+
+f(x) 2 p2(x)dx = f,  2 Dp f ,
+
+where  is the adjoint of , Dp is the diagonal operator that maps f to pf and
+
+., . is the inner product in L2. tained from the graph and claimed that this is the empirical counterpart of the In [2], the authors investigated the limiting behavior of the regularizer D - W obLaplace operator defined on the manifold. However, this is true only if the distribution is uniform on the manifold. We have shown that, in the general case, the
+
+continuous equivalent of the graph Laplacian is
+
+5
+
+ 2
+
+Dp .
+
+Practical Implementation and Experiments
+
+As mentioned in section 2, it is difficult in general to find the kernel associated with a given regularizer and instead, we decided to minimize the regularized loss on a The regularizer we considered is of the form (2) and is,
+
+fixed basis of functions (i)1 il , as expressed by equation (4).
+
+(f) = f p 2 L2 = f(x) · f(x)p(x)dx.
+
+Thus, the coefficients  and b in expansion (4) are found by minimizing the following convex regularized functional
+
+1 n
+
+n l
+
+(f(xi), yi) +
+
+i=1 Remp(f )
+
+ij i(x) · j(x)p(x)dx .
+
+L(f )p 2 L2
+
+(15)
+
+i,j=1
+
+Introducing the l × l matrix Hij =
+
+K with Kij = j(xi), the minimization of the functional (15) is equivalent to the following one for the standard L1-SVM loss: min  H + C i under constraints i, yi( Kijj + b)  1 - i. The dual formulation of this optimization problem turns out to be the standard SVM one with a modified kernel function (see also [9]): max ijyiyjLij,
+
+n
+
+,b
+
+l j=1
+
+i=1
+
+n n
+
+i -
+
+1 2
+
+
+
+i=1 i,j=1
+
+i(x) · j(x)p(x)dx and the n × l matrix
+
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+
+0
+
+-0.5
+
+-1
+
+-1.5
+
+-2
+
+-2.5 -4 -3 -2 -1 0 1 2 3 4
+
+Figure 1: Two moons toy problem: there are 2 labeled points (the cross and the triangle) and 200 unlabeled points. The gray level corresponds to the output of the function. The function was expanded on all unlabeled points (m=200 in (4)) and the widths of the gaussians have been chosen as  = 0.5 and p = 0.05.
+
+under constraints 0  i  C and
+
+iyi = 0, with L = KH-1K .
+
+Once the vector  has been found, the coefficients  of the expansion are given by  = H-1K diag(Y ). In order to calculate the Hij, one has to compute an integral. From now on, we consider a special case where this integral can be computed analytically:
+
+· The basis functions are gaussian RBF, i(x) = exp -
+
+the points x1, . . . , xl can be chosen arbitrarily.
+
+x-xi 22 2 , where
+
+We decided to take the
+
+unlabeled points (or a subset of them) for this expansion. · The marginal density p is estimated using a Parzen window with a Gaussian
+
+kernel, p(x) = 1 m m i=1 exp - x-x2 2p i 2 .
+
+Defining h = 1/2 and hp = 1/p, this integral turns out to be, up to an irrelevant constant factor,
+
+m
+
+h2 2 2 2
+
+Hij = exp -2
+
+xi - xk
+
+2
+
+h + hp
+
+xi -2xj - hhp 2h + hp + xj - xk 2
+
+k=1
+
+h2p(xk - xi) · (xk - xj) - h(h + hp)(xi - xj)2 + d(2h + hp) , where d is the dimension of the input space. After careful dataset selection [6], we considered the two moons toy problem (see figure 1). On this 2D example, the regularizer we suggested implements perfectly the cluster assumption: the function is smooth on high density regions and the decision boundary lies in a low density region. We also tried some real world experiments but were not successful. The reason might be that in dimension more than 2, the gradient does not yield a suitable regularizer: there exists non continuous functions whose regularizer is 0. To avoid this, from the Sobolev embedding lemma, we consider derivatives of order at least d/2. More specifically, we are currently investigating the regularizer associated with
+
+
+a Gaussian kernel of width r [8, page 100],
+
+ p=1 r p!2p 2p
+
+p f(x) 2 p(x)dx, with 2p
+
+ p.
+
+6 Conclusion
+
+We have tried to make a first step towards a theoretical framework for semisupervised learning. Ideally, this framework should be based on general principles which can then be used to derive new heuristics or justify existing ones. One such general principle is the cluster assumption. Starting from the assumption that the distribution P (x) of the data is known, we have proposed several ideas to implement this principle and shown their relationships. In addition, we have shown the relationship to the limiting behavior of an algorithm based on the graph Laplacian. We believe that this topic deserves further investigation. From a theoretical point of view, other types of regularizers, involving, for example, higher order derivatives should be studied. Also from a practical point of view, we should derive efficient algorithms from the proposed ideas, especially by obtaining finite sample approximations of the limit case where P (x) is known. References [1] M. Belkin and P. Niyogi. Laplacian eigenmaps for dimensionality reduction and data representation. Neural Computation, 15(6):1373­1396, 2003. [2] M. Belkin and P. Niyogi. Semi-supervised learning on manifolds. Machine Learning journal, 2003. to appear. [3] F. Girosi, M. Jones, and T. Poggio. Priors, stabilizers and basis functions: From regularization to radial, tensor and additive splines. Technical Report Artificial Intelligence Memo 1430, Massachusetts Institute of Technology, 1993. [4] W. Hoeffding. Probability inequalities for sums of bounded random variables. Journal of the American Statistical Association, 58:13­30, 1963. [5] G. Kimeldorf and G. Wahba. Some results on tchebychean spline functions. Journal of Mathematics Analysis and Applications, 33:82­95, 1971. [6] Doudou LaLoudouana and Mambobo Bonouliqui Tarare. Data set selection. In Advances in Neural Information Processing Systems, volume 15, 2002. [7] A. Y. Ng, M. I. Jordan, and Y. Weiss. On spectral clustering: Analysis and an algorithm. In Advances in Neural Information Processing Systems, volume 14, 2001. [8] B. Sch¨olkopf and A. Smola. Learning with kernels. MIT Press, Cambridge, MA, 2002. [9] A. Smola and B. Scholkopf. On a kernel-based method for pattern recognition, regression, approximation and operator inversion. Algorithmica, 22:211­231, 1998. [10] M. Szummer and T. Jaakkola. Information regularization with partially labeled data. In Advances in Neural Information Processing Systems, volume 15. MIT Press, 2002. [11] J. B. Tenenbaum, V. de Silva, and J. C. Langford. A global geometric framework for nonlinear dimensionality reduction. Science, 290(5500):2319­2323, 2000. [12] P. Vincent and Y. Bengio. Density-sensitive metrics and kernels. Presented at the Snowbird Learning Workshop, 2003. [13] U. von Luxburg and O. Bousquet. Distance-based classification with lipschitz functions. In Proceedings of the 16th Annual Conference on Computational Learning Theory, 2003.
+
+

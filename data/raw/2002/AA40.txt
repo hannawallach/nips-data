@@ -1,0 +1,1480 @@
+Nash Propagation for Loopy Graphical Games
+
+Luis E. Ortiz Michael Kearns Department of Computer and Information Science University of Pennsylvania leortiz,mkearns @cis.upenn.edu Abstract We introduce NashProp, an iterative and local message-passing algorithm for computing Nash equilibria in multi-player games represented by arbitrary undirected graphs. We provide a formal analysis and experimental evidence demonstrating that NashProp performs well on large graphical games with many loops, often converging in just a dozen iterations on graphs with hundreds of nodes. NashProp generalizes the tree algorithm of (Kearns et al. 2001), and can be viewed as similar in spirit to belief propagation in probabilistic inference, and thus complements the recent work of (Vickrey and Koller 2002), who explored a junction tree approach. Thus, as for probabilistic inference, we have at least two promising general-purpose approaches to equilibria computation in graphs. 1 Introduction There has been considerable recent interest in representational and algorithmic issues arising in multi-player game theory. One example is the recent work on graphical games (Kearns et al. 2001) (abbreviated KLS in the sequel). Here a multi-player game is represented by an undirected graph. The interpretation is that while the global equilibria of the game depend on the actions of all players, individual payoffs for a player are determined solely by his own action and the actions of his immediate neighbors in the graph. Like graphical models in probabilistic inference, graphical games may provide an exponentially more succinct representation than the standard "tabular" or normal form of the game. Also as for probabilistic inference, the problem of computing equilibria on arbitrary graphs is intractable in general, and so it is of interest to identify both natural special topologies permitting fast Nash computations, and good heuristics for general graphs. KLS gave a dynamic programming algorithm for computing Nash equilibria in graphical games in which the underlying graph is a tree, and drew analogies to the polytree algorithm for probabilistic inference (Pearl 1988). A natural question following from this work is whether there are generalizations of the basic tree algorithm analogous to those for probabilistic inference. In probabilistic inference, there are two main approaches to generalizing the polytree algorithm. Roughly speaking, the first approach is to take an arbitrary graph and "turn it into a tree" via triangulation, and subsequently run the tree-based algorithm on the resulting junction tree (Lauritzen and Spiegelhalter 1988). This approach has the merit of being guaranteed to perform inference correctly, but the drawback of requiring the computation to be done on the junction tree. On highly loopy graphs, junction tree computations may require exponential time. The other broad approach is to simply run (an appropriate
+
+ 
+
+¡
+
+
+generalization of) the polytree algorithm on the original loopy graph. This method garnered considerable interest when it was discovered that it sometimes performed quite well empirically, and was closely connected to the problem of decoding in Turbo Codes. Belief propagation has the merit of each iteration being quite efficient, but the drawback of having no guarantee of convergence in general (though recent theoretical work has established convergence for certain special cases (Weiss 2000)). In recent work, (Vickrey and Koller 2002) proposed a number of heuristics for equilibria computation in graphical games, including a constraint satisfaction generalization of KLS that essentially provides a junction tree approach for arbitrary graphical games. They also gave promising experimental results for this heuristic on certain loopy graphs that result in manageable junction trees. In this work, we introduce the NashProp algorithm, a different KLS generalization which provides an approach analogous to loopy belief propagation for graphical games. Like belief propagation, NashProp is a local message-passing algorithm that operates directly on the original graph of the game, requiring no triangulation or moralization operations.
+
+1
+
+NashProp is a two-phase algorithm. In the first phase, nodes exchange messages in the form of two-dimensional tables. The table player sends to neighboring player in the graph indicates the values "believes" he can play given a setting of and the information he has received in tables from his other neighbors, a kind of conditional Nash equilibrium. In the second phase of NashProp, the players attempt to incrementally construct an equilibrium obeying constraints imposed by the tables computed in the first phase. Interestingly, we can provide rather strong theory for the first phase, proving that the tables must always converge, and result in a reduced search space that can never eliminate an equilibrium. When run using a discretization scheme introduced by KLS, the first phase of NashProp will actually converge in time polynomial in the size of the game representation. We also report on a number of controlled experiments with NashProp on loopy graphs, including some that would be difficult via the junction tree approach due to the graph topology. The results appear to be quite encouraging, thus growing the body of heuristics available for computing equilibria in compactly represented games. 2 Preliminaries  
+
+¡
+
+£¥¤ ¦¨§©§¢ ¢
+
+The normal or tabular form of an
+
+©
+
+matrices
+
+0
+
+¢
+
+-player, two-action2 game is defined by a set of
+
+4"$5%¢3
+
+¦ 10
+
+¡
+
+£¥¤
+
+¢
+
+), each with indices. The entry
+
+£¥¤!#"$&% ¦('
+
+specifies the
+
+  ¡
+
+2
+
+(
+
+payoff to player when the joint action of the
+
+©
+
+) $&%
+
+ 
+
+entries. The actions 0 and 1 are the pure strategies of each player, while a mixed strategy
+
+ ©
+
+for player is given by the probability
+
+£7¤893
+
+3 ¤ ¦6'
+
+3
+
+mixed strategy, given by a product distribution , we define the expected payoff to player
+
+as where indicates that each is 0 with probability
+
+1 with probability
+
+We use
+
+3`Y¤.
+
+to denote the vector which is the same as
+
+© 3 Y¤
+
+3
+
+where the value has been changed to
+
+strategy say that
+
+" 3 ©WVX3PY¤' 33 ¤such
+
+
+
+A@CBEDFG D "¦UTR3P. H £7¤8IS ', RQ
+
+players is . Thus, each has
+
+that the player will play 0. For any joint
+
+&S
+
+3
+
+S
+
+and
+
+that for any player , and for any
+
+except in the th component,
+
+©
+
+A (Nash) equilibrium for the game is a mixed
+
+(We
+
+is a best response to the rest of .) In other words, no player can improve their
+
+3
+
+a"$&%
+
+¦6',£¥¤bc3 £¥¤bc3 ©eV13 Y¤'
+
+Wd " .
+
+expected payoff by deviating unilaterally from a Nash equilibrium. The classic theorem of (Nash 1951) states that for any game, there exists a Nash equilibrium in the space of joint mixed strategies. We will also use a straightforward definition for approximate Nash
+
+f 3 ©
+
+equilibria. An -Nash equilibrium is a mixed strategy
+
+3
+
+any value
+
+3PY¤
+
+g"$&%
+
+¦(',£ ¤ 93 f £ ¤ c3 ©iV&3PY¤'
+
+Ah d " .
+
+such that for any player , and for
+
+f
+
+(We say that
+
+3 ¤ f
+
+is an -best response
+
+to the rest of .) Thus, no player can improve their expected payoff by more than
+
+1 2
+
+by
+
+Unlike for inference, moralization may be required for games even on undirected graphs. For simplicity, we describe our results for two actions, but they generalize to multi-action games.
+
+
+deviating unilaterally from an approximate Nash equilibrium. The following definitions are due to KLS. An -player graphical game is a pair
+
+¢
+
+¢
+
+vertices and where   is an undirected graph on
+
+¢
+
+is a set of
+
+¢
+
+matrices
+
+£4¤
+
+
+
+¡ 
+
+% , £¢
+
+called the
+
+local game matrices. Each player is represented by a vertex in
+
+£
+
+  , and the interpretation
+
+¡ is that each player's payoff is determined solely by the actions in their local neighborhood an index for itself, and for when he
+
+¡ C"$&%¡
+
+in   . Thus the matrix ¥¤
+
+ "$&% ¦(' £ `
+
+¦¢ has an index for each of the
+
+¡¨© , ¤
+
+§ neighbors of , and
+
+£
+
+and his § neighbors play . The expected payoff under a mixed strategy
+
+0
+
+2 3 ¦6'
+
+¨© is
+
+defined analogously. Note that in the two-action case, considerably smaller than .
+
+2
+
+denotes the payoff to
+
+¤ has ¨© entries, which may be
+
+Note that any game can be trivially represented as a graphical game by choosing   to be the
+
+¢
+
+complete graph, and letting the local game matrices be the original tabular form matrices. graphical representation is exponentially smaller than the normal form. We are interested in heuristics that can exploit this succinctness computationally. 3 NashProp: Table-Passing Phase The table-passing phase of NashProp proceeds in a series of rounds. In each round, every node will send a different binary-valued table to each of its neighbors in the graph. Thus, if vertices and are neighbors, the table sent from to in round shall be denoted
+
+However, any time in which the local neighborhoods in   can be bounded by § , the
+
+¡ ¡
+
+
+
+!#"$
+
+% . ('
+
+ 
+
+¤ &%
+
+
+
+Since the vertices are always clear from the lower-case table indices, we shall
+
+!)"
+
+¦(' ¡
+
+% .
+
+0'
+
+drop the subscript and simply write
+
+possible mixed strategies
+
+!1"
+
+binary value ¡%
+
+0'
+
+
+
+% 
+
+%
+
+0'
+
+% "$5%
+
+&% This table is indexed by the continuum of
+
+(global) Nash equilibrium in which 
+
+@¡
+
+for players
+
+¡
+
+ and , respectively. Intuitively, the
+
+indicates player 's (possibly incorrect) "belief" that there exists a
+
+% and
+
+2'
+
+.
+
+@
+
+As these tables are indexed by continuous values, it is not clear how they can be finitely represented. However, as in KLS, we shall shortly introduce a finite discretization of these tables whose resolution is dependent only on local neighborhood size, yet is sufficient to compute global (approximate) equilibria. For the sake of generality we shall work with the exact tables in the ensuing formal analysis, which will immediately apply to the approximation algorithm as well.
+
+% ,
+
+!)4
+
+%  @ %!
+
+For every edge
+
+¦('.
+
+"$&%
+
+ ¡
+
+3
+
+¦6',
+
+the table-passing phase initialization is 0' 0'
+
+0' !1"
+
+R@
+
+¡
+
+exists a vector of mixed strategies
+
+!#"
+
+¡
+
+%  @
+
+' (A
+
+¤ ¦
+
+1. 2.
+
+@
+
+for all
+
+A
+
+9other%%
+
+© ¡% A
+
+0'
+
+756575 (A
+
+
+
+6%is
+
+than 
+
+assigned the value 1 if and only if there
+
+ "$&%
+
+¦('
+
+for
+
+ 
+
+such that ¨B8C D¨98@
+
+   
+
+¡%
+
+
+
+@ % (%for  .
+
+all
+
+¨98@
+
+%
+
+657575
+
+¦
+
+Let us denote the neighbors of
+
+the table entry each %
+
+%7 "$&%
+
+(if any) by For
+
+¦ §4© §  Ta¦ E§
+
+' is a best response to
+
+A
+
+@ % @ A 
+
+% R@
+
+(' © &%
+
+9
+
+; and
+
+% .
+
+¦ ¡
+
+. If
+
+
+
+!)"
+
+We shall call such a a witness to has no neighbors other than
+
+!#" 
+
+, we define Condition 1 above to hold vacuously. If either condition is violated, we set
+
+© ¡%
+
+0'
+
+.
+
+% 
+
+9
+
+%  @C$
+
+Lemma 1 For all edges 3
+
+ ¡
+
+ 
+
+&%
+
+0'
+
+contract or remain the same:
+
+%and Vall c !)" GF © &% (' %$  @
+
+, the table sent from!#" to0' 0'
+
+ 
+
+H ¡% ¡%
+
+¡
+
+¦  V  %  ¡ %  @ 
+
+can only
+
+. ¡
+
+¦
+
+Proof: By induction on . The base case
+
+to contain all 1 entries. For the induction, assume for contradiction that for some
+
+there!#"exists0' a pair ofyet
+
+that ¡%
+
+
+
+%  @ $
+
+9 ¦ 9 ¦
+
+neighboring players
+
+!1"
+
+© &%
+
+('
+
+% ¨@
+
+3 and a strategy pair
+
+!1"
+
+© &%
+
+0'
+
+%  @
+
+&%
+
+('
+
+. Since
+
+@  ¡
+
+¦
+
+holds trivially due to the table initialization
+
+% 
+
+table-passing phase implies that there exists a witness A
+
+
+
+%  a"$&%
+
+¦6'
+
+IF 3P
+
+¦
+
+,
+
+such
+
+, the definition of the
+
+for the neighbors
+
+  ¡
+
+of other
+
+
+! "
+
+than  meeting Conditions 1 and 2 above. By induction, the fact that
+
+!1"
+
+¦
+
+Condition 1 implies that
+
+¦' 0'
+
+it must be that
+
+!#"
+
+witness to © ¡%
+
+9¡  @is
+
+@%
+
+8@
+
+I ¤ ¦
+
+' (A
+
+%  @
+
+for all
+
+   A
+
+© ¦ TC¦
+
+757565 
+
+§
+
+%
+
+a not best response to
+
+, a contradiction.
+
+(% @@ %% @ P% ¤% ¦
+
+' 0A
+
+!#"
+
+A
+
+
+
+&% ('
+
+. Since
+
+@i@ in $
+
+. But then cannot be a
+
+Since all tables begin filled with 1 entries, and Lemma 1 states entries can only change from 1 to 0, the table-passing phase must converge:
+
+%  7"$5%
+
+0' ¡£¢¥¤
+
+% 
+
+('  0'
+
+% 
+
+¡
+
+!
+
+% 
+
+(' Theorem 2 For all
+
+
+
+¡%
+
+¦('
+
+DP , the limit "§¦©¨
+
+!#" !
+
+
+
+&% ¡%
+
+
+
+&% exists.
+
+ 
+
+It is also immediately obvious that the limit tables
+
+ ¡   ¦
+
+
+
+for all edges
+
+ 
+
+3
+
+P%% ¤A@and¦allfor © ¡
+
+
+
+&%
+
+% ,
+
+such that ' 0A all , and
+
+%@  @is
+
+must all simultaneously
+
+
+
+balance each other, in the sense of obeying Conditions 1 and 2. That is, we must have that
+
+(' !
+
+&%
+
+0' '
+
+implies the existence of a witness
+
+a best response to A  %
+
+A
+
+for
+
+!
+
+  
+
+@ % @
+
+. If this
+
+were not true the tables would be altered by a single round of the table-passing phase. We next establish that the table-passing phase will never eliminate any global Nash equilibria. Let be any mixed strategy for the entire population of players, and let us
+
+3 ¦6'0
+
+¥"$5%
+
+use
+
+" 3 ¡ '
+
+to denote the mixed strategy assigned to player
+
+"$&%
+
+ ¡
+
+¡ 3
+
+by .
+
+Lemma 3 Let
+
+3 ¦6'0
+
+be a Nash equilibrium. Then for all rounds
+
+!)"
+
+passing phase, and every edge
+
+" % "¡  @
+
+
+
+% , 93 ' 3 ¡ ' ¦
+
+
+
+" % " A@
+
+d $ of the table-
+
+.
+
+Proof: By induction on . The base case
+
+c3 ' 3 ¡ 'and ¦
+
+By induction, for every neighbor
+
+! "
+
+dition 1 for equilibrium. 
+
+  ¡
+
+of
+
+@g$
+
+holds trivially by the table initialization.
+
+!)"
+
+3
+
+8@ , satisfying Con,
+
+Ic3 ¡ ' 3  e' ¦
+
+" % "  @
+
+. Condition 2 is immediately satisfied since
+
+3
+
+is a Nash
+
+!
+
+ % 
+
+0'
+
+¡%
+
+ 
+
+We can now establish a strong sense in which the set of balanced limit tables
+
+characterizes the Nash equilibria of the global game. We say that
+
+!
+
+0'
+
+!
+
+3  W'
+
+&%
+
+"  
+
+%  %
+
+the and
+
+
+
+if for every vertex
+
+
+
+¡
+
+with neighbors 
+
+ 
+
+we have ¡
+
+¡
+
+c3is"consistent ¦
+
+
+
+'%3 ¡W'
+
+" W@with,
+
+3
+
+is a witness to this value. In other words, every edge assignment made in
+
+!  0'
+
+ 
+
+"allowed" by the are witnesses.
+
+Theorem 4 Let
+
+3
+
+¡%
+
+#"$&%
+
+!
+
+ 
+
+balanced limit tables
+
+%  ¦6'0
+
+¡%
+
+3
+
+is
+
+¡
+
+, and furthermore the neighborhood assignments made by
+
+%be 0'
+
+any global mixed strategy. Then
+
+3
+
+is consistent with the
+
+¡
+
+if and only if it is a Nash equilibrium.
+
+3inition,   e' "
+
+for all
+
+3¡is
+
+,
+
+@ " ¡ 3 ¡ '
+
+3
+
+ 
+
+!
+
+Proof: The forward direction is easy. If is consistent with the
+
+
+
+&%
+
+%  ('
+
+¡
+
+is a best response to the local neighborhood 
+
+@, " %  @
+
+then by def-
+
+3 '  
+
+
+
+is certainly a
+
+. Hence, a Nash equilibrium.
+
+For the other direction, if
+
+3
+
+is a Nash equilibrium, then for all
+
+" % "  @
+
+0'
+
+ 
+
+!
+
+!
+
+
+
+¡% with the
+
+% 
+
+¡
+
+!
+
+@ " %  @¡¡ " 
+
+,
+
+
+
+©
+
+3 '   3¡ W'@.
+
+" 3 ¡ '
+
+best response to the strategy of its neighbors
+
+93 ¡ ' 3 ' ¦,and 93 ¡ ' 3  A¤' ¦
+
+ So for consistency
+
+it remains to show that for every player
+
+
+
+" % "  @
+
+for all . This has already been established
+
+and its neighbors 
+
+%
+
+ 
+
+,
+
+in Lemma 3.
+
+Theorem 4 is important because it establishes that the table-passing phase provides us with an alternative -- and hopefully vastly reduced -- seach space for Nash equilibria. Rather than search for equilibria in the space of all mixed strategies, Theorem 4 asserts that we can limit our search to the space of that are consistent with the balanced limit tables tables is a locally stronger demand than merely asking for a player to be playing a best response to its neighborhood. Heuristics for searching this constrained space are the topic of Section 5.
+
+3  ! 0'
+
+ 
+
+%  &% , with no fear of missing equilibria. The demand for consistency with the limit
+
+¡
+
+
+ 
+
+!©
+
+
+
+&% (' But first let us ask in what ways the search space defined by the
+
+% 
+
+¡
+
+might constitute
+
+a significant reduction. The most obvious case is that in which many of the tables contain a large fraction of 0 entries, since every such entry eliminates all mixed strategies in which the corresponding pair of vertices plays the corresponding pair of values. As we shall see in the discussion of experimental results, such behavior seems to occur in many -- but certainly not all -- interesting cases. We shall also see that even when such reduction does not occur, the underlying graphical structure of the game may still yield significant computational benefits in the search for a consistent mixed strategy.
+
+4 Approximate Tables Thus far we have assumed that the binary-valuedtables
+
+'
+
+! "
+
+
+
+%  (' &% have continuous indices %
+
+and , and thus it is not clear how they can be finitely represented . Here we briefly address this issue by asserting that it can be handled using the discretization scheme of KLS. More precisely, in that work it was established that if we restrict all table indices to only assume discrete values that are multiples of , and we relax Condition 2 in the definition of the
+
+@ f     b
+
+table-passing phase to¡ ask that¡£¢¥¤
+
+then the choice
+
+Here §
+
+  ¨© §
+
+@
+
+f 2
+
+¡
+
+
+
+'
+
+f
+
+be only an -best response to 
+
+@ %  @
+
+% A ,
+
+§ suffices to preserve -Nash equilibria in the tables.
+
+3
+
+is the maximum degree of any node in the graph. The total number of entries in
+
+¡
+
+¦
+
+each table will be  
+
+
+
+P and thus exponential in , but the payoff matrices for the players §
+
+are already exponential in , so our tables remain polynomial in the size of the graphical game representation. The crucial point established in KLS is that the required resolution is independent of the total number of players. It is easily verified that none of the key results establishing this fact (specifically, Lemmas 2, 3 and 4 of KLS) depend on the underlying graph being a tree, but hold for all graphical games. Precise analogues of all the results of the preceding section can thus be established for the discretized instantiation of the table-passing phase (details omitted). In particular, the tablepassing phase will now converge to finite balanced limit tables, and consistency with these tables characterizes -Nash equilibria. Furthermore, since every round prior to convergence must change at least one entry in one table, the table-passing phase must thus converge in §
+
+f
+
+¢
+
+¡
+
+¢
+
+at most §   P rounds, which is again polynomial in the size of the game representation.
+
+¡
+
+Each round of the table-passing phase takes at most on the order of § @¨©   computational
+
+steps in the worst case (though possibly considerably less), giving a total running time to the table-passing phase that scales polynomially with the size of the game. We note that the discretization of each player's space of mixed strategies allows one to formulate the problem of computing an approximate NE in a graphical game as a CSP(Vickrey and Koller 2002), and there is a precise connection between NashProp and constraint propagation algorithms for (generalized) arc consistency in constraint networks . 5 NashProp: Assignment-Passing Phase be considerably smaller than the set of all mixed strategies. We now describe heuristics for searching this space for a Nash equilibrium. For this it will be convenient to define, for (or by their allowed values in the aforementioned discretization scheme). The purpose of
+
+4
+
+! ('  
+
+%  We have already suggested that the tables  &% represent a solution space that may
+
+¡
+
+¡  ¦('  , "$5%
+
+each vertex , its projection set ' ' ¦ which is indexed by the possible values
+
+
+
+ ¤ ¦
+
+% to@
+
+'
+
+
+
+ ¦¡) 
+
+¦
+
+
+
+is simply to consolidate the information sent to
+
+
+
+¡
+
+by all of its neighbors. Thus, if
+
+© ¡
+
+ 
+
+are all the neighbors of
+
+
+
+a witness to
+
+A
+
+  
+
+@
+
+'
+
+¦
+
+ @
+
+, we define! such that
+
+
+
+
+
+' A
+
+¦ be 1 if and only if there exists
+
+for all , and
+
+'
+
+(again called
+
+' (A
+
+@
+
+; otherwise we define ¦
+
+
+
+'
+
+is a best response to
+
+!© 0'
+
+to be 0.
+
+3 3  
+
+If is any global mixed strategy, it is easily verified that is consistent with the
+
+3
+
+ ¡% % 
+
+¡
+
+We note that the KLS proof that the exact tables must admit a rectilinear representation holds
+
+generally, but we cannot bound their complexity here.
+
+4 We are grateful to Michael Littman for helping us establish this connection.
+
+
+
+
+if and only if
+
+in
+
+3
+
+¦
+
+" i@ c3 ¡ ' ¦
+
+
+
+for all nodes
+
+¡
+
+¡
+
+, with the assignment of the neighbors of
+
+¡
+
+as a witness. The first step of the assignment-passing phase of NashProp is thus the
+
+
+
+computation of the Neighboring nodes ¦ ¡
+
+'
+
+
+
+at each vertex
+
+
+
+, which is again a local computation in the graph. 
+
+and also exchange their projections ¦
+
+ '
+
+
+
+and ¦
+
+ &%
+
+.
+
+Let us begin by noting that the search space for a Nash equilibrium is immediately reduced to the cross-product of the projection sets by Theorem 4, so if the table-passing phase has resulted in many 0 values in the projections, even an exhaustive search across this (discretized) cross-product space may sometimes quickly yield a solution. However, we would obviously prefer a solution that exploits the local topology of the solution space given by the graph. At a high level, such a local search algorithm is straightforward:
+
+P%
+
+
+
+ @
+
+1. Initialization: Choose any node
+
+A  A
+
+, and ¦ for all .
+
+ © ¡
+
+¡
+
+and any values
+
+'
+
+' A
+
+
+
+such that '
+
+  ¤
+
+¦
+
+ ¦
+
+with witness
+
+assigns itself value , and assigns each of its neighbors
+
+¡
+
+¤.¤U@ ¦
+
+A
+
+the value
+
+2. Pick the next node
+
+'
+
+¡
+
+(in some fixed ordering) that has already been assigned some value
+
+. If there is a partial assignment to the neighbors of
+
+
+
+¡
+
+to
+
+ ¦
+
+'
+
+¦
+
+ @
+
+¦
+
+ ¤A@ ¦
+
+A
+
+©
+
+, attempt to extend it to a witness
+
+¡
+
+A
+
+
+
+such that for all , and assign any previously unassigned neighbors
+
+their values in this witness. If all the neighbors of is a best response. have been assigned, make sure
+
+@
+
+2'
+
+Thus, the first vertex chosen assigns both itself and all of its neighbors, but afterwards vertices assign only (some of) their neighbors, and receive their own values from a neighbor. It is easily verified that if this process succeeds in assigning all vertices, the resulting mixed equilibrium in the discretized case). The difficulty, of course, is that the inductive step of the assignment-passing phase may fail due to cycles in the graph -- we may reach a node is not a best response to its complete neighborhood assignment. In this case, as with any structured local search phase, we have reached a failure point and must backtrack. The overall NashProp algorithm thus consists of the (always converging) table-passing phase followed by the backtracking local assignment-passing phase. NashProp directly generalizes the algorithm of KLS, and as such, on certain special topologies such as trees may provably yield efficient computation of equilibria. Here we have shown that NashProp enjoys several natural and desirable properties even on arbitrary graphs. We now turn to some experimental investigation of NashProp on graphs containing cycles. 6 Experimental Results We have implemented the NashProp algorithm (with distinct table-passing and assignmentpassing phases) as described, and run a series of controlled experiments on loopy graphs
+
+ ! ('   %  strategy is consistent with the &% and thus a Nash equilibrium (or approximate
+
+¡
+
+¡ ¡ @ whose neighbor partial assignment cannot be extended, or whose assigned value '
+
+5
+
+of varying size and topology. As discussed in Section 4, there is a relationship suggested
+
+f,
+
+by the KLS analysis between the table resolution
+
+f
+
+  and the global approximation quality
+
+f
+
+but in practice this relationship may be pessimistic (Vickrey and Koller 2002) . Our
+
+implementation thus takes both   and as inputs, and attempts to find an -Nash equilibrium We first draw attention to Figure 1, in which we provide a visual display of the evolution of the tables computed by the NashProp table-passing phase for a small (3 by 3) grid game. Note that for this game, the table-passing phase constrains the search space tremendously -- so much so that the projection sets entirely determine the unique equilibrium, and the assignment-passing phase is superfluous. This is of course ideal behavior. The main results of our controlled experiments are summarized in Figure 2. One of our all 3000 runs described here.
+
+running NashProp on tables of resolution .  
+
+5 We did not implement backtracking, but this caused an overall rate of failure of only 3% across
+
+
+r = 1 r = 2 r = 3 r = 8
+
+Figure 1: Visual display of the NashProp table-passing phase after rounds 1,2 and 3 and 8 (where convergence occurs). Each row shows first the projection set, then the four outbound tables, for each of the 9 players in a 3 by 3 grid. For the reward functions, each player has a distinct preference for one of his two actions. For 15 of the 16 possible settings of his 4 neighbors, this preference is the same, but for the remaining setting it is reversed. It is easily verified that every player's payoff
+
+depends on all of his neighbors. (Settings used:
+
+ ¢¡ £¥¤§¦©¨ £¥¤£ ¡
+
+).
+
+primary interests is how the number of rounds in each of the two phases -- and therefore the overall running time -- scales with the size and complexity of the graph. More detail is provided in the caption, but we created graphs varying in size from 5 to 100 nodes with a number of different topologies: single cycles; single cycles to which a varying number of chords were added, which generates considerably more cycles in the graph; grids; and "ring of rings" (Vickrey and Koller 2002). We also experimented with local payoff matrices for some fixed number of the settings of its neighbors, each node has a strong preference for one of their actions, and in the remaining settings, a strong preference for the other. The (thus no simplification of the graph is possible). These classes of graphs seems to generate a nice variability in the relative speed of the table-passing and assignment-passing phases of NashProp, which is why we chose them. We now make a number of remarks regarding the NashProp experiments. First, and most basically, these preliminary results indicate that the algorithm performs well across a range of loopy topologies, including some (such as grids and cycles with many chords) that might pose computational challenges for junction tree approaches as the number of players becomes large. Excluding the small fraction of trials in which the assignment-passing phase failed to find a solution, even on grid and loopy chord graphs with 100 nodes, we find convergence of both the table and assignment-passing phases in less than a dozen rounds. We next note that there is considerable variation across topologies (and little within) in the amount of work done by the table-passing phase, both in terms of the expected number of rounds to convergence, and the fraction of 0 entries that have been computed at completion. For example, for cycles the amount of work in both senses is at its highest, while for grids with random rewards it is lowest. For grids and chordal cycles, decreasing the be accomplished by the table-passing phase. Intuitively, when rewards are entirely random and unbiased, nodes with large degrees will tend to rarely or never compute 0s in their
+
+¦6', "$5% in which each entry was chosen randomly from  and with "biased" rewards, in which
+
+ settings were chosen randomly subject to the constraint that no neighbor is marginalized
+
+value of  (and thus increasing the bias of the payoff matrices) generally causes more to
+
+
+Table-Passing Phase Assignment-Passing Phase
+
+14
+
+10 cycle grid chordal(0.25,1,2,3) chordal(0.25,1,1,2)
+
+12
+
+0.53 0.65 0.59
+
+0.60 chordal(0.25,1,1,1)
+
+0.42
+
+10
+
+8 rounds
+
+of
+
+0.81 0.61 0.81 0.78 0.87
+
+8 chordal(0.5,1,2,3) chordal(0.5,1,1,2) chordal(0.5,1,1,1) grid(3)
+
+6
+
+grid(2) grid(1) ringofrings
+
+cycle grid chordal(0.25,1,2,3) chordal(0.25,1,1,2) chordal(0.25,1,1,1) chordal(0.5,1,2,3) chordal(0.5,1,1,2) chordal(0.5,1,1,1) grid(3) grid(2) grid(1) ringofrings
+
+rounds
+
+of
+
+6 4
+
+number number 0.93
+
+4
+
+2
+
+2
+
+1.00
+
+0 0
+
+0 20 40 60 80 100 0 20 40 60 80 100
+
+number of players number of players
+
+Figure 2: Plots showing the number of rounds taken by the NashProp table-passing (left) and assignment-passing (right) phases in computing an equilibrium, for a variety of different graph topologies. The   -axis shows the total number of vertices in the graph. Topologies and rewards examined included cycles, grids and "ring of rings"(Vickrey and Koller 2002) with random rewards (denoted cycle, grid and ringofrings in the legend); cycles¢ with¢¤£ a, fraction ¡ of random chords added, with , denoted grid( )). Each data point represents averages over 50 trials for the given topology and number of vertices. In the table-passing plot, each curve is also annotated with the average fraction
+
+and with biased rewards in which nodes of degree 2 have
+
+¢ ¢¨§
+
+have ¢
+
+¡ ¢ (see text¢ for definition of ), denoted chordal(¡ ¡¨
+
+¢
+
+¢ £ ¢ ¥ ¢¨§ ¨ ¨
+
+degree 3 have
+
+¡
+
+¢¦¥ , and degree 4
+
+); and grids with biased rewards
+
+of 1 values in© the converged tables. For cycles, settings used were
+
+rings,   ¡ ; for all other classes,   ¡ .
+
+£ ¤¥¨ £ ¤£ ¡ £ ¤© ¨  £ ¤© ¡   ¡ £¥¤¦¨ £ ¤£  ¡
+
+; for ring of
+
+outbound tables -- there have too many neighbors whose combined setting can act as a witnesses for a 1 in an outbound table. However, as suggested by the theory, greater progress (and computation) in the tablepassing phase pays dividends in the assignment-passing phase, since the search space may have been dramatically reduced. For example, for chordal and grid graphs with biased rewards, the ordering of plots by convergence time is essentially reversed from the tablepassing to assignment-passing phases. This suggests that, when it occurs, the additional convergence time in the table-passing phase is worth the investment. However, we again note that even for the least useful table-passing phase (for grids with random rewards), the assignment-passing phase (which thus exploits the graph structure alone) still manages to find an equilibrium rapidly. References M. Kearns, M. Littman, and S. Singh. Graphical models for game theory. In Proceedings of the Conference on Uncertainty in Artificial Intelligence, pages 253­260, 2001. S. Lauritzen and D. Spiegelhalter. Local computations with probabilities on graphical structures and their application to expert systems. J. Royal Stat. Soc. B, 50(2):157­224, 1988. J. F. Nash. Non-cooperative games. Annals of Mathematics, 54:286­295, 1951. J. Pearl. Probabilistic Reasoning in Intelligent Systems. Morgan Kaufmann, 1988. D. Vickrey and D. Koller. Multi-agent algorithms for solving graphical games. In Proceedings of the National Conference on Artificial Intelligence (AAAI), 2002. To appear. Yair Weiss. Correctness of local probability propagation in graphical models with loops. Neural Computation, 12(1):1­41, 2000.
+
+

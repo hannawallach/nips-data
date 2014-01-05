@@ -1,0 +1,598 @@
+Manifold Parzen Windows
+
+Pascal Vincent and Yoshua Bengio Dept. IRO, Université de Montréal C.P. 6128, Montreal, Qc, H3C 3J7, Canada {vincentp,bengioy}@iro.umontreal.ca http://www.iro.umontreal.ca/ vincentp   Abstract The similarity between objects is a fundamental element of many learning algorithms. Most non-parametric methods take this similarity to be fixed, but much recent work has shown the advantages of learning it, in particular to exploit the local invariances in the data or to capture the possibly non-linear manifold on which most of the data lies. We propose a new non-parametric kernel density estimation method which captures the local structure of an underlying manifold through the leading eigenvectors of regularized local covariance matrices. Experiments in density estimation show significant improvements with respect to Parzen density estimators. The density estimators can also be used within Bayes classifiers, yielding classification rates similar to SVMs and much superior to the Parzen classifier. 1 Introduction In [1], while attempting to better understand and bridge the gap between the good performance of the popular Support Vector Machines and the more traditional K-NN (K Nearest Neighbors) for classification problems, we had suggested a modified Nearest-Neighbor algorithm. This algorithm, which was able to slightly outperform SVMs on several realworld problems, was based on the geometric intuition that the classes actually lived "close to" a lower dimensional non-linear manifold in the high dimensional input space. When this was not properly taken into account, as with traditional K-NN, the sparsity of the data points due to having a finite number of training samples would cause "holes" or "zig-zag" artifacts in the resulting decision surface, as illustrated in Figure 1.
+
+Figure 1: A local view of the decision surface, with "holes", produced by the Nearest Neighbor when the data have a local structure (horizontal direction). The present work is based on the same underlying geometric intuition, but applied to the well known Parzen windows [2] non-parametricmethod for density estimation, using Gaussian kernels. Most of the time, Parzen Windows estimates are built using a "spherical Gaussian" with Gaussian", i.e. with a diagonal covariance matrix, or even a "full Gaussian" with a full covariance matrix, usually set to be proportional to the global empirical covariance of the
+
+a single scalar variance (or width) parameter ¡£¢ . It is also possible to use a "diagonal
+
+
+training data. However these are equivalent to using a spherical Gaussian on preprocessed, normalized data (i.e. normalized by subtracting the empirical sample mean, and multiplying by the inverse sample covariance). Whatever the shape of the kernel, if, as is customary, a fixed shape is used, merely centered on every training point, the shape can only compensate for the global structure (such as global covariance) of the data. Now if the true density that we want to model is indeed "close to" a non-linear lower dimensional manifold embedded in the higher dimensional input space, in the sense that most of the probability density is concentrated around such a manifold (with a small noise component away from it), then using Parzen Windows with a spherical or fixed-shape Gaussian is probably not the most appropriate method, for the following reason. While the true density mass, in the vicinity of a particular training point  ¢¡ , will be mostly concentrated in a few local directions along the manifold, a spherical Gaussian centered on that point will spread its density mass equally along all input space directions, thus giving too much probability to irrelevant regions of space and too little along the manifold. This is likely to result in an excessive "bumpyness" of the thus modeled density, much like the "holes" and "zig-zag" artifacts observed in KNN (see Fig. 1 and Fig. 2). If the true density in the vicinity of   ¡ is concentrated along a lower dimensional manifold, then it should be possible to infer the local direction of that manifold from the neighborhood of  £¡ , and then anchor on  ¤¡ a Gaussian "pancake" parameterized in such a way that it spreads mostly along the directions of the manifold, and is almost flat along the other directions. The resulting model is a mixture of Gaussian "pancakes", similar to [3], mixtures of probabilistic PCAs [4] or mixtures of factor analyzers [5, 6], in the same way that the most traditional Parzen Windows is a mixture of spherical Gaussians. But it remains a memory-based method, with a Gaussian kernel centered on each training points, yet with a differently shaped kernel for each point.
+
+2 The Manifold Parzen Windows algorithm In the following we formally define and justify in detail the proposed algorithm. Let
+
+¥
+
+be
+
+an ¦ -dimensional random variable with values in §¨© , and an unknown probability density function £ . Our training set contains  samples of that random variable, collected in a  !¦ matrix " whose row   ¡ is the # -th sample. Our goal is to estimate the density   . Our estimator £%'&( has the form of a mixture of Gaussians, but unlike the Parzen density $ estimator, its covariances ) ¡ are not necessarily spherical and not necessarily identical
+
+everywhere:
+
+2
+
+£%'&(0 £'1 $ 4 8@9BADCE£A
+
+
+
+8PI CE
+
+3 ¡657
+
+F £HG (1)
+
+where F ¤ is the multivariate Gaussian density with mean vector Q and covariance
+
+8 I CE
+
+9 Iih0p Erq 9 Iih c c
+
+e g F ¤'1 R
+
+2 TSVUWYXW`)a`0bdc
+
+fVge
+
+(2)
+
+matrix ) :
+
+where `)a` is the determinant of ) . How should we select the individual covariances ) ¡ ? From the above discussion, we expect that if there is an underlying "non-linear principal manifold", those gaussians would be "pancakes" aligned with the plane locally tangent to this underlying manifold. The only available information (in the absence of further prior knowledge) about this tangent plane can be gathered from the training samples int the neighborhood of  £¡ . In other words, we are interested in computing the principal directions of the samples in the neighborhood of   ¡ . For generality, we can define a soft neighborhood of   ¡ with a neighborhood kernel
+
+s F t  ¡  that will associate an influence weight to any point   in the neighborhood of
+
+
+  ¡ . We canthencomputethe weightedcovariancematrix
+
+¢¤£ £
+
+¡ ) 1 A
+
+£ 
+
+C£©¨ s 57¦¥§¥3 5¢¡ ¢£
+
+0  t   ¡D
+
+£
+
+ £¡DT0 
+
+£    ¡  F 
+
+£ 57¦¥§¥3 5¢¡ 0  tC   ¡DHF  £©¨ s £   ¡D
+
+(3)
+
+where 0 
+
+s
+
+  ¡  denotestheouterproduct.
+
+F G  ¡  could be a spherical Gaussian centered on   ¡ for instance, or any other positive
+
+definite kernel, possibly incorporating prior knowledge as to what constitutes a reasonable the global training sample covariance. As an important special case, we can define a hard than the -th nearest neighbor of  ¤¡ among the training set, according to some metric such
+
+neighborhood for point  ¤¡ . Notice that if 0 WG  £¡D is a constant (uniform kernel), )   is A
+
+k-neighborhood for training sample   ¡ by assigning a weight of
+
+2
+
+to any point no further
+
+
+
+as the Euclidean distance in input space, and assigning a weight of
+
+the -th neighbor. In that case, ) of   ¡ .   
+
+A 
+
+to points further than
+
+is the unweighted covariance of the
+
+
+
+nearest neighbors
+
+s
+
+Notice what is happening here: we start with a possibly rough prior notion of neighborhood, such as one based on the ordinary Euclidean distance in input space, and use this to compute a local covariance matrix, which implicitly defines a refined local notion of neighborhood, taking into account the local direction observed in the training samples. Now that we have a way of computing a local covariance matrix for each training point, we might be tempted to use this directly in equations 2 and 1. But a number of problems must first be addressed: conditioned. This situation will definitely arise if we use a hard k-neighborhood with
+
+ Equation 2 requires the inverse covariance matrix, whereas )   A is likely to be ill-
+
+! ¦
+
+. In this case we get a Gaussian that is totally flat outside of the affine subspace
+
+spanned by   ¡ and its  neighbors, and it does not constitute a proper density in §¨ © . A
+
+common way to deal with this problem is to add a small isotropic (spherical) Gaussian
+
+noise of variance
+
+¡ ¢
+
+in all directions, which is done by simply adding
+
+the covariance matrix: ) ¡ 1
+
+
+
+¡ )
+
+#"A
+
+¡ %$¢
+
+¡ ¢
+
+to the diagonal of
+
+Even if we regularize ) ¡ by adding
+
+. ¡ ¢
+
+, when we deal with high dimensional spaces,
+
+it would be prohibitive in computation time and storage to keep and use the full inverse covariance matrix as expressed in 2. This would in effect multiply both the time and storage use a different, more compact representation of the inverse Gaussian, by storing only the eigenvectors associated with the first few largest eigenvalues of ) ¡ , as described below. The eigen-decomposition of a covariance matrix ) can be expressed as: ) 1 the eigenvalues 7    , that we will suppose sorted in decreasing order, without loss of
+
+requirement of the already expensive ordinary Parzen Windows by ¦ " 2
+
+. So instead, we
+
+where the columns of are the orthonormal eigenvectors and
+
+( '&)(0&1,
+
+is a diagonal matrix with
+
+2 32&
+
+X generality.
+
+The first
+
+4
+
+eigenvectors with largest eigenvalues correspond to the principal directions of
+
+the local neighborhood, i.e. the high variance local directions of the supposed underlying vary across space). The last few eigenvalues and eigenvectors are but noise directions with a small variance. So we may, without too much risk, force those last few components to (by considering only the first to all eigenvalues.
+
+4 -dimensional manifold (but the true underlying dimension is unknown and may actually
+
+the same low noise level ¡ ¢ . We have done this by zeroing the last ¦
+
+4
+
+leading eigenvalues) and then adding ¡ ¢
+
+
+
+4 eigenvalues
+
+This allows us to store only the first 5
+
+4
+
+8 I CE
+
+eigenvectors, and to later compute
+
+0 £ in time
+
+F¦76©4  instead of 0¦  . Thus both the storage requirementand the computationalcost
+
+5 ¢
+
+4
+
+" 2
+
+when estimating the density at a test point is only about times that of ordinary Parzen.
+
+It can easily be shown that such an approximation of the covariance matrix yields to the following computation of 0 £ : 8 I CE
+
+
+Algorithm LocalGaussian( WG  £¡YG
+
+¡ ¡ ¦& ¡ 32G ¡ G 4 G
+
+¡ ¢ )
+
+Input: test vector   §¨W© , training vector   ¡ §¨¢© , 4 eigenvalues 2 ¡ , 4 eigenvectors
+
+£
+
+in the columns of ¡ , dimension , and the regularization hyper-parameter
+
+(1) ¢ 1 4¤£¦¥¨§  SiUW
+
+¢©£
+
+57
+
+"
+
+¡ ¢
+
+" 
+
+¡ ¢
+
+(2)  1  `6`  7f 
+
+
+
+  ¡ `6` ¢
+
+" ¢©££¥§57 £ 2
+
+¥ ¦!#"%$ g 7
+
+
+
+ 0¦ 4 £¦¥¨§£ 
+
+£  h
+
+7f  `6`&) F    ¡  `6`¢
+
+&" 4£ ¡ ¢
+
+.
+
+Output: Gaussian density
+
+b c
+
+In the case of the hard k-neighborhood, the training algorithm pre-computes the local printhem with a SVD rather than an eigen-decomposition of the covariance matrix, see below).
+
+cipal directions &£¡ of the nearest neighbors of each training point # (in practice we compute 
+
+Note that with
+
+4 1 
+
+, we trivially obtain the traditional Parzen windows estimator.
+
+Algorithm MParzen::Train("!G
+
+Input: training set matrix " with  rows   ¡
+
+4 4
+
+(1) For #
+
+(2) (3)
+
+¡
+
+4 3G ¤G
+
+¡ ¢ )
+
+tions , chosen number of neighbors '& , and regularization hyper-parameter
+
+¡)( 2
+
+G S G    G 10
+
+
+
+£ 
+
+Collect
+
+Perform a partial singular value decomposition of 2 , to obtain the leading
+
+nearest neighbors   of   ¡ , and put  
+
+£
+
+§¨ © , chosen numberof principal direc-
+
+¡ ¢ .
+
+  ¡ intherowsofmatrix 2 .
+
+singular values 3 (4
+
+(4)
+
+For 4
+
+£ ¡)( 2
+
+¡5( 2
+
+£ G    34G 60 )andsingularcolumnvectors & 87¡ of 2 . 4
+
+Output: The model A
+
+G    34G 60 ,let 2 ¡ 1
+
+= F"
+
+£
+
+¡ ¢
+
+"@93f
+
+¦&G ¦2G ¢G¦¤G 4 G  ¡ ¢
+
+, where
+
+2 is a   4
+
+& is an   ¦  4
+
+tensor that
+
+collects all the eigenvectors and matrix with all the eigenvalues.
+
+Algorithm MParzen::Test( GBA )
+
+Input: test point   and model A
+
+(1) 3DC (2) For #
+
+(3)
+
+
+
+¡)( 2
+
+¡ ¢ 1 0" 3&G 'G32WG3 G 4 G  .
+
+3ECF3 LocalGaussian( WG ¤¡$3&G ¡G¦2 ¡ G 4 G )
+
+" G S G    G 10
+
+¡ ¢
+
+93
+
+.
+
+Output: manifold Parzen estimator ¤%'&(0 £'1
+
+3 Related work As we have already pointed out, Manifold Parzen Windows, like traditional Parzen Windows and so many other density estimation algorithms, results in defining the density as a mixture of Gaussians. What differs is mostly how those Gaussians and their parameters are chosen. The idea of having a parameterization of each Gaussian that orients it along the local principal directions also underlies the already mentioned work on mixtures of Gaussian pancakes [3], mixtures of probabilistic PCAs [4], and mixtures of factor analysers [5, 6]. All these algorithms typically model the density using a relatively small number of Gaussians, whose centers and parameters must be learnt with some iterative optimisation algorithm such as EM (procedures which are known to be sensitive to local minima traps). By contrast our approach is, like the original Parzen windows, heavily memory-based. It avoids the problem of optimizing the centers by assigning a Gaussian to every training point, and uses simple analytic SVD to compute the local principal directions for each. Another successful memory-based approach that uses local directions and inspired our work is the tangent distance algorithm [7]. While this approach was initially aimed at solving classification tasks with a nearest neighbor paradigm, some work has already been done in developing it into a probabilistic interpretation for mixtures with a few gaussians,
+
+
+as well as for full-fledged kernel density estimation [8, 9]. The main difference between our approach and the above is that the Manifold Parzen estimator does not require prior knowledge, as it infers the local directions directly from the data, although it should be easy to also incorporate prior knowledge if available. We should also mention similarities between our approach and the Local Linear Embedding and recent related dimensionality reduction methods [10, 11, 12, 13]. There are also links with previous work on locally-defined metrics for nearest-neighbors [14, 15, 16, 17]. Lastly, it can also be seen as an extension along the line of traditional variable and adaptive kernel estimators that adapt the kernel width locally (see [18] for a survey). 4 Experimental results Throughout this whole section, when we mention Parzen Windows (sometimes abbreviated Parzen ), we mean ordinary Parzen windows using a spherical Gaussian kernel with a single hyper-parameter , the width of the Gaussian. ¡ When we mention Manifold Parzen Windows (sometimes abbreviated MParzen), we used a hard k-neighborhood, so that the hyper-parameters are: the number of neighbors , the number of retained principal components , and the additional isotropic Gaussian noise When measuring the quality of a density estimator 0 £ , we used the average negative log
+
+4 
+
+parameter . ¡
+
+likelihood: ANLL 1
+
+ ¢ %7 %¡ 5 7 $ £¥§a$ F  ¡  withthe  examples  ¡ fromatestset.
+
+4.1 Experiment on 2D artificial data A training set of 300 points, a validation set of 300 points and a test set of 10000 points were generated from the following distribution of two dimensional F G¢¡  points:
+
+" 9
+
+#"
+
+2(' 9
+
+& G  ,
+
+
+
+G¡ ! £¥¨ ¥ ¥ 1
+
+§
+
+"!#"
+
+where ¥  %$
+
+ P1  ¤£¦¥¨§©W2¥
+
+ 0)   G    ,  1)   G    , 2£G43  is uniformin the interval $
+
+2
+
+) ¡ 2£G#3H and
+
+0QrG  is a normaldensity.
+
+4@1
+
+2
+
+We trained an ordinary Parzen, as well as MParzen with and
+
+4@1 S
+
+on the training
+
+set, tuning the hyper-parameters to achieve best performance on the validation set. Figure 2 shows the training set and gives a good idea of the densities produced by both kinds of algorithms (as the visual representation for MParzen with and did not appear very artifacts of ordinary Parzen, and shows that MParzen is indeed able to better concentrate the probability density along the manifold, even when the training data is scarce. Quantitative comparative results of the two models are reported in table 1 Table 1: Comparative results on the artificial data (standard errors are in parenthesis).
+
+2
+
+different, we show only the case 4 1 2 4 1 4 1 S
+
+). The graphic reveals the anticipated "bumpyness"
+
+Algorithm Parzen MParzen MParzen Parameters used S , a1  , 1      ¡
+
+44 11 a1 ,
+
+!2  1 &
+
+,
+
+2d22 ¡¡ 1  87
+
+265
+
+2
+
+ANLL on test-set -1.183 (0.016) -1.466 (0.009) -1.419 (0.009)
+
+Several points are worth noticing:
+
+ Both MParzen models seem to achieve a lower ANLL than ordinary Parzen (even
+
+though the underlying manifold really has dimension sistency over the test sets (lower standard error).
+
+The optimal width
+
+¡
+
+4 1
+
+), and with more con-
+
+2
+
+
+
+for ordinary Parzen is much larger than the noise parameter
+
+of the true generating model (0.01), probably because of the finite sample size.
+
+
+ ¡
+
+4 1
+
+2 The optimal regularization parameter for MParzen with (i.e. supposing
+
+a one-dimensional underlying manifold) is very close to the actual noise parameter of the true generating model. This suggests that it was able to capture the underlying structure quite well. Also it is the best of the three models, which is not surprising, since the true model is indeed a one dimensional manifold with an added isotropic Gaussian noise.
+
+The optimal additional noise parameter ¡ for MParzen with
+
+4 1 S
+
+(i.e. supposing
+
+
+
+a two-dimensional underlying manifold) is close to 0, which suggests that the model was able to capture all the noise in the second "principal direction".
+
+Figure 2: Illustration of the density estimated by ordinary Parzen Windows (left) and Manifold Parzen Windows (right). The two images on the bottom are a zoomed area of the corresponding image at the top. The 300 training points are represented as black dots and the area where the estimated by ordinary Parzen windows model can clearly be seen, whereas Manifold Parzen density is better aligned with the underlying manifold, allowing it to even successfully "extrapolate" in regions with few data points but high true density.
+
+density   ¡£¢¥¤§¦©¨£ is above 1.0 is painted in gray. The excessive "bumpyness" and holes produced
+
+
+4.2 Density estimation on OCR data In order to compare the performance of both algorithms for density estimation on a realworld problem, we estimated the density of one class of the MNIST OCR data set, namely the "2" digit. The available data for this class was divided into 5400 training points, 558 validation points and 1032 test points. Hyper-parameters were tuned on the validation set. The results are summarized in Table 2, using the performance measures introduced above (average negative log-likelihood). Note that the improvement with respect to Parzen windows is extremely large and of course statistically significant. Table 2: Density estimation of class '2' in the MNIST data set. Standard errors in parenthesis.
+
+Algorithm Parzen MParzen
+
+Parameters used
+
+¡
+
+4 11  a1  1  ¤7
+
+' 7
+
+,
+
+¡  , ¡
+
+ 2 validation ANLL -197.27 (4.18) -696.42 (5.94) test ANLL -197.19 (3.55) -695.15 (5.21)
+
+4.3 Classification performance To obtain a probabilistic classifier with a density estimator we train an9 estimator
+
+£¢
+
+$ B0 £'1 F  `  foreachclass ,andapplyBayes'ruletoobtain  ` £'1
+
+¥$
+
+When measuring the quality of a probabilistic classifier
+
+ditional log likelihood: ANCLL 1 (correct class, input) from a test set.
+
+%7 ¢ %¡
+
+5 7
+
+
+
+
+
+£¥§  ¡ `  ¡  , withthe
+
+¥$ ¦¤
+
+¦¤
+
+$ ¤ ¤
+
+¥$
+
+¦¤ &p§g&§©¨g©¨9¢h¢§phg¢§hg¢ph.
+
+` £ , we usedthe negativecon-
+
+  examples
+
+¤ ¡ G   ¡ 
+
+This method was applied to both the Parzen and the Manifold Parzen density estimators, which were compared with state-of-the-art Gaussian SVMs on the full USPS data set. The original training set (7291) was split into a training (first 6291) and validation set (last 1000), used to tune hyper-parameters. The classification errors for all three methods are compared in Table 3, where the hyper-parameters are chosen based on validation classification error. The log-likelihoods are compared in Table 4, where the hyper-parameters are chosen based on validation ANCLL. Hyper-parameters for SVMs are the box constraint ) and the Gaussian width . MParzen has the lowest classification error and ANCLL of the ¡ three algorithms. Table 3: Classification error obtained on USPS with SVM, Parzen windows and Manifold Parzen
+
+windows classifiers. Algorithm SVM Parzen MParzen validation error 1.2% 1.8% 0.9% test error 4.68% 5.08% 4.08%
+
+parameters
+
+¡) 4 111  
+
+,
+
+,
+
+¡
+
+2 2 2   ¡ 
+
+2 2
+
+1
+
+1 ¡ ¢ !  1 2 ,
+
+Table 4: Comparative negative conditional log likelihood obtained on USPS.
+
+Algorithm Parzen MParzen 5 Conclusion valid ANCLL 0.1022 0.0658 test ANCLL 0.3478 0.3384  
+
+parameters
+
+¡
+
+4 11
+
+2
+
+ 
+
+5 , a1 2 5
+
+, ¡ ¢ ! 5' 1
+
+The rapid increase in computational power now allows to experiment with sophisticated non-parametric models such as those presented here. They have allowed to show the usefulness of learning the local structure of the data through a regularized covariance matrix estimated for each data point. By taking advantage of local structure, the new kernel density estimation method outperforms the Parzen windows estimator. Classifiers built from
+
+
+this density estimator yield state-of-the-art knowledge-free performance, which is remarkable for a not discriminatively trained classifier. Besides, in some applications, the accurate estimation of probabilities can be crucial, e.g. when the classes are highly imbalanced. Future work should consider other alternative methods of estimating the local covariance matrix, for example as suggested here using a weighted estimator, or taking advantage of prior knowledge (e.g. the Tangent distance directions). References [1] P. Vincent and Y. Bengio. K-local hyperplane and convex distance nearest neighbor algorithms. In T.G. Dietterich, S. Becker, and Z. Ghahramani, editors, Advances in Neural Information Processing Systems, volume 14. The MIT Press, 2002. [2] E. Parzen. On the estimation of a probability density function and mode. Annals of Mathematical Statistics, 33:1064­1076, 1962. [3] G.E. Hinton, M. Revow, and P. Dayan. Recognizing handwritten digits using mixtures of linear models. In G. Tesauro, D.S. Touretzky, and T.K. Leen, editors, Advances in Neural Information Processing Systems 7, pages 1015­1022. MIT Press, Cambridge, MA, 1995. [4] M.E. Tipping and C.M. Bishop. Mixtures of probabilistic principal component analysers. Neural Computation, 11(2):443­482, 1999. [5] Z. Ghahramani and G.E. Hinton. The EM algorithm for mixtures of factor analyzers. Technical Report CRG-TR-96-1, Dpt. of Comp. Sci., Univ. of Toronto, 21 1996. [6] Z. Ghahramani and M. J. Beal. Variational inference for Bayesian mixtures of factor analysers. In Advances in Neural Information Processing Systems 12, Cambridge, MA, 2000. MIT Press. [7] P. Y. Simard, Y. A. LeCun, J. S. Denker, and B. Victorri. Transformation invariance in pattern recognition -- tangent distance and tangent propagation. Lecture Notes in Computer Science, 1524, 1998. [8] D. Keysers, J. Dahmen, and H. Ney. A probabilistic view on tangent distance. In 22nd Symposium of the German Association for Pattern Recognition, Kiel, Germany, 2000. [9] J. Dahmen, D. Keysers, M. Pitz, and H. Ney. Structured covariance matrices for statistical image object recognition. In 22nd Symposium of the German Association for Pattern Recognition, Kiel, Germany, 2000. [10] S. Roweis and L. Saul. Nonlinear dimensionality reduction by locally linear embedding. Science, 290(5500):2323­2326, Dec. 2000. [11] Y. Whye Teh and S. Roweis. Automatic alignment of local representations. In S. Becker, S. Thrun, and K. Obermayer, editors, Advances in Neural Information Processing Systems, volume 15. The MIT Press, 2003. [12] V. de Silva and J.B. Tenenbaum. Global versus local approaches to nonlinear dimensionality reduction. In S. Becker, S. Thrun, and K. Obermayer, editors, Advances in Neural Information Processing Systems, volume 15. The MIT Press, 2003. [13] M. Brand. Charting a manifold. In S. Becker, S. Thrun, and K. Obermayer, editors, Advances in Neural Information Processing Systems, volume 15. The MIT Press, 2003. [14] R. D. Short and K. Fukunaga. The optimal distance measure for nearest neighbor classification. IEEE Transactions on Information Theory, 27:622­627, 1981. [15] J. Myles and D. Hand. The multi-class measure problem in nearest neighbour discrimination rules. Pattern Recognition, 23:1291­1297, 1990. [16] J. Friedman. Flexible metric nearest neighbor classification. Technical Report 113, Stanford University Statistics Department, 1994. [17] T. Hastie and R. Tibshirani. Discriminant adaptive nearest neighbor classification and regression. In David S. Touretzky, Michael C. Mozer, and Michael E. Hasselmo, editors, Advances in Neural Information Processing Systems, volume 8, pages 409­415. The MIT Press, 1996. [18] A.J. Inzenman. Recent developments in nonparametric density estimation. Journal of the American Statistical Association, 86(413):205­224, 1991.
+
+

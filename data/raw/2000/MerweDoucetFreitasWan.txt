@@ -1,0 +1,405 @@
+The Unscented Particle Filter
+Rudolph van der Merwe
+Oregon Graduate Institute
+Electrical and Computer Engineering
+P.O. Box 91000,Portland,OR 97006, USA
+rvdmerwe@ece.ogi.edu
+Arnaud Doucet
+Cambridge University
+Engineering Department
+Cambridge CB2 1PZ, England
+ad2@eng.cam.ac.uk
+Nando de Freitas
+UC Berkeley, Computer Science
+387 Soda Hall, Berkeley
+CA 94720-1776 USA
+jfgf@cs.berkeley.edu
+Eric Wan
+Oregon Graduate Institute
+Electrical and Computer Engineering
+P.O. Box 91000,Portland,OR 97006, USA
+ericwan@ece.ogi.edu
+Abstract
+In this paper, we propose a new particle lter based on sequential
+importance sampling. The algorithm uses a bank of unscented l-
+ters to obtain the importance proposal distribution. This proposal
+has two very \nice" properties. Firstly, it makes eÆcient use of
+the latest available information and, secondly, it can have heavy
+tails. As a result, we nd that the algorithm outperforms stan-
+dard particle ltering and other nonlinear ltering methods very
+substantially. This experimental nding is in agreement with the
+theoretical convergence proof for the algorithm. The algorithm
+also includes resampling and (possibly) Markov chain Monte Carlo
+(MCMC) steps.
+1 Introduction
+Filtering is the problem of estimating the states (parameters or hidden variables)
+of a system as a set of observations becomes available on-line. This problem is
+of paramount importance in many elds of science, engineering and nance. To
+solve it, one begins by modelling the evolution of the system and the noise in the
+measurements. The resulting models typically exhibit complex nonlinearities and
+non-Gaussian distributions, thus precluding analytical solution.
+The best known algorithm to solve the problem of non-Gaussian, nonlinear lter-
+ing (ltering for short) is the extended Kalman lter (Anderson and Moore 1979).
+This lter is based upon the principle of linearising the measurements and evolu-
+tion models using Taylor series expansions. The series approximations in the EKF
+algorithm can, however, lead to poor representations of the nonlinear functions and
+probability distributions of interest. As as result, this lter can diverge.
+Recently, Julier and Uhlmann (Julier and Uhlmann 1997) have introduced a lter
+founded on the intuition that it is easier to approximate a Gaussian distribution
+
+than it is to approximate arbitrary nonlinear functions. They named this lter
+the unscented Kalman lter (UKF). They have shown that the UKF leads to more
+accurate results than the EKF and that in particular it generates much better
+estimates of the covariance of the states (the EKF seems to underestimate this
+quantity). The UKF has, however, the limitation that it does not apply to general
+non-Gaussian distributions.
+Another popular solution strategy for the general ltering problem is to use sequen-
+tial Monte Carlo methods, also known as particle lters (PFs): see for example
+(Doucet, Godsill and Andrieu 2000, Doucet, de Freitas and Gordon 2001, Gordon,
+Salmond and Smith 1993). These methods allow for a complete representation of
+the posterior distribution of the states, so that any statistical estimates, such as the
+mean, modes, kurtosis and variance, can be easily computed. They can therefore,
+deal with any nonlinearities or distributions.
+PFs rely on importance sampling and, as a result, require the design of proposal
+distributions that can approximate the posterior distribution reasonably well. In
+general, it is hard to design such proposals. The most common strategy is to sample
+from the probabilistic model of the states evolution (transition prior). This strategy
+can, however, fail if the new measurements appear in the tail of the prior or if the
+likelihood is too peaked in comparison to the prior. This situation does indeed arise
+in several areas of engineering and nance, where one can encounter sensors that
+are very accurate (peaked likelihoods) or data that undergoes sudden changes (non-
+stationarities): see for example (Pitt and Shephard 1999, Thrun 2000). To overcome
+this problem, several techniques based on linearisation have been proposed in the
+literature (de Freitas 1999, de Freitas, Niranjan, Gee and Doucet 2000, Doucet et al.
+2000, Pitt and Shephard 1999). For example, in (de Freitas et al. 2000), the EKF
+Gaussian approximation is used as the proposal distribution for a PF. In this paper,
+we follow the same approach, but replace the EKF proposal by a UKF proposal. The
+resulting lter should perform better not only because the UKF is more accurate,
+but because it also allows one to control the rate at which the tails of the proposal
+distribution go to zero. It becomes thus possible to adopt heavier tailed distributions
+as proposals and, consequently, obtain better importance samplers (Gelman, Carlin,
+Stern and Rubin 1995). Readers are encouraged to consult our technical report for
+further results and implementation details (van der Merwe, Doucet, de Freitas and
+Wan 2000) 1 .
+2 Dynamic State Space Model
+We apply our algorithm to general state space models consisting of a transition
+equation p(x t jx t 1 ) and a measurement equation p(y t jx t ). That is, the states follow
+a Markov process and the observations are assumed to be independent given the
+states. For example, if we are interested in nonlinear, non-Gaussian regression, the
+model can be expressed as follows
+x t = f (x t 1 ; v t 1 )
+y t = h(u t ; x t ; n t )
+where u t 2 R nu denotes the input data at time t, x t 2 R nx denotes the states (or
+parameters) of the model, y t 2 R ny the observations, v t 2 R nv the process noise
+and n t 2 R nn the measurement noise. The mappings f : R nx  R nv 7! R nx and
+h : (R nx  R nu )R nn 7! R ny represent the deterministic process and measurement
+models. To complete the specication of the model, the prior distribution (at t = 0)
+1 The TR and software are available at http://www.cs.berkeley.edu/~jfgf.
+
+is denoted by p(x 0 ). Our goal will be to approximate the posterior distribution
+p(x 0:t jy 1:t ) and one of its marginals, the ltering density p(x t jy 1:t ), where y 1:t =
+fy 1 ; y 2 ; : : : ; y t g. By computing the ltering density recursively, we do not need to
+keep track of the complete history of the states.
+3 Particle Filtering
+Particle lters allow us to approximate the posterior distribution p ( x 0:t j y 1:t ) using
+a set of N weighted samples (particles)
+n
+x (i)
+0:t ; i = 1; :::; N
+o
+, which are drawn from
+an importance proposal distribution q ( x 0:t j y 1:t ). These samples are propagated
+in time as shown in Figure 1. In doing so, it becomes possible to map intractable
+integration problems (such as computing expectations and marginal distributions)
+to easy summations. This is done in a rigorous setting that ensures convergence
+according to the strong law of large numbers
+1
+N
+N
+X
+i=1
+f t
+
+x (i)
+0:t
+ a:s: !
+N!+1
+Z
+f t (x 0:t ) P ( dx 0:t j y 1:t )
+where a:s:
+! denotes almost sure convergence and f t : R nx ! R n f t is some func-
+tion of interest. For example, it could be the conditional mean, in which case
+f t (x 0:t ) = x 0:t , or the conditional covariance of x t with f t (x 0:t ) = x t x 0
+t
+(i) ­1
+(i) ­1
+t­1
+{x ,N }
+(i)
+t
+t­1
+{x ,N }
+(i)
+t
+i=1,...,N=10 particles
+{x ,N }
+­1
+{x ,w }
+(i)
+t­1 t­1
+(i)
+(i)
+{x ,w }
+~
+~
+~
+~ ~
+~
+Figure 1: In this example, a particle lter starts at time t 1 with an unweighted
+measure fe x (i)
+t 1 ; N 1 g, which provides an approximation of p(x t 1 jy 1:t 2 ). For each
+particle we compute the importance weights using the information at time t 1.
+This results in the weighted measure fe x (i)
+t 1 ; e
+w (i)
+t 1 g, which yields an approximation
+p(x t 1 jy 1:t 1 ). Subsequently, a resampling step selects only the \ttest" particles
+to obtain the unweighted measure fe x (i)
+t 1 ; N 1 g, which is still an approximation of
+p(x t 1 jy 1:t 1 ) . Finally, the sampling (prediction) step introduces variety, resulting
+in the measure fe x (i)
+t ; N 1 g.
+
+E p( x t jy 1:t ) [x t ] E 0
+p( x t jy 1:t ) [x t ]. A Generic PF algorithm involves the following steps.
+Generic PF
+1. Sequential importance sampling step
+ For i = 1; : : : ; N , sample e x (i)
+t  q(x t jx (i)
+0:t 1 ; y 1:t ) and update the trajectories
+e
+x (i)
+0:t , e
+x (i)
+t ; x (i)
+0:t 1
+
+ For i = 1; : : : ; N , evaluate the importance weights up to a normalizing constant:
+w (i)
+t = p(e x (i)
+0:t jy 1:t )
+q(e x (i)
+t jx (i)
+0:t 1 ; y 1:t )p(e x (i)
+0:t 1 jy 1:t 1 )
+ For i = 1; : : : ; N , normalize the weights: e
+w (i)
+t = w (i)
+t
+ P N
+j=1 w (j)
+t
+ 1
+.
+2. Selection step
+ Multiply/ suppress samples (e x (i)
+0:t ) with high/low importance weights e
+w (i)
+t ,
+respectively, to obtain N random samples ( x (i)
+0:t ) approximately distributed ac-
+cording to p( x (i)
+0:t jy 1:t ).
+3. MCMC step
+ Apply a Markov transition kernel with invariant distribution given by p(x (i)
+0:t jy 1:t )
+to obtain (x (i)
+0:t ).
+
+In the above algorithm, we can restrict ourselves to importance functions of the
+form q ( x 0:t j y 1:t ) = q (x 0 )
+t
+Q
+k=1
+q ( x k j y 1:k ; x 1:k 1 ) to obtain a recursive formula to
+evaluate the importance weights
+w t / p ( y t j y 1:t 1 ; x 0:t ) p ( x t j x t 1 )
+q ( x t j y 1:t ; x 1:t 1 )
+There are innitely many possible choices for q ( x 0:t j y 1:t ), the only condition being
+that its support must include that of p (x 0:t j y 1:t ). The simplest choice is to just
+sample from the prior, p ( x t j x t 1 ), in which case the importance weight is equal to
+the likelihood, p ( y t j y 1:t 1 ; x 0:t ). This is the most widely used distribution, since
+it is simple to compute, but it can be ineÆcient, since it ignores the most recent
+evidence, y t .
+The selection (resampling) step is used to eliminate the particles having low impor-
+tance weights and to multiply particles having high importance weights (Gordon
+et al. 1993). This is done by mapping the weighted measure fe x (i)
+t ; e
+w (i)
+t g to an un-
+weighted measure fe x (i)
+t ; N 1 g that provides an approximation of p(x t jy 1:t ). After
+the selection scheme at time t, we obtain N particles distributed marginally ap-
+proximately according to p(x 0:t jy 1:t ). One can, therefore, apply a Markov kernel
+(for example, a Metropolis or Gibbs kernel) to each particle and the resulting distri-
+bution will still be p(x 0:t jy 1:t ). This step usually allows us to obtain better results
+and to treat more complex models (de Freitas 1999).
+
+4 The Unscented Particle Filter
+As mentioned earlier, using the transition prior as proposal distribution can be
+ineÆcient. As illustrated in Figure 2, if we fail to use the latest available informa-
+tion to propose new values for the states, only a few particles might survive. It
+is therefore of paramount importance to move the particles towards the regions of
+high likelihood. To achieve this, we propose to use the unscented lter as proposal
+distribution. This simply requires that we propagate the suÆcient statistics of the
+UKF for each particle. For exact details, please refer to our technical report (van
+der Merwe et al. 2000).
+.
+Likelihood
+Prior
+Figure 2: The UKF proposal distribution allows us to move the samples in the prior
+to regions of high likelihood. This is of paramount importance if the likelihood
+happens to lie in one of the tails of the prior distribution, or if it is too narrow (low
+measurement error).
+5 Theoretical Convergence
+Let B (R n ) be the space of bounded, Borel measurable functions on R n . We denote
+kfk , sup
+x2R n
+jf (x)j. The following theorem is a straightforward extension of previous
+results in (Crisan and Doucet 2000).
+Theorem 1 If the importance weight
+w t / p ( y t j x t ) p ( x t j x t 1 )
+q ( x t j x 0:t 1 ; y 1:t ) (1)
+is upper bounded for any (x t 1 ; y t ), then, for all t  0, there exists c t independent
+of N , such that for any f t 2 B R nx (t+1)
+
+E
+2
+4
+ 
+1
+N
+N
+X
+i=1
+f t
+
+x (i)
+0:t
+ Z
+f t (x 0:t ) p ( dx 0:t j y 1:t )
+! 2
+3
+5  c t
+kf t k 2
+N
+: (2)
+The expectation in equation 2 is with respect to the randomness introduced by the
+particle ltering algorithm. This convergence result shows that, under very lose
+assumptions, convergence of the (unscented) particle lter is ensured and that the
+convergence rate of the method is independent of the dimension of the state-space.
+The only crucial assumption is to ensure that w t is upper bounded, that is that the
+proposal distribution q ( x t j x 0:t 1 ; y 1:t ) has heavier tails than p (y t j x t ) p ( x t j x t 1 ).
+Considering this theoretical result, it is not surprising that the UKF (which has
+heavier tails than the EKF) can yield better estimates.
+
+6 Demonstration
+For this experiment, a time-series is generated by the following process model x t+1 =
+1 + sin(!t) + x t + v t , where v t is a Gamma(3,2) random variable modeling the
+process noise, and ! = 4e 2 and  = 0:5 are scalar parameters. A non-stationary
+observation model,
+y t =
+
+x 2
+t + n t t  30
+x t 2 + n t t > 30
+is used. The observation noise, n t , is drawn from a zero-mean Gaussian distribution.
+Given only the noisy observations, y t , a few dierent lters were used to estimate
+the underlying clean state sequence x t for t = 1 : : : 60. The experiment was repeated
+100 times with random re-initialization for each run. All of the particle lters used
+200 particles. Table 1 summarizes the performance of the dierent lters. The
+Algorithm MSE
+mean var
+Extended Kalman Filter (EKF) 0.374 0.015
+Unscented Kalman Filter (UKF) 0.280 0.012
+Particle Filter : generic 0.424 0.053
+Particle Filter : MCMC move step 0.417 0.055
+Particle Filter : EKF proposal 0.310 0.016
+Particle Filter : EKF proposal and MCMC move step 0.307 0.015
+Particle Filter : UKF proposal (\Unscented Particle Filter") 0.070 0.006
+Particle Filter : UKF proposal and MCMC move step 0.074 0.008
+Table 1: Mean and variance of the MSE calculated over 100 independent runs.
+table shows the means and variances of the mean-square-error (MSE) of the state
+estimates. Note that MCMC could improve results in other situations. Figure 3
+compares the estimates generated from a single run of the dierent particle lters.
+The superior performance of the unscented particle lter is clearly evident. Figure
+0 10 20 30 40 50 60
+1
+2
+3
+4
+5
+6
+7
+8
+9
+Time
+E[x(t)]
+True x
+PF estimate
+PF-EKF estimate
+PF-UKF estimate
+Figure 3: Plot of the state estimates generated by dierent lters.
+4 shows the estimates of the state covariance generated by a stand-alone EKF and
+UKF for this problem. Notice how the EKF's estimates are consistently smaller than
+those generated by the UKF. This property makes the UKF better suited than the
+EKF for proposal distribution generation within the particle lter framework.
+
+0 10 20 30 40 50 60
+10 -6
+10 -4
+10 -2
+10 0
+Estimates of state covariance
+time
+var(x)
+EKF
+UKF
+Figure 4: EKF and UKF estimates of state covariance.
+7 Conclusions
+We proposed a new particle lter that uses unscented lters as proposal distribu-
+tions. The convergence proof and empirical evidence, clearly, demonstrate that this
+algorithm can lead to substantial improvements over other nonlinear ltering algo-
+rithms. The algorithm is well suited for engineering applications, when the sensors
+are very accurate but nonlinear, and nancial time series, where outliers and heavy
+tailed distributions play a signicant role in the analysis of the data. For further
+details and experiments, please refer to our report (van der Merwe et al. 2000).
+References
+Anderson, B. D. and Moore, J. B. (1979). Optimal Filtering, Prentice-Hall, New Jersey.
+Crisan, D. and Doucet, A. (2000). Convergence of generalized particle lters, Technical
+Report CUED/F-INFENG/TR 381, Cambridge University Engineering Department.
+de Freitas, J. F. G. (1999). Bayesian Methods for Neural Networks, PhD thesis, Depart-
+ment of Engineering, Cambridge University, Cambridge, UK.
+de Freitas, J. F. G., Niranjan, M., Gee, A. H. and Doucet, A. (2000). Sequential Monte
+Carlo methods to train neural network models, Neural Computation 12(4): 955{993.
+Doucet, A., de Freitas, J. F. G. and Gordon, N. J. (eds) (2001). Sequential Monte Carlo
+Methods in Practice, Springer-Verlag.
+Doucet, A., Godsill, S. and Andrieu, C. (2000). On sequential Monte Carlo sampling
+methods for Bayesian ltering, Statistics and Computing 10(3): 197{208.
+Gelman, A., Carlin, J. B., Stern, H. S. and Rubin, D. B. (1995). Bayesian Data Analysis,
+Chapman and Hall.
+Gordon, N. J., Salmond, D. J. and Smith, A. F. M. (1993). Novel approach to
+nonlinear/non-Gaussian Bayesian state estimation, IEE Proceedings-F 140(2): 107{
+113.
+Julier, S. J. and Uhlmann, J. K. (1997). A new extension of the Kalman lter
+to nonlinear systems, Proc. of AeroSense: The 11th International Symposium on
+Aerospace/Defence Sensing, Simulation and Controls, Orlando, Florida., Vol. Multi
+Sensor Fusion, Tracking and Resource Management II.
+Pitt, M. K. and Shephard, N. (1999). Filtering via simulation: Auxiliary particle lters,
+Journal of the American Statistical Association 94(446): 590{599.
+Thrun, S. (2000). Monte Carlo POMDPs, in S. Solla, T. Leen and K.-R. Muller (eds),
+Advances in Neural Information Processing Systems 12, MIT Press, pp. 1064{1070.
+van der Merwe, R., Doucet, A., de Freitas, J. F. G. and Wan, E. (2000). The unscented
+particle lter, Technical Report CUED/F-INFENG/TR 380, Cambridge University
+Engineering Department.
+

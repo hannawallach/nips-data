@@ -1,0 +1,438 @@
+Partially Observable SDE Models for
+Image Sequence Recognition Tasks
+Javier R. Movellan
+Institute for Neural Computation
+University of California San Diego
+Paul Mineiro
+Department of Cognitive Science
+University of California San Diego
+R. J. Williams
+Department of Mathematics
+University of California San Diego
+Abstract
+This paper explores a framework for recognition of image sequences
+using partially observable stochastic dierential equation (SDE)
+models. Monte-Carlo importance sampling techniques are used for
+e∆cient estimation of sequence likelihoods and sequence likelihood
+gradients. Once the network dynamics are learned, we apply the
+SDE models to sequence recognition tasks in a manner similar to
+the way Hidden Markov models (HMMs) are commonly applied.
+The potential advantage of SDEs over HMMS is the use of contin-
+uous state dynamics. We present encouraging results for a video
+sequence recognition task in which SDE models provided excellent
+performance when compared to hidden Markov models.
+1 Introduction
+This paper explores a framework for recognition of image sequences using partially
+observable stochastic dierential equations (SDEs). In particular we use SDE mod-
+els of low-power non-linear RC circuits with a signicant thermal noise component.
+We call them diusion networks. A diusion network consists of a set of n nodes
+coupled via a vector of adaptive impedance parameters  which are tuned to op-
+timize the network's behavior. The temporal evolution of the n nodes denes a
+continuous stochastic process X that satises the following It^o SDE:
+dX(t) = (X(t); )dt +  dB(t); (1)
+X(0)  ; (2)
+where  represents the (stochastic) initial conditions and B is standard Brownian
+motion. The drift is dened by a non-linear RC charging equation
+ j (X(t); ) = 1
+ j
+
+ j + 
+X j (t) 1
+ j
+X j (t)
+
+; for j = 1;    ; n; (3)
+where  j is the drift of unit j, i.e., the j th component of . Here X j is the internal
+potential at node j,  j > 0 is the input capacitance,  j the node resistance,  j a
+
+State at time t
+Drift
+Distribution at t+dt
+State at time t
+Drift
+Distribution at t+dt
+State at time t
+Drift
+Distribution at t+dt
+SDE Models ODE Models Hidden Markov Models
+Figure 1: An illustration of the dierences between stochastic dierential equation
+models (SDE), ordinary dierential equation models (ODE) and Hidden Markov
+Models (HMM). In ODEs the the state dynamics are continuous and deterministic.
+In SDEs the state dynamics are continuous and stochastic. In HMMs the state
+dynamics are discrete and probabilistic.
+constant input current to the unit, 
+X j the net electrical current input to the node,
+
+X j (t) =
+n
+X
+m=1
+w j;m '(Xm (t)); for j = 1;    ; n; (4)
+'(x) = 1
+1 + e x ; for all x 2 R; (5)
+where ' the input-output characteristic amplication, and 1=w j;m is the impedance
+between the output Xm and the node j. Intuition for equation (3) can be achieved
+by thinking of it as the limit of a discrete time stochastic dierence equation,
+X(t +t) = X(t) + (X(t); )t + 
+p
+tZ(t); (6)
+where the Z(t) is an n-dimensional vector of independent standard Gaussian random
+variables. For a xed state at time t there are two forces controlling the change in
+activation: the drift, which is deterministic, and the dispersion which is stochastic
+(see Figure 1). This results in a distribution of states at time t +t. As t goes to
+zero, the solution to the dierence equation (6) converges to the diusion process
+dened in (3).
+Figures 1 and 2 shows the relationship between SDE models and other approaches
+in the neural network and the stochastic ltering literature. The main dierence
+between ODE models, like standard recurrent neural networks, and SDE models is
+that the rst has deterministic dynamics while the second has probabilistic dynam-
+ics. The two approaches are similar in that the states are continuous. The main
+dierence between HMMs and SDEs is that the rst have discrete state dynamics
+while the second have continuous state dynamics. The main similarity is that both
+are probabilistic. Kalman lters are linear SDE models. If the impedance ma-
+trix is symmetric and the network is given enough time to approximate stochastic
+equilibrium, diusion network behave like continuous Boltzmann machines (Ackley,
+Hinton & Sejnowski, 1985). If the network is discretized in state and time it be-
+comes a standard HMM. Finally, if the dispersion constant is set to zero the network
+behaves like a deterministic recurrent neural network.
+In order to use of SDE models we need a method for nding the likelihood and the
+likelihood gradient of observed sequences.
+
+Kalman-Bucy
+Filters
+Boltzmann
+Machines
+Diusion Networks
+Linear Dynamics # # # # # #
+## # # # Stochastic Equilibrium
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+Zero Noise # # # # # # #
+## # # # # Discrete Space and Time
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+Recurrent Neural
+Networks
+Hidden Markov
+Models
+Figure 2: Relationship between diusion lters and other approaches in the neural
+network and stochastic ltering literature.
+2 Observed sequence likelihoods
+We regard the rst d components of an SDE model as observable and denote them by
+O. The last n d components are denoted by H and named unobservable or hidden.
+Hidden components are included for modeling non-Markovian dependencies in the
+observable components.
+Let
+ o
+,
+ h be the outcome spaces for the observable and
+hidden processes.
+Let
+ =
+ o
+
+ h the joint outcome space. Here each outcome ! is
+a continuous path ! : [0; T ] ! R n . For each ! 2 
+ we write ! = (! o ; ! h ), where ! o
+represents the observable dimensions of the path and ! h the hidden dimensions. Let
+Q  (A) represent the probability that a network with parameter  generates paths in
+the set A, Q 
+o (A o ) the probability that the observable components generate paths in
+A o and Q 
+h (A h ) the probability that the hidden components generate paths in A h .
+To apply the familiar techniques of maximum likelihood and Bayesian estimation
+we use as reference the probability distribution of a diusion network with zero
+drift, i.e., the paths generated by this network are Brownian motion scaled by .
+We denote such reference distribution as R, its observable and hidden components
+as R o , R h . Using Girsanov's theorem (Karatzas & Shreve, 1991, p. 303) we have
+that
+L 
+o (! o ) = dQ 
+o
+dR o
+(! o ) =
+Z
+ h
+L 
+o;h (! o ; ! h ) dR h (! h ); ! o
+2
+ o ; (7)
+where
+L 
+o;h (!) = dQ 
+dR
+(!) = exp
+(
+1
+ 2
+Z T
+0
+(!(t); )  d!(t)
+1
+2 2
+Z T
+0
+j(!(t); )j 2 dt
+)
+:
+(8)
+The rst integral in (8) is an It^o stochastic integral, the second is a standard
+Lebesgue integral. The term L 
+o is a Radon-Nikodym derivative that represents
+the probability density of Q 
+o with respect to R o . For a xed path ! o the term
+L 
+o (! o ) is a likelihood function of  that can be used for Maximum likelihood esti-
+mation. To obtain the likelihood gradient, we dierentiate (7) which yields
+r  log L 
+o (! o ) =
+Z
+ h
+L 
+hjo (! h j ! o )r  log L 
+o;h (! o ; ! h ) dR h (! h ); (9)
+
+where
+L 
+hjo (! h j ! o ) =
+L 
+o;h (! o ; ! h )
+L 
+o (! o ) ; (10)
+r  log L 
+o;h (!) = 1
+ 2
+Z T
+0
+J(t; !(t); )  dI  (t; !); (11)
+J j;k (t; !; ) = @ k (!(t); )
+@ j
+; (12)
+(13)
+and I  is the joint innovation process
+I  (t; !) = !(t) !(0)
+Z t
+0
+(!(u); ) du: (14)
+2.1 Importance sampling
+The likelihood of observed paths (7), and the gradient of the likelihood (9) require
+averaging with respect to the distribution of hidden paths R h . We estimate these
+averages using an importance sampling in the space of sample paths. Instead of
+sampling from R h we sample from a distribution that weights more heavily regions
+where L 
+o;h is large. Each sample is then weighted by the density of the sampling
+distribution with respect to R h . This weighting function is commonly known as
+the importance function in the Monte-Carlo literature (Fishman, 1996, p. 257).
+In particular for each observable path ! o we let the sampling distribution S ;!o
+h
+be the probability distribution generated by a diusion network with parameter
+ which has been forced to exhibit the path ! o over the observable units. The
+approach reminiscent of the technique of teacher forcing from deterministic neural
+networks. In practice, we generate i.i.d. sampled hidden paths fh (i) g m
+i=1 from S ;!o
+h
+by numerically simulating a diusion network with the observable units forced to
+exhibit the path ! o these hidden paths are then weighted by the density of S ;!o
+h
+with respect to R h , which acts as a Monte-Carlo importance function
+dR h
+dS ;!o
+h
+(! h ) = exp
+(
+1
+ 2
+Z T
+0
+ h ((! o (t); ! h (t)); )  d! h (t)
+1
+2 2
+Z T
+0
+j h ((! o (t); ! h (t)); )j 2 dt
+)
+: (15)
+In practice we have obtained good results with m in the order of 20, i.e., we sample
+20 hidden sequences per observed sequence. One interesting property of this ap-
+proach is that the sampling distributions S ;!o
+h change as learning progresses, since
+they depend on .
+Figure 3 shows results of a computer simulation in which a 2 unit network was
+trained to oscillate. We tried an oscillation pattern because of its relevance for the
+application we explore in a later section, which involves recognizing sequences of
+lip movements. The gure shows the \training" path and a couple of sample paths,
+one obtained with the  parameter set to 0, and one with the parameter set to 0.5.
+
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+-2
+-1
+0
+1
+2
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+-2
+-1
+0
+1
+2
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+-4
+-2
+0
+2
+Figure 3: Training a 2 unit network to maximize the likelihood of a sinusoidal path.
+The top graph shows the training path. It consists of two sinusoids out of phase
+each representing the activation of the two units in the network. The center graph
+shows a sample path obtained after training the network and setting  = 0, i.e., no
+noise. The bottom graph shows a sample path obtained with  = 0:5.
+3 Recognizing video sequences
+In this section we illustrate the use of SDE models on a sequence classication
+task of reasonable di∆culty with a body of realistic data. We chose this task since
+we know of SDE models used for tracking problems but know of no SDE models
+used for sequence recognition tasks. The potential advantage of SDEs over more
+established approaches such as HMMs is that they enforce continuity constraints,
+an aspect that may be benecial when the actual signals are better described using
+continuous state dynamics. We compared a diusion network approach with classic
+hidden Markov model approaches.
+We used Tulips1 (Movellan, 1995), a database consisting of 96 movies of 9 male
+and 3 female undergraduate students from the Cognitive Science Department at
+the University of California, San Diego. For each student two sample utterances
+were taken for each of the digits \one" through \four". The database is available
+at http://cogsci.ucsd.edu. We compared the performance of diusion networks and
+HMMs using two dierent image processing techniques (contours and contours plus
+intensity) in combination with 2 dierent recognition engines (HMMs and diusion
+networks). The image processing was performed by Luettin and colleagues (Luettin,
+1997). They employ point density models, where each lip contour is represented by
+a set of points; in this case both the inner and outer lip contour are represented,
+corresponding to Luettin's double contour model. The dimensionality of the rep-
+resentation of the contours is reduced using principal component analysis. For the
+work presented here 10 principal components were used to approximate the contour,
+along with a scale parameter which measured the pixel distance between the mouth
+corners; associated with each of these 11 parameters was a corresponding \delta
+component", the left-hand temporal dierence of the component (dened to be zero
+for the rst frame). In this manner a total of 22 parameters were used to represent
+lip contour information for each still frame. These 22 parameters were represented
+using diusion networks with 22 observation units, one per parameter value. We
+also tested the performance of a representation that used intensity information in
+addition to contour shape information. This approach used 62 parameters, which
+were represented using diusion networks with 62 observation units.
+
+Approach Correct Generalization
+Best HMM, shape information only 82.3%
+Best diusion network, shape information only 85.4%
+Untrained human subjects 89.9%
+Best HMM, shape and intensity information 90.6%
+Best diusion network, shape and intensity information 91.7%
+Trained human subjects 95.5%
+Table 1: Average generalization performance on the Tulips1 database. Shown in
+order are the performance of the best performing HMM from (Luettin et al., 1996),
+which uses only shape information, the best diusion network obtained using only
+shape information, the performance of untrained human subjects (Movellan, 1995),
+the HMM from Luettin's thesis (Luettin 1997) which uses both shape and intensity
+information, the best diusion network obtained using both shape and intensity
+information, and the performance of trained human lipreaders (Movellan, 1995).
+We independently trained 4 diusion networks, to approximate the distributions
+of lip-contour trajectories of each of the four words to be recognized, i.e., the rst
+network was trained with examples of the word \one", and the last network with
+examples of the word \four". Each network had the same number of nodes, and
+the drift of each network was given by (3) with  i = 1, 1
+ i
+= 0 for all units, and
+ being part of the adaptive vector . Thus,  = ( 1 ;    ;  n ; w 1;1 ; w 1;2 ;    w n;n ) 0 .
+The number of hidden units was varied from one to 5. We obtained optimal results
+with 4 hidden units. The initial state of the hidden units was set to (1; : : : ; 1) with
+probability 1, and  was set to 1 for all networks. The diusion network dynamics
+were simulated using a forward-Euler technique, i.e., equation (1) is approximated
+in discrete time using (6). In our simulations we set t = 1=30 seconds, the time
+between video frame samples. Each diusion network was trained with examples of
+one of the 4 digits using the cost function
+^
+() =
+X
+i
+log ^
+L 
+o (y (i) ) 1
+2 jj 2 ; (16)
+where fy (i) g are samples from the desired empirical distribution P 0 and  is the
+strength of a Gaussian prior on the network parameters. Best results were obtained
+with diusion networks with 4 hidden units. The log-likelihood gradients were
+estimated using the importance sampling approach with m = 20, i.e., we generated
+20 hidden sample paths per observed path. With this number of samples training
+took about 10 times longer with diusion networks than with HMMs. At test time,
+computation of the likelihood estimates was very fast and could have been done in
+real time using a fast Pentium II.
+The generalization performance was estimated using a jacknife (one-out) technique:
+we trained on all subjects but one, which is used for testing. The process is repeated
+leaving a dierent subject out every time. Results are shown in Table 1. The table
+includes HMM results reported by Luettin (1997), who tried a variety of HMM
+architectures and reported the best results obtained with them. The only dierence
+between Luettin's approach and our approach is the recognition engine, which was a
+bank of HMMs in his case and a bank of diusion networks in our case. If anything
+we were at a disadvantage since the image representations mentioned above were
+optimized by Luettin to work best with HMMs.
+In all cases the best diusion networks outperformed the best HMMs reported in
+the literature using exactly the same visual preprocessing. In all cases diusion net-
+
+works outperformed HMMs. The dierence in performance was not large. However
+obtaining even a 1% increment in performance on this database is very di∆cult.
+4 Discussion
+While we presented results for a video sequence recognition task, the same frame-
+work can be used for tasks such as sequence recognition, object tracking and se-
+quence generation. Our work was inspired by the rich literature on continuous
+stochastic ltering and stochastic neural networks. The idea was to combine the
+versatility of recurrent neural networks and the well known advantages of stochas-
+tic modeling approaches. The continuous-time nature of the networks is convenient
+for data with dropouts or variable sample rates, since the models we use dene
+all the nite dimensional distributions. The continuous-state representation is well
+suited to problems involving inference about continuous unobservable quantities, as
+in visual tracking tasks. Since these networks enforce continuity constraints in the
+observable paths they may not have the well known problems encountered when
+HMMs are used as generative models of continuous sequences.
+We have presented encouraging results on a realistic sequence recognition task.
+However more work needs to be done, since the database we used is relatively small.
+At this point the main disadvantage of diusion networks relative to conventional
+hidden Markov models is training speed. The diusion networks used here were
+approximately 10 times slower to train than HMMs. Fortunately the Monte Carlo
+approximations employed herein, which represent the bulk of the computational
+burden, lend themselves to parallel and hardware implementations. Moreover, once
+a network is trained, the computation of the density functions needed in recognition
+tasks can be done in real time.
+We are exploring applications of diusion networks to stochastic ltering prob-
+lems (e.g., contour tracking) and sequence generation problems, not just sequence
+recognition problems. Our work shows that diusion networks may be a feasible
+alternative to HMMs for problems in which state continuity is advantageous. The
+results obtained for the visual speech recognition task are encouraging, and rein-
+force the possibility that diusion networks may become a versatile tool for a very
+wide variety of continuous signal processing tasks.
+References
+Ackley, D. H., Hinton, G. E., & Sejnowski, T. (1985). A Learning Algorithm for
+Boltzmann Machines. Cognitive Science, 9 (2), 147{169.
+Fishman, G. S. (1996). Monte Carlo Sampling: Concepts Algorithms and Applica-
+tions. New York: Sprienger-Verlag.
+Karatzas, I. & Shreve, S. (1991). Brownian Motion and Stochastic Calculus.
+Springer.
+Luettin, J. (1997). Visual Speech and Speaker Recognition. PhD thesis, University
+of She∆eld.
+Movellan, J. (1995). Visual Speech Recognition with Stochastic Neural Networks. In
+G. Tesauro, D. Touretzky, & T. Leen (Eds.), Advances in Neural Information
+Processing Systems, volume 7. MIT Press.
+Oksendal, B. (1992). Stochastic Dierential Equations. Berlin: Springer Verlag.
+

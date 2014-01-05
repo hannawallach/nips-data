@@ -1,0 +1,428 @@
+Kernel Dependency Estimation
+Jason Weston, Olivier Chapelle, Andre Elissee,
+Bernhard Scholkopf and Vladimir Vapnik 
+Max Planck Institute for Biological Cybernetics, 72076 Tubingen, Germany
+ NEC Research Institute, Princeton, NJ 08540 USA
+Abstract
+We consider the learning problem of nding a dependency between
+a general class of objects and another, possibly dierent, general
+class of objects. The objects can be for example: vectors, images,
+strings, trees or graphs. Such a task is made possible by employing
+similarity measures in both input and output spaces using ker-
+nel functions, thus embedding the objects into vector spaces. We
+experimentally validate our approach on several tasks: mapping
+strings to strings, pattern recognition, and reconstruction from par-
+tial images.
+1 Introduction
+In this article we consider the rather general learning problem of nding a de-
+pendency between inputs x 2 X and outputs y 2 Y given a training set
+(x 1 ; y 1 ); : : : ; (xm ; ym ) 2 X  Y where X and Y are nonempty sets. This includes
+conventional pattern recognition and regression estimation. It also encompasses
+more complex dependency estimation tasks, e.g mapping of a certain class of strings
+to a certain class of graphs (as in text parsing) or the mapping of text descriptions
+to images. In this setting, we dene learning as estimating the function f(x;   )
+from the set of functions ff(; ),  2 g which provides the minimum value of the
+risk function
+R() =
+Z
+XY
+L(y; f(x; ))dP (x; y) (1)
+where P is the (unknown) joint distribution of x and y and L(y; ) is a loss function,
+a measure of distance between the estimate  and the true output y at a point x.
+Hence in this setting one is given a priori knowledge of the similarity measure used
+in the space Y in the form of a loss function. In pattern recognition this is often the
+zero-one loss, in regression often squared loss is chosen. However, for other types
+of outputs, for example if one was required to learn a mapping to images, or to
+a mixture of drugs (a drug cocktail) to prescribe to a patient then more complex
+costs would apply. We would like to be able to encode these costs into the method
+of estimation we choose.
+The framework we attempt to address is rather general. Few algorithms have been
+constructed which can work in such a domain - in fact the only algorithm that we
+are aware of is k-nearest neighbors. Most algorithms have focussed on the pattern
+
+recognition and regression problems and cannot deal with more general outputs.
+Conversely, specialist algorithms have been made for structured outputs, for exam-
+ple the ones of text classication which calculate parse trees for natural language
+sentences, however these algorithms are specialized for their tasks. Recently, kernel
+methods [12, 11] have been extended to deal with inputs that are structured ob-
+jects such as strings or trees by linearly embedding the objects using the so-called
+kernel trick [5, 7]. These objects are then used in pattern recognition or regression
+domains. In this article we show how to construct a general algorithm for dealing
+with dependencies between both general inputs and general outputs. The algorithm
+ends up in an formulation which has a kernel function for the inputs and a kernel
+function (which will correspond to choosing a particular loss function) for the out-
+puts. This also enables us (in principle) to encode specic prior information about
+the outputs (such as special cost functions and/or invariances) in an elegant way,
+although this is not experimentally validated in this work.
+The paper is organized as follows. In Section 2 it is shown how to use kernel
+functions to measure similarity between outputs as well as inputs. This leads to
+the derivation of the Kernel Dependency Estimation (KDE) algorithm in Section
+3. Section 4 validates the method experimentally and Section 5 concludes.
+2 Loss functions and kernels
+An informal way of looking at the learning problem consists of the following. Gen-
+eralization occurs when, given a previously unseen x 2 X , we nd a suitable
+y 2 Y such that (x; y) should be \similar" to (x 1 ; y 1 ); : : : ; (xm ; ym ). For out-
+puts one is usually given a loss function for measuring similarity (this can be, but
+is not always, inherent to the problem domain). For inputs, one way of mea-
+suring similarity is by using a kernel function. A kernel k is a symmetric func-
+tion which is an inner product in some Hilbert space F , i.e., there exists a map
+ k : X ! F such that k(x; x 0 ) = ( k (x)   k (x 0 )). We can think of the patterns
+as  k (x);  k (x 0 ), and carry out geometric algorithms in the inner product space
+(\feature space") F . Many successful algorithms are now based on this approach,
+see e.g [12, 11]. Typical kernel functions are polynomials k(x; x 0 ) = (x  x 0 + 1) p
+and RBFs k (x; x 0 ) = exp( kx x 0 k 2 =2 2 ) although many other types (including
+ones which take into account prior information about the learning problem) exist.
+Note that, like distances between examples in input space, it is also possible to
+think of the loss function as a distance measure in output space, we will denote
+this space L. We can measure inner products in this space using a kernel function.
+We will denote this as `(y; y 0 ) = ( ` (y)   ` (y 0 )), where  ` : Y ! L. This map
+makes it possible to consider a large class of nonlinear loss functions. 1 As in the
+traditional kernel trick for the inputs, the nonlinearity is only taken into account
+when computing the kernel matrix. The rest of the training is \simple" (e.g., a
+convex program, or methods of linear algebra such as matrix diagonalization). It
+also makes it possible to consider structured objects as outputs such as the ones
+described in [5]: strings, trees, graphs and so forth. One embeds the output objects
+in the space L using a kernel.
+Let us dene some kernel functions for output spaces.
+1 For instance, assuming the outputs live in R n , using an RBF kernel, one obtains a
+loss function k ` (y)  ` (y 0 )k 2 = 2 2 exp ky y 0
+k 2
+=2 2
+
+. This is a nonlinear loss
+function which takes the value 0 if y and y 0 coincide, and 2 if they are maximally dierent.
+The rate of increase in between (i.e., the \locality"), is controlled by .
+
+In M-class pattern recognition, given Y = f1; : : : ; Mg, one often uses the distance
+L(y; y 0 ) = 1 [y = y 0 ], where [y = y 0 ] is 1 if y = y 0 and 0 otherwise. To construct a
+corresponding inner product it is necessary to embed this distance into a Euclidean
+space, which can be done using the following kernel:
+` pat (y; y 0 ) = 1
+2 [y = y 0 ]; (2)
+as L(y; y 0 ) 2 = k ` (y)  ` (y 0 )k 2 = `(y; y) + `(y 0 ; y 0 ) 2`(y; y 0 ) = 1 [y = y 0 ].
+It corresponds to embedding into a M-dimensional Euclidean space via the map
+ ` (y) = (0; 0; : : : ;
+p
+2
+2 ; : : : ; 0) where the y th coordinate is nonzero. It is also possible
+to describe multi-label classication (where any one example belongs to an arbitrary
+subset of the M classes) in a similar way.
+For regression estimation, one can use the usual inner product
+` reg (y; y 0 ) = (y  y 0 ): (3)
+For outputs such as strings and other structured objects we require the correspond-
+ing string kernels and kernels for structured objects [5, 7]. We give one example
+here, the string subsequence kernel employed in [7] for text categorization. This
+kernel is an inner product in a feature space consisting of all ordered subsequences
+of length r, denoted  r . The subsequences, which do not have to be contiguous,
+are weighted by an exponentially decaying factor  of their full length in the text:
+`(s; t) =
+X
+u2 r
+ u (s)   u (t) =
+X
+u2 r
+X
+i:u=s[i]
+ l(i)
+X
+j:u=t[j]
+ l(j) (4)
+where u = x[i] denotes u is the subsequence of x with indices 1  i 1      i juj
+and l(i) = i juj i 1 + 1. A fast way to compute this kernel is described in [7].
+Sometimes, one would also like apply the loss given by an (arbitrary) distance matrix
+D of the loss between training examples, i.e where D ij = L(y i ; y j ). In general it
+is not always obvious to nd an embedding of such data in an Euclidian space (in
+order to apply kernels). However, one such method is to compute the inner product
+with [11, Proposition 2.27]:
+`(y i ; y j ) = 1
+2
+ 
+jD ij j 2
+m
+X
+p=1
+c p jD ip j 2
+m
+X
+q=1
+c q jD qj j 2 +
+m
+X
+p;q=1
+c p c q jD pq j 2
+!
+(5)
+where coe∆cients c i satisfy
+P
+i c i = 1 (e.g using c i = 1
+m for all i | this amounts
+to using the centre of mass as an origin) . See also [3] for ways of dealing with
+problems of embedding distances when equation (5) will not su∆ce.
+3 Algorithm
+Now we will describe the algorithm for performing KDE. We wish to minimize the
+risk function (1) using the feature space F induced by the kernel k and the loss
+function measured in the space L induced by the kernel `. To do this we must learn
+the mapping from  k (x) to  ` (y). Our solution is the following: decompose  ` (y)
+into p orthogonal directions using kernel principal components analysis (KPCA)
+(see, e.g [11, Chapter 14]). One can then learn the mapping from  k (x) to each
+direction independently using a standard kernel regression method, e.g SVM regres-
+sion [12] or kernel ridge regression [9]. Finally, to output an estimate y given a test
+example x one must solve a pre-image problem as the solution of the algorithm is
+initially a solution in the space L. We will now describe each step in detail.
+
+1) Decomposition of outputs Let us construct the kernel matrix L on the
+training data such that L ij = `(y i ; y j ), and perform kernel principal components
+analysis on L. This can be achieved by centering the data in feature space us-
+ing: L 0 = (I 1
+m 1m1 >
+m )L(I 1
+m 1m1 >
+m ), where I is the m-dimensional identity
+matrix and 1m is an m dimensional vector of ones. One then solves the eigen-
+value problem  = L 0  where  n is the n th eigenvector of L 0 which we nor-
+malize such that 1 = ( n  L 0  n ) = n ( n   n ). We can then compute the
+projection of  ` (y) onto the n th principal component v n =
+P m
+i=1  n
+i  ` (y i ) by
+(v n   ` (y)) =
+P m
+i=1  n
+i `(y i ; y):
+2) Learning the map We can now learn the map from  k (x) to ((v 1 
+ ` (y)); : : : ; (v p   ` (y))) where p is the number of principal components. One can
+learn the map by estimating each output independently. In our experiments we
+use kernel ridge regression [9], note that this requires only a single matrix inver-
+sion to learn all p directions. That is, we minimize with respect to w the function
+1
+m
+P m
+i=1 (y i (w   k (x i ))) 2 + jjwjj 2 in its dual form. We thus learn each output
+direction (v n  ` (y)) using the kernel matrix K ij = k(x i ; x j ) and the training labels
+^
+y n
+i = (v n   ` (y i )), with estimator fn (x):
+fn (x) =
+m
+X
+i=1
+ n
+i k(x i ; x);  n = (K + I) 1 ^
+y n : (6)
+3) Solving the pre-image problem During the testing phase, to obtain the
+estimate y for a given x it is now necessary to nd the pre-image of the given
+output  ` (y). This can be achieved by nding:
+y(x) = argmin y2Y jj (v 1   ` (y)); : : : ; (v p   ` (y))
+ (f 1 (x); : : : ; f p (x))jj
+For the kernel (3) it is possible to compute the solution explicitely. For other
+problems searching from a set of candidate solutions may be enough, e.g from the set
+of training set outputs y 1 ; : : : ; ym ; in our experiments we use this set. When more
+accurate solutions are required, several algorithms exist for nding approximate
+pre-images e.g via xed-point iteration methods, see [10] or [11, Chapter 18] for an
+overview.
+For the simple case of vectorial outputs with linear kernel (3), if the output is only
+one dimension the method of KDE boils down to the same solution as using ridge
+regression since the matrix L is rank 1 in this case. However, when there are d
+outputs, the rank of L is d and the method trains ridge regression d times, but the
+kernel PCA step rst decorrelates the outputs. Thus, in the special case of multiple
+outputs regression with a linear kernel, the method is also related to the work of
+[2] (see [4, page 73] for an overview of other multiple output regression methods.)
+In the case of classication, the method is related to Kernel Fisher Discriminant
+Analysis (KFD) [8].
+4 Experiments
+In the following we validate our method with several experiments. In the ex-
+periments we chose the parameters of KDE to be from the following:   =
+f10 3 ; 10 2 ; 10 1 ; 10 0 ; 10 1 ; 10 2 ; 10 3 g where  = 1
+p
+2 
+, and the ridge parameter
+ = f10 4 ; 10 3 ; 10 2 ; 10 1 ; 10 0 ; 10 1 g. We chose them by ve fold cross valida-
+tion.
+
+4.1 Mapping from strings to strings
+Toy problem. Three classes of strings consist of letters from the same alphabet of
+4 letters (a,b,c,d), and strings from all classes are generated with a random length
+between 10 to 15. Strings from the rst class are generated by a model where
+transitions from any letter to any other letter are equally likely. The output is the
+string abad, corrupted with the following noise. There is a probability of 0.3 of
+a random insertion of a random letter, and a probability of 0.15 of two random
+insertions. After the potential insertions there is a probability of 0.3 of a random
+deletion, and a probability of 0.15 of two random deletions. In the second class,
+transitions from one letter to itself (so the next letter is the same as the last) have
+probability 0:7, and all other transitions have probability 0:1. The output is the
+string dbbd, but corrupted with the same noise as for class one. In the third class
+only the letters c and d are used; transitions from one letter to itself have probability
+0:7. The output is the string aabc, but corrupted with the same noise as for class
+one. For classes one and two any starting letter is equally likely, for the third class
+only c and d are (equally probable) starting letters.
+input string output string
+ccdddddddd ! aabc
+dccccdddcd ! abc
+adddccccccccc ! bb
+bbcdcdadbad ! aebad
+cdaaccadcbccdd ! abad
+Figure 1: Five examples from our articial task (mapping strings to strings).
+The task is to predict the output string given the input string. Note that this is
+almost like a classication problem with three classes, apart from the noise on the
+outputs. This construction was employed so we can also calculate classication error
+as a sanity check. We use the string subsequence kernel (4) from [7] for both inputs
+and outputs, normalized such that k(x; x 0 ) = k(x; x 0 )=(
+p
+k(x; x)
+p
+k(x 0 ; x 0 )). We
+chose the parameters r = 3 and  = 0:01. In the space induced by the input kernel
+k we then chose a further nonlinear map using an RBF kernel: exp( (k(x; x) +
+k(x 0 ; x 0 ) 2k(x; x 0 ))=2 2 ).
+We generated 200 such strings and measured the success by calculating the mean
+and standard error of the loss (computed via the output kernel) over 4 fold cross
+validation. We chose  (the width of the RBF kernel) and  (the ridge parameter)
+on each trial via a further level of 5 fold cross validation. We compare our method
+to an adaptation of k-nearest neighbors for general outputs: if k = 1 it returns the
+output of the nearest neighbor, otherwise it returns the linear combination (in the
+space of outputs) of the k nearest neighbors (in input space). In the case of k > 1,
+as well as for KDE, we nd a pre-image by nding the closest training example
+output to the given solution. We choose k again via a further level of 5 fold cross
+validation. The mean results, and their standard errors, are given in Table 1.
+KDE k-NN
+string loss 0.676  0.030 0.985  0.029
+classication loss 0.125  0.012 0.205  0.026
+Table 1: Performance of KDE and k-NN on the string to string mapping problem.
+
+4.2 Multi-class classication problem
+We next tried a multi-class classication problem, a simple special case of the general
+dependency estimation problem. We performed 5-fold cross validation on 1000 digits
+(the rst 100 examples of each digit) of the USPS handwritten 16x16 pixel digit
+database, training with a single fold (200 examples) and testing on the remainder.
+We used an RBF kernel for the inputs and the zero-one multi-class classication
+loss for the outputs using kernel (2). We again compared to k-NN and also to 1-
+vs-rest Support Vector Machines (SVMs) (see, e.g [11, Section 7.6]). We found k
+for k-NN and  and  for the other methods (we employed a ridge also to the SVM
+method, reulting in a squared error penalization term) by another level of 5-fold
+cross validation. The results are given in Table 2. SVMs and KDE give similar
+results (this is not too surprising since KDE gives a rather similar solution to KFD,
+whose similarity to SVMs in terms of performance has been shown before [8]). Both
+SVM and KDE outperform k-NN.
+KDE 1-vs-rest SVM k-NN
+classication loss 0.0798  0.0067 0.0847  0.0064 0.1250  0.0075
+Table 2: Performance of KDE, 1-vs-rest SVMs and k-NN on a classication problem
+of handwritten digits.
+4.3 Image reconstruction
+We then considered a problem of image reconstruction: given the top half (the rst
+8 pixel lines) of a USPS postal digit, it is required to estimate what the bottom
+half will be (we thus ignored the original labels of the data). 2 The loss function we
+choose for the outputs is induced by an RBF kernel. The reason for this is that
+a penalty that is only linear in y would encourage the algorithm to choose images
+that are \inbetween" clearly readable digits. Hence, the di∆culty in this task is
+both choosing a good loss function (to reect the end user's objectives) as well as
+an accurate estimator. We chose the width  0 of the output RBF kernel which
+maximized the kernel alignment [1] with a target kernel generated via k-means
+clustering. We chose k=30 clusters and the target kernel is K ij = 1 if x i and x j
+are in the same cluster, and 0 otherwise. Kernel alignment is then calculated via:
+A(K 1 ; K 2 ) = hK 1 ; K 2 i F =
+p
+hK 1 ; K 1 i F hK 2 ; K 2 i F where hK; K 0 i F =
+P m
+i;j=1 K ij K 0
+ij
+is the Frobenius dot product, which gave  0 = 0:35. For the inputs we use an RBF
+kernel of width .
+We again performed 5-fold cross validation on the rst 1000 digits of the USPS
+handwritten 16x16 pixel digit database, training with a single fold (200 examples)
+and testing on the remainder, comparing KDE to k-NN and a Hopeld net. 3 The
+Hopeld network we used was the one of [6] implemented in the Neural Network
+Toolbox for Matlab. It is a generalization of standard Hopeld nets that has a
+nonlinear transfer function and can thus deal with scalars between -1 and +1;
+after building the network based on the (complete) digits of the training set we
+present the top half of test digits and ll the bottom half with zeros, and then
+nd the networks equilibrium point. We then chose as output the pre-image from
+the training data that is closest to this solution (thus the possible outputs are the
+2 A similar problem, of higher dimensionality, would be to learn the mapping from top
+half to complete digit.
+3 Note that training a naive regressor on each pixel output independently would not
+take into account that the combination of pixel outputs should resemble a digit.
+
+ORIG:
+KDE:
+k-NN:
+Figure 2: Errors in the digit database image reconstruction problem. Images
+have to be estimated using only the top half (rst 8 rows of pixels) of the orig-
+inal image (top row) by KDE (middle row) and k-NN (bottom row). We show
+all the test examples on the rst fold of cross validation where k-NN makes
+an error in estimating the correct digit whilst KDE does not (73 mistakes) and
+vice-versa (23 mistakes). We chose them by viewing the complete results by
+eye (and are thus somewhat subjective). The complete results can be found at
+http://www.kyb.tuebingen.mpg.de/bs/people/weston/kde/kde.html.
+same as the competing algorithms). We found  and  for KDE and k for k-NN by
+another level of 5-fold cross validation. The results are given in Table 3.
+KDE k-NN Hopeld net
+RBF loss 0.8384  0.0077 0.8960  0.0052 1.2190  0.0072
+Table 3: Performance of KDE, k-NN and a Hopeld network on an image recon-
+struction problem of handwritten digits.
+KDE outperforms k-NN and Hopeld nets on average, see Figure 2 for comparison
+with k-NN. Note that we cannot easily compare classication rates on this problem
+using the pre-images selected since KDE outputs are not correlated well with the
+labels. For example it will use the bottom stalk of a digit \7" or a digit \9" equally
+if they are identical, whereas k-NN will not: in the region of the input space which
+is the top half of \9"s it will only output the bottom half of \9"s. This explains why
+measuring the class of the pre-images compared to the true class as a classication
+problem yields a lower loss for k-NN, 0:2345  0:0058, compared to KDE, 0:2985 
+0:0147 and Hopeld nets, 0:59100:0137. Note that if we performed classication as
+in Section 4.2 but using only the rst 8 pixel rows then k-NN yields 0:23450:0058,
+but KDE yields 0:1878  0:0098 and 1-vs-rest SVMs yield 0:1942  0:0097, so k-NN
+does not adapt well to the given learning task (loss function).
+Finally, we note that nothing was stopping us from incorporating known invariances
+into our loss function in KDE via the kernel. For example we could have used a
+kernel which takes into account local patches of pixels rendering spatial information
+or jittered kernels which take into account chosen transformations (translations,
+rotations, and so forth). It may also be useful to add virtual examples to the
+
+output matrix L before the decomposition step. For an overview of incorporating
+invariances see [11, Chapter 11] or [12].
+5 Discussion
+We have introduced a kernel method of learning general dependencies. We also gave
+some rst experiments indicating the usefulness of the approach. There are many
+applications of KDE to explore: problems with complex outputs (natural language
+parsing, image interpretation/manipulation, . . . ), applying to special cost functions
+(e.g ROC scores) and when prior knowledge can be encoded in the outputs.
+In terms of further research, we feel there are also still many possibilities to explore
+in terms of algorithm development. We admit in this work we have a very simplied
+algorithm for the pre-image part (just choosing the closest image given from the
+training sample). To make the approach work on more complex problems (where
+a test output is not so trivially close to a training output) improved pre-image
+approaches should be applied. Although one can apply techniques such as [10] for
+vector based pre-images, e∆ciently nding pre-images for structured objects such
+as strings is an open problem. Finally, the algorithm should be extended to deal
+with non-Euclidean loss functions directly, e.g for classication with a general cost
+matrix. One naive way is to use a distance matrix directly, ignoring the PCA step.
+References
+[1] N. Cristianini, A. Elissee, and J. Shawe-Taylor. On optimizing kernel alignment.
+Technical Report 2001-087, NeuroCOLT, 2001.
+[2] I. Frank and J. Friedman. A Statistical View of Some Chemometrics Regression Tools.
+Technometrics, 35(2):109{147, 1993.
+[3] T. Graepel, R. Herbrich, P. Bollmann-Sdorra, and K. Obermayer. Classication on
+pairwise proximity data. NIPS, 11:438{444, 1999.
+[4] T. Hastie, R. Tibshirani, and J. Friedman. The Elements of Statistical Learning.
+Springer-Verlag, New York, 2001.
+[5] D. Haussler. Convolutional kernels on discrete structures. Technical Report UCSC-
+CRL-99-10, Computer Science Department, University of California at Santa Cruz,
+1999.
+[6] J. Li, A. N. Michel, and W. Porod. Analysis and synthesis of a class of neural
+networks: linear systems operating on a closed hypercube. IEEE Trans. on Circuits
+and Systems, 36(11):1405{22, 1989.
+[7] H. Lodhi, C. Saunders, J. Shawe-Taylor, N. Cristianini, and C. Watkins. Text clas-
+sication using string kernels. Journal of Machine Learning Research, 2:419{444,
+2002.
+[8] S. Mika, G. Ratsch, J. Weston, B. Scholkopf, and K.-R. Muller. Fisher discriminant
+analysis with kernels. In Y.-H. Hu, J. Larsen, E. Wilson, and S. Douglas, editors,
+Neural Networks for Signal Processing IX, pages 41{48. IEEE, 1999.
+[9] C. Saunders, V. Vovk, and A. Gammerman. Ridge regression learning algorithm in
+dual variables. In J. Shavlik, editor, Machine Learning Proceedings of the Fifteenth
+International Conference(ICML '98), San Francisco, CA, 1998. Morgan Kaufmann.
+[10] B. Scholkopf, S. Mika, C. Burges, P. Knirsch, K.-R. Muller, G. Ratsch, and A. J.
+Smola. Input space vs. feature space in kernel-based methods. IEEE-NN, 10(5):1000{
+1017, 1999.
+[11] B. Scholkopf and A. J. Smola. Learning with Kernels. MIT Press, Cambridge, MA,
+2002.
+[12] V. Vapnik. Statistical Learning Theory. John Wiley and Sons, New York, 1998.
+

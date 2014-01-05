@@ -1,0 +1,322 @@
+Learning Spectral Clustering
+
+Francis R. Bach Computer Science University of California Berkeley, CA 94720 fbach@cs.berkeley.edu Michael I. Jordan Computer Science and Statistics University of California Berkeley, CA 94720 jordan@cs.berkeley.edu
+
+Abstract Spectral clustering refers to a class of techniques which rely on the eigenstructure of a similarity matrix to partition points into disjoint clusters with points in the same cluster having high similarity and points in different clusters having low similarity. In this paper, we derive a new cost function for spectral clustering based on a measure of error between a given partition and a solution of the spectral relaxation of a minimum normalized cut problem. Minimizing this cost function with respect to the partition leads to a new spectral clustering algorithm. Minimizing with respect to the similarity matrix leads to an algorithm for learning the similarity matrix. We develop a tractable approximation of our cost function that is based on the power method of computing eigenvectors. 1 Introduction Spectral clustering has many applications in machine learning, exploratory data analysis, computer vision and speech processing. Most techniques explicitly or implicitly assume a metric or a similarity structure over the space of configurations, which is then used by clustering algorithms. The success of such algorithms depends heavily on the choice of the metric, but this choice is generally not treated as part of the learning problem. Thus, time-consuming manual feature selection and weighting is often a necessary precursor to the use of spectral methods. Several recent papers have considered ways to alleviate this burden by incorporating prior knowledge into the metric, either in the setting of K-means clustering [1, 2] or spectral clustering [3, 4]. In this paper, we consider a complementary approach, providing a general framework for learning the similarity matrix for spectral clustering from examples. We assume that we are given sample data with known partitions and are asked to build similarity matrices that will lead to these partitions when spectral clustering is performed. This problem is motivated by the availability of such datasets for at least two domains of application: in vision and image segmentation, a hand-segmented dataset is now available [5], while for the blind separation of speech signals via partitioning of the time-frequency plane [6], training examples can be created by mixing previously captured signals. Another important motivation for our work is the need to develop spectral clustering methods that are robust to irrelevant features. Indeed, as we show in Section 4.2, the performance of current spectral methods can degrade dramatically in the presence of such irrelevant features. By using our learning algorithm to learn a diagonally-scaled Gaussian kernel
+
+
+for generating the affinity matrix, we obtain an algorithm that is significantly more robust. Our work is based on a new cost function J(W, e) that characterizes how close the eigenstructure of a similarity matrix W is to a partition e. We derive this cost function in Section 2. As we show in Section 2.3, minimizing J with respect to e leads to a new clustering algorithm that takes the form of a weighted K-means algorithm. Minimizing J with respect to W yields an algorithm for learning the similarity matrix, as we show in Section 4. Section 3 provides foundational material on the approximation of the eigensubspace of a symmetric matrix that is needed for Section 4. 2 Spectral clustering and normalized cuts Given a dataset I of P points in a space X and a P × P "similarity matrix" (or "affinity matrix") W that measures the similarity between the P points (Wpp is large when points indexed by p and p are likely to be in the same cluster), the goal of clustering is to organize the dataset into disjoint subsets with high intra-cluster similarity and low inter-cluster similarity. Throughout this paper we always assume that the elements of W are non-negative (W 0) and that W is symmetric (W = W ). Let D denote the diagonal matrix whose i-th diagonal element is the sum of the elements in the i-th row of W, i.e., D=diag(W1), where 1 is defined as the vector in RP composed of ones. There are different variants of spectral clustering. In this paper we focus on the task of minimizing "normalized cuts." The classical relaxation of this NP-hard problem [7, 8, 9] leads to an eigenvalue problem. In this section we show that the problem of finding a solution to the original problem that is closest to the relaxed solution can be solved by a weighted K-means algorithm. 2.1 Normalized cut and graph partitioning The clustering problem is usually defined in terms of a complete graph with vertices V = {1, ..., P } and an affinity matrix with weights Wpp , for p, p  V . We wish to find R tion. An example of such a function is the R-way normalized cut defined as follows [7, 10]:
+
+disjoint clusters A = (Ar)r {1,...,R} , where r Ar = V , that optimize a certain cost func-
+
+C(A, W )= R r=1 / . iAr,jV \Ar Wij iAr,jV Wij
+
+Let er be the indicator vector in RP for the r-th cluster, i.e., er  {0, 1}R is such that er has a nonzero component exactly at points in the r-th cluster. Knowledge of e = (er) is equivalent to knowledge of A=(Ar) and, when referring to partitions, we will use the two formulations interchangeably. A short calculation reveals that the normalized cut is then
+
+equal to C(e, W)= R r=1 er (D - W )er/ (er Der).
+
+2.2 Spectral relaxation and rounding The following proposition, which extends a result of Shi and Malik [7] for two clusters to an arbitrary number of clusters, gives an alternative description of the clustering task, which will lead to a spectral relaxation:
+
+Proposition 1 The R-way normalized cut is equal to R - tr Y D-1
+
+matrix Y  RP× such that (a) the columns of D-1
+
+R /2
+
+/2 W D-1 /2 Y for any
+
+Y are piecewise constant with
+
+respect to the clusters and (b) Y has orthonormal columns (Y Y =I).
+
+Proof The constraint (a) is equivalent to the existence of a matrix   RR× such  E DE. The matrix E DE is diagonal, with elements er Der and is thus positive
+
+R
+
+Y = (e1, . . . , eR) = E. The constraint (b) is thus written as I = Y that D-1 /2 Y =
+
+
+and invertible. This immediately implies that 
+
+tr Y D-1 /2 W D-1 /2
+
+= (E DE)-1. This in turn implies that
+
+Y = tr  E W E = tr E W E = tr E W E(E DE)-1,
+
+which is exactly the normalized cut (up to an additive constant). By removing the constraint (a), we obtain a relaxed optimization problem, whose solutions on the optimal normalized cut [8, 9]. The following proposition gives the solution obtained from the relaxation (for the proof, see [11]):
+
+involve the eigenstructure of D-1 /2 W D-1 /2 and which leads to the classical lower bound
+
+Proposition 2 The maximum of tr Y D-1
+
+that Y
+
+/2
+
+W D-1
+
+/2
+
+Y over matrices Y  RP ×R such
+
+Y = I is the sum of the R largest eigenvalues of D-1 /2 W D-1 /2
+
+. It is attained
+
+at all Y of the form Y = UB1 where U  RP
+
+principal subspace of D-1 /2 W D-1 /2
+
+×R
+
+is any orthonormal basis of the R-th
+
+and B1 is an arbitrary rotation matrix in RR ×R
+
+.
+
+The solutions found by this relaxation will not in general be piecewise constant. In order to obtain a piecewise constant solution, we wish to find a piecewise constant matrix that is as close as possible to one of the possible Y obtained from the eigendecomposition. Since such matrices are defined up to a rotation matrix, it makes sense to compare the subspaces spanned by their columns. A common way to compare subspaces is to compare the orthogonal projection operators on those subspaces [12], that is, to compute (0 is the orthogonal projection operator on the subspace spanned by the columns of
+
+the Frobenius norm between UU and 0 = 0(W, e) r D1/2erer D1/2/ (er Der)
+
+D1 /2 E = D1 /2
+
+(e1, . . . , er), from Proposition 1). We thus define the following cost func-
+
+J(W, e)= 1 2 ||UU - 0||2F (1)
+
+tion: Using the fact that both UU
+
+and 0 are orthogonal projection operators on linear sub-
+
+spaces of dimension R, a short calculation reveals that the cost function J(W, e) is equal terizes the ability of the matrix W to produce the partition e when using its eigenvectors. Minimizing with respect to e leads to a new clustering algorithm that we now present. Minimizing with respect to the matrix for a given partition e leads to the learning of the similarity matrix, as we show in Section 4. 2.3 Minimizing with respect to the partition In this section, we show that minimizing J(W, e) is equivalent to a weighted K-means algorithm. The following theorem, inspired by the spectral relaxation of K-means presented in [8], shows that the cost function can be interpreted as a weighted distortion measure1: Theorem 1 Let W be an affinity matrix and let U = (u1, . . . , uP ), where up  RR, be
+
+to R - tr UU 0 =R - UU D1 r er D1 /2 /2 er/ (er Der). This cost function charac-
+
+an orthonormal basis of the R-th principal subspace of D-1 e  A, we have
+
+J(W, e)= min (µ1,...,µR)RR×
+
+/2 W D-1 /2 . For any partition
+
+R
+
+dp||updp -1/2 - µr||2.
+
+r pAr
+
+-µr||2. Minimizing D(µ,A) with respect Proof Let D(µ, A)= -1/2 dp||updp
+
+r pAr
+
+to µ is a decoupled least-squares problem and we get:
+
+minµ D(µ, A) = || r pAr up up - r
+
+1
+
+pAr
+
+d1p /2 up||2/ ( pAr dp)
+
+Note that a similar equivalence holds between normalized cuts and weighted K-means for
+
+positive semidefinite similarity matrices, which can be factorized as W = GG ; this leads
+
+to an approximation algorithm for minimizing normalized cuts; i.e., we have: C(W, e) =
+
+min( µ1,...,µR)RR× R dp||gpd- - µr||2 + R - tr D- W D- . p 1 1/2 1/2 r pAr
+
+
+Input: Similarity matrix W  RP Algorithm: ×P .
+
+1. Compute first R eigenvectors U of D-1
+
+2. Let U =(u1, . . . , uP )  RR
+
+×P
+
+/2 W D-1 /2 where D=diag(W1).
+
+and dp =Dpp.
+
+3. Weighted K-means: while partition A is not stationary, b. For all p, assign p to Ar where r=arg minr ||updp
+
+a. For all r, µr = pAr d1p /2 up/ pAr dp
+
+-1/2 -1/2
+
+dp||updp Output: partition A, distortion measure r pAr
+
+- µr || - µr||2
+
+Figure 1: Spectral clustering algorithm.
+
+= d1p /2 d1p /2 p up up -
+
+= R - er D1
+
+r /2
+
+p,p Ar
+
+UU D1
+
+up up / (er Der)
+
+r /2 er/ (er Der)=J(W, e)
+
+This theorem has an immediate algorithmic implication--to minimize the cost function J(W, e) with respect to the partition e, we can use a weighted K-means algorithm. The resulting algorithm is presented in Figure 1. While K-means is often used heuristically as a post-processor for spectral clustering [13], our approach provides a mathematical foundation for the use of K-means, and yields a specific weighted form of K-means that is appropriate for the problem. 2.4 Minimizing with respect to the similarity matrix When the partition e is given, we can consider minimization with respect to W. As we have suggested, intuitively this has the effect of yielding a matrix W such that the result of spectral clustering with that W is as close as possible to e. We now make this notion precise, by showing that the cost function J(W, e) is an upper bound on the distance between the partition e and the result of spectral clustering using the similarity matrix W. The metric between two partitions e=(er) and f =(fs) with R and S clusters respectively, is taken to be [14]:
+
+2
+
+d(e, f)= 1 2 erer er er - fsfs fs fs = R + S 2 - (er fs)2 (er er)(fs fs) (2)
+
+r s r,s F
+
+This measure is always between zero and
+
+R+S 2
+
+-1, and is equal to zero if and only if e  f.
+
+The following theorem shows that if we can perform weighted K-means exactly, we obtain a bound on the performance of our spectral clustering algorithm (for a proof, see [11]): Theorem 2 Let  = maxp Dpp/ minp Dpp 1. If e(W ) = arg mine J(W, e), then for all partitions e, we have d(e, e(W)) 4J(W, e). 3 Approximation of the cost function In order to minimize the cost function J(W, e) with respect to W, which is the topic of Section 4, we need to optimize a function of the R-th principal subspace of the matrix mation of the projection operator on this subspace. 3.1 Approximation of eigensubspace
+
+D-1 /2 W D-1 /2 . In this section, we show how we can compute a differentiable approxi-
+
+Let X  RP
+
+×P
+
+be a real symmetric matrix. We assume that its eigenvalues are ordered by |2| ··· |P|. We assume that |R| > |R+1| so that the R-th
+
+magnitude: |1|
+
+principal subspace ER is well defined, with orthogonal projection R.
+
+
+Our approximations are based on the power method to compute eigenvectors. It is well known that for almost all vectors v, the ratio Xqv/||Xqv|| converges to an eigenvector corresponding to the largest eigenvalue [12]. The same method can be generalized to the ated by the R columns of XqV will tend to the principal eigensubspace of X. Note that since we are interested only in subspaces, and in particular the orthogonal projection operators on those subspaces, we can choose any method for finding an orthonormal basis of range(XqV ). The QR decomposition is fast and stable and is usually the method used to compute such a basis (the algorithm is usually referred to as "orthogonal iteration" [12]). However this does not lead to a differentiable function. We develop a different approach which does yield a differentiable function, as made precise in the following proposition (for a proof, see [11]):
+
+computation of dominant eigensubspaces: If V is a matrix in RP ×R , the subspace gener-
+
+Proposition 3 Let V  RP ×R such that = max
+
+uER(X), vrange(V )
+
+cos(u, v) < 1. Then the
+
+function Y  R(Y ) = M(M M)-1M , where M = Y V , is C in a neighborhood
+
+of X, and we have: ||R(X) - R||2  (1-2)1/2 (|R+1|/|R|)q.
+
+q
+
+This proposition shows that as q tends to infinity, the range of XqV will tend to the principal eigensubspace. The rate of convergence is determined by the (multiplicative) eigengap |R+1|/|R| < 1: it is usually hard to compute principal subspace of matrices with eigengap close to one. Note that taking powers of matrices without care can lead to disastrous results [12]. By using successive QR iterations, the computations can be made stable and the same technique can be used for the computation of the derivatives. 3.2 Potentially hard eigenvalue problems In most of the literature on spectral clustering, it is taken for granted that the eigenvalue problem is easy to solve. It turns out that in many situations, the (multiplicative) eigengap is very close to one, making the eigenvector computation difficult (examples are given in the next section). We acknowledge this potential problem by averaging over several ini-
+
+tializations of the original subspace V . More precisely, let (Vm)m=1
+
+of dimension R. Let Bm = (range((D-1 /2 W D-1 /2 q
+
+) Vm)) be the approximations of ||Bm - 0||2F. This cost function
+
+/2 W D-1 /2 . The cost function that the projections on the R-th principal subspace2 of D-1
+
+we use is the average error F(W, 0(e)) =
+
+1 2M
+
+,...,M be M subspaces
+
+M m=1
+
+can be rewritten as the distance between the average of the Bm and 0 plus the variance of the approximations, thus explicitly penalizing the non-convergence of the power iterasubsets of each cluster. In simulations, we used q = 128, M = R2, and subsets containing 2/(log2 q + 1) times the number of original points in the clusters. 3.3 Empirical comparisons In this section, we study the ability of various cost functions to track the gold standard error measure in Eq. (2) as we vary the parameter  in the similarity matrix Wpp = exp(-||xp - xp ||2). We study the cost function J(W, e), its approximation based on the power method presented in Section 3, and two existing approaches, one based on a Markov chain interpretation of spectral clustering [15] and one based on the alignment [16]
+
+tions. We choose Vi to be equal to D1 /2 times a set of R indicator vectors corresponding to
+
+of D-1
+
+2
+
+/2 W D-1 /2 and 0. We carry out this experiment for the simple clustering example
+
+The matrix D- WD- 1/2 1/2 always has the same largest eigenvalue 1 with eigenvector
+
+D1 D1 /2 /2
+
+1 and we could consider instead the (R - 1)-st principal subspace of D- W D- -
+
+11 D1 /2 / (1 D1).
+
+1/2 1/2
+
+
+-3 -4 -5 -6 -7 log(1-eigengap) -8 -9
+
+error/cost
+
+1 0.8 0.6 0.4 0.2 0
+
+error/cost
+
+1 0.8 0.6 0.4 0.2 0
+
+0
+
+1 log()
+
+(b)
+
+2 3 0 1 2 3 0
+
+log()
+
+(c)
+
+1 log()
+
+(d)
+
+2 3
+
+(a)
+
+Figure 2: Empirical comparison of cost functions. (a) Data. (b) Eigengap of the similarity matrix as a function of . (c) Gold standard clustering error (solid), spectral cost function J (dotted) and its approximation based on the power method (dashed). (d) Gold standard clustering error (solid), the alignment (dashed), and a Markov-chain-based cost, divided by 16 (dotted).
+
+shown in Figure 2(a). This apparently simple toy example captures much of the core difficulty of spectral clustering--nonlinear separability and thinness/sparsity of clusters (any point has very few near neighbors belonging to the same cluster, so that the weighted graph is sparse). In particular, in Figure 2(b) we plot the eigengap of the similarity matrix as a function of , noting that at the optimum, this gap is very close to one, and thus the eigenvalue problem is hard to solve. In Figure 2(c) and (d), we plot the four cost functions against the gold standard. The gold standard curve shows that the optimal  lies near 2.5 on a log scale, and as seen in Figure 2(c), the minima of the new cost function and its approximation lie near to this value. As seen in Figure 2(d), on the other hand, the other two cost functions show a poor match to the gold standard, and yield minima far from the optimum. The problem with the alignment and Markov-chain-based cost functions is that these functions essentially measure the distance between the similarity matrix W (or a normalized version of W) and a matrix T which (after permutation) is block-diagonal with constant blocks. Unfortunately, in examples like the one in Figure 2, the optimal similarity matrix is very far from being block diagonal with constant blocks. Rather, given that data points that lie in the same ring are in general far apart, the blocks are very sparse--not constant and full. Methods that try to find constant blocks cannot find the optimal matrices in these cases. In the language of spectral graph partitioning, where we have a weighted graph with weights W, each cluster is a connected but very sparse graph. The power Wq corresponds to the q-th power of the graph; i.e., the graph in which two vertices are linked by an edge if and only if they are linked by a path of length no more than q in the original graph. Thus taking powers can be interpreted as "thickening" the graph to make the clusters more apparent, while not changing the eigenstructure of the matrix (taking powers of symmetric matrices only changes the eigenvalues, not the eigenvectors).
+
+4 Learning the similarity matrix We now turn to the problem of learning the similarity matrix from data. We assume that we are given one or more sets of data for which the desired clustering is known. The goal is to design a "similarity map," that is, a mapping from datasets of elements in X to the space of symmetric matrices with nonnegative elements. To turn this into a parametric learning problem, we focus on similarity matrices that are obtained as Gram matrices of a kernel function k(x, y) defined on X×X. In particular, for concreteness and simplicity, we restrict ourselves in this paper to the case of Euclidean data (X = RF ) and a diagonally-scaled
+
+Gaussian kernel k(x, y)=exp(-(x-y) that our methods apply more generally.
+
+diag()(x-y)), where   RF --while noting
+
+
+4.1 Learning algorithm We assume that we are given N datasets Dn, n  {1, . . . , N}, of points in RF . Each dataset Dn is composed of Pn points xnp, p  {1,...,Pn}. Each dataset is segmented, that is, for each n we know the partition en, so that the "target" matrix 0(en, ) can be computed for each dataset. For each n, we have a similarity matrix Wn(). The cost function that feature selection term, tending to make the solution sparse. The learning algorithm is the minimization of H() with respect to   RF , using the method of conjugate gradient Since the complexity of the cost function increases with q, we start the minimization with small q and gradually increase q up to its maximum value. We have observed that for small q, the function to optimize is smoother and thus easier to optimize--in particular, the long plateaus of constant values are less pronounced. Testing. The output of the learning algorithm is a vector   RF . In order to cluster previously unseen datasets, we compute the similarity matrix W and use the algorithm of Figure 1. In order to further enhance performance, we can also adopt an idea due to [13]-- we hold the direction of  fixed but perform a line search on its norm. This yields the real number  such that the weighted distortion obtained after application of the spectral clustering algorithm of Figure 1, with the similarity matrices defined by , is minimum.3 4.2 Simulations We performed simulations on synthetic datasets in two dimensions, where we consider datasets similar to the one in Figure 2, with two rings whose relative distance is constant across samples (but whose relative orientation has a random direction). We add D irrelevant dimensions of the same magnitude as the two relevant variables. The goal is thus to learn the diagonal scale   RD+2 of a Gaussian kernel that leads to the best clustering on unseen data. We learn  from N sample datasets (N =1 or 10), and compute the clustering error of our algorithm with and without adaptive tuning of the norm of  during testing (as described in Section 4.1) on ten previously unseen datasets. We compare to an approach that does not use the training data:  is taken to be the vector of all ones and we again search over the best possible norm during testing (we refer to this method as "no learning"). We report results in Table 1. Without feature selection, the performance of spectral clustering degrades very rapidly when the number of irrelevant features increases, while our learning approach is very robust, even with only one training dataset. 5 Conclusion We have presented two algorithms--one for spectral clustering and one for learning the similarity matrix. These algorithms can be derived as the minimization of a single cost function with respect to its two arguments. This cost function depends directly on the eigenstructure of the similarity matrix. We have shown that it can be approximated efficiently using the power method, yielding a method for learning similarity matrices that can cluster effectively in cases in which non-adaptive approaches fail. Note in particular that our new approach yields a spectral clustering method that is significantly more robust to irrelevant features than current methods. We are currently applying our algorithm to problems in speech separation and image segmentation, in particular with the objective of selecting features from among the numerous
+
+we use is H() = 1 N penalty serves as a n F (Wn(), 0(en, )) + C||||1. The 1
+
++
+
+with line search.
+
+3 In [13], this procedure is used to learn one parameter of the similarity matrix with no training
+
+data; it cannot be used directly here to learn a more complex similarity matrix with more parameters, because it would lead to overfitting.
+
+
+Table 1: Performance on synthetic datasets: clustering errors (multiplied by 100) for method without learning (but with tuning) and for our learning method with and without tuning, with N =1 or 10 training datasets; D is the number of irrelevant features.
+
+D 0 1 2 4 8 16 32 no learning 0 60.8 79.8 99.8 99.8 99.7 99.9
+
+learning w/o tuning
+
+N=1 15.5 37.7 36.9 37.8 37 38.8 38.9 N=10 10.5 9.5 9.5 9.7 10.7 10.9 15.1
+
+learning with tuning
+
+N=1 0 0 0 0.4 0 14 14.6 N=10 0 0 0 0 0 0 6.1
+
+features that are available in these domains [6, 7]. The number of points in such datasets can be very large and we have developed efficient implementations of both learning and clustering based on sparsity and low-rank approximations [11]. Acknowledgments We would like to acknowledge support from NSF grant IIS-9988642, MURI ONRN00014-01-1-0890 and a grant from Intel Corporation. References [1] K. Wagstaff, C. Cardie, S. Rogers, and S. Schr¨odl. Constrained K-means clustering with background knowledge. In ICML, 2001. [2] E. P. Xing, A. Y. Ng, M. I. Jordan, and S. Russell. Distance metric learning, with application to clustering with side-information. In NIPS 15, 2003. [3] S. X. Yu and J. Shi. Grouping with bias. In NIPS 14, 2002. [4] S. D. Kamvar, D. Klein, and C. D. Manning. Spectral learning. In IJCAI, 2003. [5] D. Martin, C. Fowlkes, D. Tal, and J. Malik. A database of human segmented natural images and its application to evaluating segmentation algorithms and measuring ecological statistics. In ICCV, 2001. [6] G. J. Brown and M. P. Cooke. Computational auditory scene analysis. Computer Speech and Language, 8:297­333, 1994. [7] J. Shi and J. Malik. Normalized cuts and image segmentation. IEEE Trans. PAMI, 22(8):888­ 905, 2000. [8] H. Zha, C. Ding, M. Gu, X. He, and H. Simon. Spectral relaxation for K-means clustering. In NIPS 14, 2002. [9] P. K. Chan, M. D. F. Schlag, and J. Y. Zien. Spectral K-way ratio-cut partitioning and clustering. IEEE Trans. CAD, 13(9):1088­1096, 1994. [10] M. Gu, H. Zha, C. Ding, X. He, and H. Simon. Spectral relaxation models and structure analysis for K-way graph clustering and bi-clustering. Technical report, Penn. State Univ, Computer Science and Engineering, 2001. [11] F. R. Bach and M. I. Jordan. Learning spectral clustering. Technical report, UC Berkeley, available at www.cs.berkeley.edu/~fbach, 2003. [12] G. H. Golub and C. F. Van Loan. Matrix Computations. Johns Hopkins University Press, 1996. [13] A. Y. Ng, M. I. Jordan, and Y. Weiss. On spectral clustering: analysis and an algorithm. In NIPS 14, 2001. [14] L. J. Hubert and P. Arabie. Comparing partitions. Journal of Classification, 2:193­218, 1985. [15] M. Meila and J. Shi. Learning segmentation by random walks. In NIPS 13, 2002. [16] N. Cristianini, J. Shawe-Taylor, and J. Kandola. Spectral kernel methods for clustering. In NIPS 14, 2002.
+
+

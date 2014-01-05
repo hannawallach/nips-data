@@ -1,0 +1,252 @@
+Sequential Bayesian Kernel Regression
+
+Jaco Vermaak, Simon J. Godsill, Arnaud Doucet Cambridge University Engineering Department Cambridge, CB2 1PZ, U.K. {jv211, sjg, ad2}@eng.cam.ac.uk
+
+Abstract We propose a method for sequential Bayesian kernel regression. As is the case for the popular Relevance Vector Machine (RVM) [10, 11], the method automatically identifies the number and locations of the kernels. Our algorithm overcomes some of the computational difficulties related to batch methods for kernel regression. It is non-iterative, and requires only a single pass over the data. It is thus applicable to truly sequential data sets and batch data sets alike. The algorithm is based on a generalisation of Importance Sampling, which allows the design of intuitively simple and efficient proposal distributions for the model parameters. Comparative results on two standard data sets show our algorithm to compare favourably with existing batch estimation strategies.
+
+1 Introduction Bayesian kernel methods, including the popular Relevance Vector Machine (RVM) [10, 11], have proved to be effective tools for regression and classification. For the RVM the sparsity constraints are elegantly formulated within a Bayesian framework, and the result of the estimation is a mixture of kernel functions that rely on only a small fraction of the data points. In this sense it bears resemblance to the popular Support Vector Machine (SVM) [13]. Contrary to the SVM, where the support vectors lie on the decision boundaries, the relevance vectors are prototypical of the data. Furthermore, the RVM does not require any constraints on the types of kernel functions, and provides a probabilistic output, rather than a hard decision. Standard batch methods for kernel regression suffer from a computational drawback in that they are iterative in nature, with a computational complexity that is normally cubic in the number of data points at each iteration. A large proportion of the research effort in this area is devoted to the development of estimation algorithms with reduced computational complexity. For the RVM, for example, a strategy is proposed in [12] that exploits the structure of the marginal likelihood function to significantly reduce the number of computations. In this paper we propose a full Bayesian formulation for kernel regression on sequential data. Our algorithm is non-iterative, and requires only a single pass over the data. It is equally applicable to batch data sets by presenting the data points one at a time, with the order of presentation being unimportant. The algorithm is especially effective for large data sets. As opposed to batch strategies that attempt to find the optimal solution conditional on all the data, the sequential strategy includes the data one at a time, so that the poste-
+
+
+rior exhibits a tempering effect as the amount of data increases. Thus, the difficult global estimation problem is effectively decomposed into a series of easier estimation problems. The algorithm itself is based on a generalisation of Importance Sampling, and recursively updates a sample based approximation of the posterior distribution as more data points become available. The proposal distribution is defined on an augmented parameter space, and is formulated in terms of model moves, reminiscent of the Reversible Jump Markov Chain Monte Carlo (RJ-MCMC) algorithm [5]. For kernel regression these moves may include update moves to refine the kernel locations, birth moves to add new kernels to better explain the increasing data, and death moves to eliminate erroneous or redundant kernels. The remainder of the paper is organised as follows. In Section 2 we outline the details of the model for sequential Bayesian kernel regression. In Section 3 we present the sequential estimation algorithm. Although we focus on regression, the method extends straightforwardly to classification. It can, in fact, be applied to any model for which the posterior can be evaluated up to a normalising constant. We illustrate the performance of the algorithm on two standard regression data sets in Section 4, before concluding with some remarks in Section 5. 2 Model Description The data is assumed to arrive sequentially as input-output pairs (xt,yt), t = 1, 2, ··· , xt  Rd, yt  R. For kernel regression the output is assumed to follow the model
+
+yt = 0 + k i=1 iK(xt,µi) + vt, vt  N(0,y), 2
+
+where k is the number of kernel functions, which we will consider to be unknown, k = (0 ···k) are the regression coefficients, Uk = (µ1 ···µk) are the kernel centres, and y 2
+
+is the variance of the Gaussian observation noise. Assuming independence the likelihood for all the data points observed up to time t, denoted by Yt = (y1 ··· yt), can be written as
+
+p(Yt|k,k,Uk,y) = N(Yt|Kkk,yIt), 2 2 (1)
+
+where Kk denotes the t × (k + 1) kernel matrix with [Kk]s, = 1 and [Kk]s,l = 1
+
+K(xs,µl ) for l > 1, and In denotes the n-dimensional identity matrix. For the un-
+
+-1
+
+known model parameters k = (k, Uk,y,) we assume a hierarchical prior that takes
+
+the form with
+
+p(k,k) = p(k)p(k,)p(Uk)p(y), p(k)  k exp(-)/k!, k  {1···kmax} p(k,) = N(k|0,Ik )IG(|a,b)
+
+2 2 2 +1
+
+xs(µl)/t p(Uk) = k l=1 t s=1
+
+2 2 (2)
+
+2 2
+
+p(y) = IG(y|ay,by), where x(·) denotes the Dirac delta function with mass at x, and IG(·|a,b) denotes the Inverted Gamma distribution with parameters a and b. The prior on the number of kernels is set to be a truncated Poisson distribution, with the mean  and the maximum number of kernels kmax assumed to be fixed and known. The regression coefficients are drawn from an isotropic Gaussian prior with variance  in each direction. This variance is, in turn,
+
+2
+
+drawn from an Inverted Gamma prior. This is in contrast with the Automatic Relevance Determination (ARD) prior [8], where each coefficient has its own associated variance. The prior for the kernel centres is assumed to be uniform over the grid formed by the input
+
+2 2
+
+
+data points available at the current time step. Note that the support for this prior increases with time. Finally, the noise variance is assumed to follow an Inverted Gamma prior. The parameters of the Inverted Gamma priors are assumed to be fixed and known. Given the likelihood and prior in (1) and (2), respectively, it is straightforward to obtain an expression for the full posterior distribution p(k, k|Yt). Due to conjugacy this expression can be marginalised over the regression coefficients, so that the marginal posterior for the kernel centres can be written as
+
+p(k,Uk|y,,Yt)  2 2 |Bk|1 exp(-YtPkYt/2y)p(k)p(Uk),
+
+(2y) 2 t/2 () 2 k+1/2
+
+/2 T 2
+
+(3)
+
+with Bk = (KTkKk/y + Ik /) +1 2 2 -1 and Pk = It - KkBkKTk/y. It will be our ob2
+
+jective to approximate this distribution recursively in time as more data becomes available, using Monte Carlo techniques. Once we have samples for the kernel centres, we will require new samples for the unknown parameters (y,) at the next time step. We can
+
+2 2
+
+obtain these by first sampling for the regression coefficients from the posterior p(k|k,Uk,y,,Yt) = N(k|k,Bk),
+
+2 2 (4)
+
+with k = BkKTkYt, and conditional on these values, sampling for the unknown parameters from the posteriors
+
+p(y|k,k,Uk,Yt) = IG(y|ay + t/2,by + eTtet/2) p(|k,k) = IG(|a + (k + 1)/2,b + Tkk/2),
+
+2 2
+
+2 2
+
+(5)
+
+with et = Yt - Kkk the model approximation error. Since the number of kernel functions to use is unknown the marginal posterior in (3) is defined over a discrete space of variable dimension. In the next section we will present a generalised importance sampling strategy to obtain Monte Carlo approximations for distributions of this nature recursively as more data becomes available. 3 Sequential Estimation Recall that it is our objective to recursively update a Monte Carlo representation of the posterior distribution for the kernel regression parameters as more data becomes available. The method we propose here is based on a generalisation of the popular importance sampling technique. Its application extends to any model for which the posterior can be evaluated up to a normalising constant. We will thus first present the general strategy, before outlining the details for sequential kernel regression. 3.1 Generalised Importance Sampling Our aim is to recursively update a sample based approximation of the posterior p(k, k|Yt) of a model parameterised by k as more data becomes available. The efficiency of importance sampling hinges on the ability to design a good proposal distribution, i.e. one that approximates the target distribution sufficiently well. Designing an efficient proposal distribution to generate samples directly in the target parameter space is difficult. This is mostly due to the fact that the dimension of the parameter space is generally high and variable. To circumvent these problems we augment the target parameter space with an auxiliary parameter space, which we will associate with the parameters at the previous time step. We now define the target distribution over the resulting joint space as t(k,k;k ,k ) = p(k,k|Yt)qt(k ,k |k,k). (6)
+
+
+This joint clearly admits the desired target distribution as a marginal. Apart from some weak assumptions, which we will discuss shortly, the distribution qt is entirely arbitrary, and may depend on the data and the time step. In fact, in the application to the RVM we appears from the expression above. A similar strategy of augmenting the space to simplify the importance sampling procedure has been exploited before in [7] to develop efficient Sequential Monte Carlo (SMC) samplers for a wide range of models. To generate samples in this joint space we define the proposal for importance sampling to be of the form where qt may again depend on the data and the time step. This proposal embodies the sequential character of our algorithm. Similar to SMC methods [3] it generates samples for the parameters at the current time step by incrementally refining the posterior at the previous time step through the distribution qt. Designing efficient incremental proposals is much easier than constructing proposals that generate samples directly in the target parameter space, since the posterior is unlikely to undergo dramatic changes over consecutive time steps. To compensate for the discrepancy between the proposal in (7) and the joint posterior in (6) the importance weight takes the form
+
+consider here we will set it to qt(k , k |k, k) = ( k,k) (k ,k ), so that it effectively dis-
+
+Qt(k,k;k ,k ) = p(k ,k |Yt )q (k,k|k ,k ), -1 t (7)
+
+Wt(k,k;k ,k ) = p(k ,k |Yt )q (k,k|k ,k ). p(k,k|Yt)qt(k ,k |k,k)
+
+-1 t
+
+(8)
+
+Due to the construction of the joint in (6), marginal samples in the target parameter space associated with this weighting will indeed be distributed according to the target posterior p(k,k|Yt). As might be expected the importance weight in (8) is similar in form to the acceptance ratio for the RJ-MCMC algorithm [5]. One notable difference is that the reversibility condition is not required, so that for a given qt, qt may be arbitrary, as long as the ratio in (8) is well-defined. In practice it is often necessary to design a number of candidate moves to obtain an efficient algorithm. Examples include update moves to refine the model parameters in the light of the new data, birth moves to add new parameters to better explain the new data, death moves to remove redundant or erroneous parameters, and many more. We will denote the set of candidate moves at time t by {t,i,qt,i,qt,i}M , where t,i is the probability of choosing
+
+i=1
+
+t,i = 1. For each move i the importance weight is computed by
+
+substituting the corresponding qt,i and qt,i into (8). Note that the probability of choosing a particular move may depend on the old state and the time step, so that moves may be included or excluded as is appropriate. 3.2 Sequential Kernel Regression We will now present the details for sequential kernel regression. Our main concern will be the recursive estimation of the marginal posterior for the kernel centres in (3). This distribution is conditional on the parameters (y,), for which samples can be obtained
+
+2 2
+
+at each time step from the corresponding posteriors in (4) and (5). To sample for the new kernel centres we will consider three kinds of moves: a zero move qt, , a birth move qt, , and a death move qt, . The zero move leaves the kernel centres
+
+1 2 3
+
+unchanged. The birth move adds a new kernel at a uniformly randomly chosen location over the grid of unoccupied input data points. The death move removes a uniformly randomly chosen kernel. For k = 0 only the birth move is possible, whereas the birth move is impossible for k = kmax or k = t. Similar to [5] we set the move probabilities to t, = cmin{1,p(k + 1)/p(k)}
+
+2
+
+t, = cmin{1,p(k - 1)/p(k)} 3
+
+t, = 1 - t, - t, 1 2 3
+
+move i, with
+
+M i=1
+
+
+in all other cases. In the above c  (0, 1) is a parameter that tunes the relative frequency of the dimension changing moves to the zero move. For these choices the importance weight in (8) becomes
+
+|Bk|1 exp(-(YtPkYt - Yt P Yt )/2y) -1
+
+|Bk |1 (2y) /2 2 1/2 () 2 k-k /2
+
+k
+
+-k
+
+/2 T T -1 k 2
+
+Wt,i(k,Uk;k ,Uk ) 
+
+(t - 1)(k - 1)! ×
+
+t(k - 1)!qt,i(k,Uk|k ,Uk ),
+
+where the primed variables are those corresponding to the posterior at time t - 1. For the zero move the parameters are left unchanged, so that the expression for qt, in the
+
+1
+
+importance weight becomes unity. This is often a good move to choose, and captures the notion that the posterior rarely changes dramatically over consecutive time steps. For the birth move one new kernel is added, so that k = k + 1. The centre for this kernel is uniformly randomly chosen from the grid of unoccupied input data points. This means that the expression for qt, in the importance weight reduces to 1/(t-k ), since there are t-k
+
+2
+
+such data points. Similarly, the death move removes a uniformly randomly chosen kernel, so that k = k - 1. In this case the expression for qt, in the importance weight reduces
+
+3
+
+to 1/k . It is straightforward to design numerous other moves, e.g. an update move that perturbs existing kernel centres. However, we found that the simple moves presented yield satisfactory results while keeping the computational complexity acceptable. We conclude this section with a summary of the algorithm.
+
+Algorithm 1: Sequential Kernel Regression Inputs: · Kernel function K(·,·), model parameters (,kmax,ay,by,a,b), fraction of dimension change moves c, number of samples to approximate the posterior N. Initialisation: t = 0 · For i = 1···N, set k( = 0, (k = , U(k = , and sample y  p(y),   p(). Generalised Importance Sampling Step: t > 0 · For i = 1···N, - Sample a move j(i) so that P(j(i) = l) = t,l. - If j(i) = 1 (zero move), set U(k = U(k and k( = k( . Else if j(i) = 2 (birth move), form U(k by uniformly randomly adding a kernel at one of
+
+i) i) i) 2(i) 2 2(i) 2
+
+i) i) i) i)
+
+i) i)
+
+the unoccupied data points, and set k( = k( + 1. Else if j(i) = 3 (death move), form U(k by uniformly randomly deleting one of the existing kernels, and set k( = k( - 1.
+
+i)
+
+i) i)
+
+· For i = 1···N, compute the importance weights Wt  Wt(k( ,U(k ;k( ,U(k ), and normalise. · For i = 1···N, sample the nuisance parameters k  p(k|k( ,U(k ,y , ,Yt),   p(|k( ,k ), y  p(y|k ,k ,U(k ,Yt). Resampling Step: t > 0 · Multiply / discard samples {k( ,k } with respect to high / low importance weights {Wt }
+
+i) i)
+
+i) i) 2(i) 2(i)
+
+2(i) 2 i) (i) 2(i) 2 (i) (i)
+
+(i) i)
+
+i)
+
+to obtain N samples {k( , (k }.
+
+i)
+
+(i) (i)
+
+i)
+
+(i) i) i)
+
+i)
+
+
+Each of the samples is initialised to be empty, i.e. no kernels are included. Initial values for the variance parameters are sampled from their corresponding prior distributions. Using the samples before resampling, a Minimum Mean Square Error (MMSE) estimate of the clean data can be obtained as
+
+(i)
+
+Zt = N i=1 Wt K(k k . (i) i)
+
+The resampling step is required to avoid degeneracy of the sample based representation. It can be performed by standard procedures such as multinomial resampling [4], stratified resampling [6], or minimum entropy resampling [2]. All these schemes are unbiased, so that the number of times Ni the sample (k( , k ) appears after resampling satisfies E(Ni) = NWt . Thus, resampling essentially multiplies samples with high importance
+
+i) (i)
+
+(i)
+
+weights, and discards those with low importance weights. The algorithm requires only a single pass through the data. The computational complexity at each time step is O(N). For each sample the computations are dominated by the computation of the matrix Bk, which requires a (k + 1)-dimensional matrix inverse. However, this inverse can be incrementally updated from the inverse at the previous time step using the techniques described in [12], leading to substantial computational savings.
+
+4 Experiments and Results In this section we illustrate the performance of the proposed sequential estimation algorithm on two standard regression data sets. 4.1 Sinc Data This experiment is described in [1]. The training data is taken to be the sinc function, i.e. sinc(x) = sin(x)/x, corrupted by additive Gaussian noise of standard deviation y = 0.1, for 50 evenly spaced points in the interval x  [-10, 10]. In all the runs we presented these points to the sequential estimation algorithm in random order. For the test data we used 1000 points over the same interval. We used a Gaussian kernel of width 1.6, and set the fixed parameters of the model to (,kmax,ay,by,a,b) = (1, 50, 0, 0, 0, 0). For these settings the prior on the variances reduces to the uninformative Jeffreys' prior. The fraction of dimension change moves was set to c = 0.25. It should be noted that the algorithm proved to be relatively insensitive to reasonable variations in the values of the fixed parameters. The left side of Figure 1 shows the test error as a function of the number of samples N. These results were obtained by averaging over 25 random generations of the training data for each value of N. As expected, the error decreases with an increase in the number of samples. No significant decrease is obtained beyond N = 250, and we adopt this value for subsequent comparisons. A typical MMSE estimate of the clean data is shown on the right side of Figure 1. In Table 1 we compare the results of the proposed sequential estimation algorithm with a number of batch strategies for the SVM and RVM. The results for the batch algorithms are duplicated from [1, 9]. The error for the sequential algorithm is slightly higher. This is due to the stochastic nature of the algorithm, and the fact that it uses only very simple moves that take no account of the characteristics of the data during the move proposition. This increase should be offset against the algorithm simplicity and efficiency. The error could be further decreased by designing more complex moves.
+
+
+1.5
+
+0.4
+
+0.35
+
+1
+
+0.3
+
+0.25
+
+0.5
+
+0.2
+
+0.15
+
+0 0.1
+
+0.05
+
+0
+
+100 200 300 400 500 600 700 800 900 1000 -0.5 -10 -8 -6 -4 -2 0 2 4 6 8 10
+
+Figure 1: Results for the sinc experiment. Test error as a function of the number of samples (left), and example fit (right), showing the uncorrupted data (blue circles), noisy data (red crosses) and MMSE estimate (green squares). For this example the test error was 0.0309 and an average of 6.18 kernels were used.
+
+Method Figueiredo SVM RVM VRVM MCMC Sequential RVM Test Error 0.0455 0.0519 0.0494 0.0494 0.0468 0.0591 # Kernels 7.0 28.0 6.9 7.4 6.5 4.5 Noise Estimate - - 0.0943 0.0950 - 0.1136
+
+Table 1: Comparative performance results for the sinc data. The batch results are reproduced from [1, 9].
+
+4.2 Boston Housing Data We also applied our algorithm to the popular Boston housing data set. We considered random train / test partitions of the data of size 300 / 206. We again used a Gaussian kernel, and set the width parameter to 5. For the model and algorithm parameters we used values similar to those for the sinc experiment, except for setting  = 5 to allow a larger number of kernels. The results are summarised in Table 2. These were obtained by averaging over 10 random partitions of the data, and setting the number of samples to N = 250. The test error is comparable to those for the batch strategies, but far fewer kernels are required.
+
+Method SVM RVM Sequential RVM Test Error 8.04 7.46 7.18 # Kernels 142.8 39.0 25.29
+
+Table 2: Comparative performance results for the Boston housing data. The batch results are reproduced from [10].
+
+5 Conclusions In this paper we proposed a sequential estimation strategy for Bayesian kernel regression. Our algorithm is based on a generalisation of importance sampling, and incrementally updates a Monte Carlo representation of the target posterior distribution as more data points
+
+
+become available. It achieves this through simple and intuitive model moves, reminiscent of the RJ-MCMC algorithm. It is further non-iterative, and requires only a single pass over the data, thus overcoming some of the computational difficulties associated with batch estimation strategies for kernel regression. Our algorithm is more general than the kernel regression problem considered here. Its application extends to any model for which the posterior can be evaluated up to a normalising constant. Initial experiments on two standard regression data sets showed our algorithm to compare favourably with existing batch estimation strategies for kernel regression. Acknowledgements The authors would like to thank Mike Tipping for helpful comments during the experimental procedure. The work of Vermaak and Godsill was partially funded by QinetiQ under the project `Extended and Joint Object Tracking and Identification', CU006-14890. References [1] C. M. Bishop and M. E. Tipping. Variational relevance vector machines. In C. Boutilier and M. Goldszmidt, editors, Proceedings of the 16th Conference on Uncertainty in Artificial Intelligence, pages 46­53. Morgan Kaufmann, 2000. [2] D. Crisan. Particle filters ­ a theoretical perspective. In A. Doucet, J. F. G. de Freitas, and N. J. Gordon, editors, Sequential Monte Carlo Methods in Practice, pages 17­38. Springer-Verlag, 2001. [3] A. Doucet, J. F. G. de Freitas, and N. J. Gordon, editors. Sequential Monte Carlo Methods in Practice. Springer-Verlag, New York, 2001. [4] N. J. Gordon, D. J. Salmond, and A. F. M. Smith. Novel approach to nonlinear/non-Gaussian Bayesian state estimation. IEE Proceedings-F, 140(2):107­113, 1993. [5] P. J. Green. Reversible jump Markov chain Monte Carlo computation and Bayesian model determination. Biometrika, 82(4):711­732, 1995. [6] G. Kitagawa. Monte Carlo filter and smoother for non-Gaussian nonlinear state space models. Journal of Computational and Graphical Statistics, 5(1):1­25, 1996. [7] P. Del Moral and A. Doucet. Sequential Monte Carlo samplers. Technical Report CUED/FINFENG/TR.443, Signal Processing Group, Cambridge University Engineering Department, 2002. [8] R. M. Neal. Assessing relevance determination methods using DELVE. In C. M. Bishop, editor, Neural Networks and Machine Learning, pages 97­129. Springer-Verlag, 1998. [9] S. S. Tham, A. Doucet, and R. Kotagiri. Sparse Bayesian learning for regression and classification using Markov chain Monte Carlo. In Proceedings of the International Conference on Machine Learning, pages 634­643, 2002. [10] M. E. Tipping. The relevance vector machine. In S. A. Solla, T. K. Leen, and K. R. M¨uller, editors, Advances in Neural Information Processing Systems, volume 12, pages 652­658. MIT Press, 2000. [11] M. E. Tipping. Sparse Bayesian learning and the relevance vector machine. Journal of Machine Learning Research, 1:211­244, 2001. [12] M. E. Tipping and A. C. Faul. Fast marginal likelihood maximisation for sparse Bayesian models. In C. M. Bishop and B. J. Frey, editors, Proceedings of the Ninth International Workshop on Artificial Intelligence and Statistics, 2003. [13] V. N. Vapnik. Statistical Learning Theory. John Wiley and Sons, New York, 1998.
+
+

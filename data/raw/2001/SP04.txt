@@ -1,0 +1,442 @@
+A Sequence Kernel and its Application to
+Speaker Recognition
+William M. Campbell
+Motorola Human Interface Lab
+7700 S. River Parkway
+Tempe, AZ 85284
+Bill.Campbell@motorola.com
+Abstract
+A novel approach for comparing sequences of observations using an
+explicit≠expansion kernel is demonstrated. The kernel is derived using
+the assumption of the independence of the sequence of observations and
+a mean≠squared error training criterion. The use of an explicit expan≠
+sion kernel reduces classifier model size and computation dramatically,
+resulting in model sizes and computation one≠hundred times smaller in
+our application. The explicit expansion also preserves the computational
+advantages of an earlier architecture based on mean≠squared error train≠
+ing. Training using standard support vector machine methodology gives
+accuracy that significantly exceeds the performance of state≠of≠the≠art
+mean≠squared error training for a speaker recognition task.
+1 Introduction
+Comparison of sequences of observations is a natural and necessary operation in speech
+applications. Several recent approaches using support vector machines (SVM's) have been
+proposed in the literature. The first set of approaches attempts to model emission proba≠
+bilities for hidden Markov models [1, 2]. This approach has been moderately successful
+in reducing error rates, but suffers from several problems. First, large training sets result
+in long training times for support vector methods. Second, the emission probabilities must
+be approximated [3], since the output of the support vector machine is not a probability.
+A more recent method for comparing sequences is based on the Fisher kernel proposed by
+Jaakkola and Haussler [4]. This approach has been explored for speech recognition in [5].
+The application to speaker recognition is detailed in [6]. We propose an alternative kernel
+based upon polynomial classifiers and the associated mean≠squared error (MSE) training
+criterion [7]. The advantage of this kernel is that it preserves the structure of the classifier
+in [7] which is both computationally and memory efficient.
+We consider the application of text≠independent speaker recognition; i.e., determining or
+verifying the identity of an individual through voice characteristics. Text≠independent
+recognition implies that knowledge of the text of the speech data is not used. Traditional
+methods for text≠independent speaker recognition are vector quantization [8], Gaussian
+mixture models [9], and artificial neural networks [8]. A state≠of≠the≠art approach based
+on polynomial classifiers was presented in [7]. The polynomial approach has several ad≠
+
+vantages over traditional methods--1) it is extremely computationally≠efficient for identi≠
+fication, 2) the classifier is discriminative which eliminates the need for a background or
+cohort model [10], and 3) the method generates small classifier models.
+In Section 2, we describe polynomial classifiers and the associated scoring process. In
+Section 3, we review the process for mean≠squared error training. Section 4 introduces the
+new kernel. Section 5 compares the new kernel approach to the standard mean≠squared
+error training approach.
+2 Polynomial classifiers for sequence data
+We start by considering the problem of speaker verification--a two≠class problem. In this
+case, the goal is to determine the correctness of an identity claim (e.g., a user id was entered
+in the system) from a voice input. If ! is the class, then the decision to be made is if the
+claim is valid, ! = spk, or if an impostor is trying to break into the system, ! = imp. We
+motivate the classification process from a probabilistic viewpoint.
+For the verification application, a decision is made from a sequence of observations ex≠
+tracted x 1 ; : : : ; xn from the speech input. We decide based on the output of a discriminant
+function using a polynomial classifier. A polynomial classifier of the form f(x) = w t p(x)
+where w is the vector of classifier parameters (model) and p is an expansion of the input
+space into the vector of monomials of degree K or less is used. For example, if K = 3 and
+x = [x 1 x 2 ] t , then
+p(x) =
+
+1 x 1 x 2 x 2
+1 x 1 x 2 x 2
+2 x 3
+1 x 2
+1 x 2 x 1 x 2
+2 x 3
+2
+ t
+: (1)
+Note that we do not use a nonlinear activation function as is common in higher≠order neural
+networks; this allows us to find a closed form solution for training. Also, note that we use
+a bold p to avoid confusion with probabilities.
+If the polynomial classifier is trained with a mean≠squared error training criterion and target
+values of 1 for ! = spk and 0 for ! = imp , then f(x) will approximate the a posteriori
+probability p(! = spkjx) [11]. We can then find the probability of the entire sequence,
+p(x 1 ; : : : ; xn j! = spk), as follows. Assuming independence of the observations [12] gives
+p(x 1 ; : : : ; xn j!) =
+n
+Y
+i=1
+p(x i j!)
+=
+n
+Y
+i=1
+p(!jx i )p(x i )
+p(!) :
+(2)
+For the purposes of classification, we can discard p(x i ). We take the logarithm of both
+sides to get the discriminant function
+d 0 (x n
+1 j!) =
+n
+X
+i=1
+log
+
+p(!jx i )
+p(!)
+
+(3)
+where we have used the shorthand x n
+1 to denote the sequence x 1 ; : : : ; xn . We use two
+terms of the Taylor series, log(x)  x 1, to approximate the discriminant function and
+also normalize by the number of frames to obtain the final discriminant function
+d(x n
+1 j!) =
+1
+n
+n
+X
+i=1
+p(!jx i )
+p(!)
+: (4)
+Note that we have discarded the 1 in this discriminant function since this will not affect
+the classification decision. The key reason for using the Taylor approximation is that it
+reduces computation without significantly affecting classifier accuracy.
+
+Now assume we have a polynomial function f(x)  p(! = spkjx); we call the vector w
+the speaker model. Substituting in the polynomial function f(x) gives
+d(x n
+1 j! = spk) =
+1
+n
+n
+X
+i=1
+w t p(x i )
+p(! = spk)
+=
+1
+np(! = spk)
+w t
+  n
+X
+i=1
+p(x i )
+!
+=
+1
+p(! = spk)
+w t 
+p
+(5)
+where we have defined the mapping x n
+1 ! 
+p as
+x n
+1 ! 1
+n
+n
+X
+i=1
+p(x i ): (6)
+We summarize the scoring method. For a sequence of input vectors x 1 ; : : : xn and a speaker
+model, w, we construct 
+p using (6). We then score using the speaker model, score = w t  p.
+Since we are performing verification, if score is above a threshold then we declare the
+identity claim valid; otherwise, the claim is rejected as an impostor attempt. More details
+on this probabilistic scoring method can be found in [13].
+Extending the sequence scoring framework to the case of identification (i.e., identifying
+the speaker from a list of speakers by voice) is straightforward. In this case, we construct
+speaker models for each speaker w i and then choose the speaker i which maximizes w t
+i 
+p
+(assuming equal prior probability of each speaker). Note that identification has low com≠
+putational complexity, since we must only compute one inner product to determine the
+speaker's score.
+3 Mean≠squared error training
+We next review how to train the polynomial classifier to approximate the probability
+p(!jx); this process will help us set notation for the following sections. Let w be the
+desired speaker model and y(!) the ideal output; i.e., y(spk) = 1 and y(imp) = 0. The
+resulting problem is
+w  = argmin
+w
+E
+n
+w t p(x) y(!)
+ 2
+o
+(7)
+where E denotes expectation. This criterion can be approximated using the training set as
+w  = argmin
+w
+ N spk
+X
+i=1
+  w t p(x i ) 1
+  2
++
+Nimp X
+i=1
+  w t p(y i )
+  2
+
+: (8)
+Here, the speaker's training data is x 1 ; : : : ; xN spk , and the anti≠speaker data is
+y 1 ; : : : ; yNimp . (Anti≠speakers are designed to have the same statistical characteristics as
+the impostor set.)
+The training method can be written in matrix form. First, define M spk as the matrix whose
+rows are the polynomial expansion of the speaker's data; i.e.,
+M spk =
+2
+6 6 4
+p(x 1 ) t
+p(x 2 ) t
+. . .
+p(xN spk ) t
+3
+7 7 5 : (9)
+
+Define a similar matrix for the impostor data, M imp . Define
+M =
+ M spk
+M imp
+
+: (10)
+The problem (8) then becomes
+w  = argmin
+w
+kMw ok 2 (11)
+where o is the vector consisting of N spk ones followed by N imp zeros (i.e., the ideal output).
+The problem (11) can be solved using the method of normal equations,
+M t Mw = M t o: (12)
+We rearrange (12) to
+M t M
+ w = M t
+spk 1 (13)
+where 1 is the vector of all ones. If we define R = M t M and solve for w, then (13)
+becomes
+w = R 1 M t
+spk 1: (14)
+4 The naive a posteriori sequence kernel
+We can now combine the methods from Sections 2 and 3 to obtain a novel sequence com≠
+parison kernel in a straightforward manner. Combine the speaker model from (14) with the
+scoring equation from (5) to obtain the classifier score
+score =
+1
+p(! = spk)
+
+p t w =
+1
+p(! = spk)
+
+p t R 1 M t
+spk 1: (15)
+Now p(! = spk) = N spk =(N imp +N spk )  N spk =N imp (because of the large anti≠speaker
+population), so that (15) becomes
+score = 
+p t 
+R 1  p t
+train (16)
+where 
+p train is (1=N spk )M t
+spk 1 (note that this exactly the same as mapping the training
+data using (6)), and 
+R is (1=N imp )R.
+The scoring method in (16) is the basis of our sequence kernel. Given two sequences of
+speech feature vectors, x n
+1 and y m
+1 , we compare them by mapping x n
+1 ! 
+p x and y m
+1 ! 
+p y
+and then computing
+k naps (x n
+1 ; y m
+1 ) = 
+p t
+x
+
+R 1 
+p y : (17)
+We call k naps the naive a posteriori sequence kernel since scoring assumes indepen≠
+dence of observations and training approximates the a posteriori probabilities. The value
+k naps (x n
+1 ; y m
+1 ) can be interpreted as scoring using a polynomial classifier on the sequence
+y m
+1 , see (5), with the MSE model trained from feature vectors x m
+1 (or vice≠versa because
+of symmetry).
+Several observations should be made about the NAPS kernel. First, scoring complexity can
+be reduced dramatically in training by the following trick. We factor 
+R 1 = U t U using
+the Cholesky decomposition. Then k naps (x n
+1 ; y m
+1 ) = (U p x ) t (U p y ). I.e., if we transform
+all the sequence data by U p x before training, the sequence kernel is a simple inner product.
+For our application in Section 5, this reduces training time from 5 hours per speaker down
+to 40 seconds on a Sun Ultra 60, 360 MHz. Second, since the NAPS kernel explicitly
+performs the expansion to ``feature space'', we can simplify the output of the support vector
+machine. Suppose g( p) is the (soft) output of the SVM,
+g( p) =
+l
+X
+i=1
+ i y i k naps ( p i ;  p) + b: (18)
+
+We can simplify this to
+g( p) =
+  l
+X
+i=1
+ i y i 
+R 1  p i + b
+! t
+ p (19)
+where b = [b 0 : : : 0] t . That is, once we train the support vector machine, we can
+collapse all the support vectors down into a single model w, where w is the quantity in
+parenthesis in (19). Third, although the NAPS kernel is reminiscent of the Mahalanobis
+distance, it is distinct. No assumption of equal covariance matrices for different classes
+(speakers) is made for the new kernel--the kernel covariance matrix is a mixture of the
+individual class covariances. Also, the kernel is not a distance measure--no subtraction of
+means occurs as in the Mahalanobis distance.
+5 Results
+5.1 Setup
+The NAPS kernel was tested on the standard speaker recognition database YOHO [14] col≠
+lected from 138 speakers. Utterances in the database consist of combination lock phrases of
+fixed length; e.g., ``23≠45≠56.'' Enrollment and verification session were recorded at distinct
+times. (Enrollment is the process of collecting data for training and generating a speaker
+model. Verification is the process of testing the system; i.e., the user makes an identity
+claim and then this hypothesis is verified.) For each speaker, enrollment consisted of four
+sessions each containing twenty≠four utterances. Verification consisted of ten separate ses≠
+sions with four utterances per session (again per speaker). Thus, there are 40 tests of the
+speaker's identity and 40*137=5480 possible impostor attempts on a speaker. For clarity,
+we emphasize that enrollment and verification session data is completely separate.
+To extract features for each of the utterances, we used standard speech processing. Each
+utterance was broken up into frames of 30 ms each with a frame rate of 100 frames/sec. The
+mean was removed from each frame, and the frame was preemphasized with the filter 1
+0:97z 1 . A Hamming window was applied and then 12 linear prediction coefficients were
+found. The resulting coefficients were transformed to 12 cepstral coefficients. Endpointing
+was performed to eliminate non≠speech frames. This typically resulted in approximately
+200 observations per utterance.
+For verification, we measure performance in terms of the pooled and average equal error
+rates (EER). The average EER is found by averaging the individual EER for each speaker.
+The individual EER is the threshold at which the false accept rate (FAR) equals the false
+reject rate (FRR). The pooled EER is found by setting a constant threshold across the
+entire population. When the FAR equals the FRR for the entire population this is termed
+the pooled EER. For identification, the misclassification error rate is used.
+To eliminate bias in verification, we trained the first 69 speakers against the first 69 and
+the second 69 against the second 69 (as in [7]). We then performed verification using the
+second 69 as impostors to the first 69 speakers models and vice versa. This insures that the
+impostors are unknown. For identification, we trained all 138 speakers against each other.
+5.2 Experiments
+We trained support vector machines for each speaker using the software tool SVM≠
+Torch [15] and the NAPS kernel (17). The 12 cepstral features were mapped to a di≠
+mension 455 vector using a 3rd degree polynomial classifier. Single utterances (i.e., ``23≠
+45≠56'') were converted to single vectors using the mapping (6) and then transformed with
+
+the Cholesky factor to reduce computation. We cross≠validated using the first 3 enrollment
+sessions as training and the 4th enrollment session as a test to determine the best tradeoff
+between margin and error; the best performing value of c = 0:1 was used with the final
+SVMTorch training. Using the identical set of features and the same methodology, clas≠
+sifier models were also trained using the mean≠squared error criterion using the method
+in [7]. For final testing, all 4 enrollment session were used for training, and all verification
+sessions were used for testing.
+Results for verification and identification are shown in Table 1. The new kernel method
+reduces error rates considerably--the average EER is reduced by 38%, the pooled EER is
+reduced by 47%, and the identification error rate is reduced by 42%. The average number
+of support vectors was 139 which resulted in a model size of about 253; 540 bytes (in single
+precision floating point); using the model size reduction method in Section 4 resulted in a
+model size of 1820 bytes--over a hundred times reduction in size.
+Table 1: Comparison of structural risk minimization and MSE training
+MSE NAPS SVM
+Average EER 1.63% 1.01%
+Pooled EER 2.76% 1.45%
+ID error rate 4.71% 2.72%
+We also plotted scores for all speakers versus a threshold, see Figure 1. We normalized
+the scores for the MSE and SVM approaches to the same range for comparison. One can
+easily see the reduction in pooled EER from the graph. Note also the dramatic shifting of
+the FRR curve to the right for the SVM training, resulting in substantially better error rates
+than the MSE training. For instance, when FAR is 0:1%, the MSE training method gives
+an FRR of 45%; whereas, the SVM training method gives an FRR of 12%--a reduction by
+a factor of 3:75 in error.
+-4 -2 0 2 4 6
+10 -1
+10 0
+10 1
+10 2
+Threshold
+Percent
+FAR(%) MSE
+FRR(%) MSE
+FAR(%) SVM
+FRR(%) SVM
+Figure 1: FAR/FRR rates for the entire population versus a threshold for the SVM and
+MSE training methods
+
+6 Conclusions and future work
+A novel kernel for comparing sequences in speech applications was derived, the NAPS
+kernel. This data≠dependent kernel was motivated by using a probabilistic scoring method
+and mean≠squared error training. Experiments showed that incorporating this kernel in
+an SVM training architecture yielded performance superior to that of the MSE training
+criterion. Reduction in error rates of up to 3:75 times were observed while retaining the
+efficiency of the original MSE classifier architecture.
+The new kernel method is also applicable to more general situations. Potential applications
+include--using the approach with radial basis functions, application to automatic speech
+recognition, and extending to an SVM/HMM architecture.
+References
+[1] Vincent Wan and William M. Campbell, ``Support vector machines for verification and iden≠
+tification,'' in Neural Networks for Signal Processing X, Proceedings of the 2000 IEEE Signal
+Processing Workshop, 2000, pp. 775--784.
+[2] Aravind Ganapathiraju and Joseph Picone, ``Hybrid SVM/HMM architectures for speech recog≠
+nition,'' in Speech Transcription Workshop, 2000.
+[3] John C. Platt, ``Probabilities for SV machines,'' in Advances in Large Margin Classifiers,
+Alexander J. Smola, Peter L. Bartlett, Bernhard Schòolkopf, and Dale Schuurmans, Eds., pp.
+61--74. The MIT Press, 2000.
+[4] Tommi S. Jaakkola and David Haussler, ``Exploiting generative models in discriminative clas≠
+sifiers,'' in Advances in Neural Information Processing 11, M. S. Kearns, S. A. Solla, and D. A.
+Cohn, Eds. 1998, pp. 487--493, The MIT Press.
+[5] Nathan Smith, Mark Gales, and Mahesan Niranjan, ``Data≠dependent kernels in SVM clas≠
+sification of speech patterns,'' Tech. Rep. CUED/F≠INFENG/TR.387, Cambridge University
+Engineering Department, 2001.
+[6] Shai Fine, Jiür í i Navríatil, and Ramesh A. Gopinath, ``A hybrid GMM/SVM approach to speaker
+recognition,'' in Proceedings of the International Conference on Acoustics, Speech, and Signal
+Processing, 2001.
+[7] William M. Campbell and Khaled T. Assaleh, ``Polynomial classifier techniques for speaker
+verification,'' in Proceedings of the International Conference on Acoustics, Speech, and Signal
+Processing, 1999, pp. 321--324.
+[8] Kevin R. Farrell, Richard J. Mammone, and Khaled T. Assaleh, ``Speaker recognition using
+neural networks and conventional classifiers,'' IEEE Trans. on Speech and Audio Processing,
+vol. 2, no. 1, pp. 194--205, Jan. 1994.
+[9] Douglas A. Reynolds, ``Automatic speaker recognition using Gaussian mixture speaker mod≠
+els,'' The Lincoln Laboratory Journal, vol. 8, no. 2, pp. 173--192, 1995.
+[10] Michael J. Carey, Eluned S. Parris, and John S. Bridle, ``A speaker verification system using
+alpha≠nets,'' in Proceedings of the International Conference on Acoustics Speech and Signal
+Processing, 1991, pp. 397--400.
+[11] Jòurgen Schòurmann, Pattern Classification, John Wiley and Sons, Inc., 1996.
+[12] Lawrence Rabiner and Biing≠Hwang Juang, Fundamentals of Speech Recognition, Prentice≠
+Hall, 1993.
+[13] William M. Campbell and C. C. Broun, ``A computationally scalable speaker recognition sys≠
+tem,'' in Proceedings of EUSIPCO, 2000, pp. 457--460.
+[14] Joseph P. Campbell, Jr., ``Testing with the YOHO CD≠ROM voice verification corpus,'' in Pro≠
+ceedings of the International Conference on Acoustics, Speech, and Signal Processing, 1995,
+pp. 341--344.
+[15] Ronan Collobert and Samy Bengio, ``Support vector machines for large≠scale regression prob≠
+lems,'' Tech. Rep. IDIAP≠RR 00≠17, IDIAP, 2000.
+

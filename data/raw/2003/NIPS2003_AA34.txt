@@ -1,0 +1,208 @@
+Efficient Exact k-NN and Nonparametric Classification in High Dimensions
+
+Ting Liu Computer Science Dept. Carnegie Mellon University Pittsburgh, PA 15213 tingliu@cs.cmu.edu Andrew W. Moore Computer Science Dept. Carnegie Mellon University Pittsburgh, PA 15213 awm@cs.cmu.edu Alexander Gray Computer Science Dept. Carnegie Mellon University Pittsburgh, PA 15213 agray@cs.cmu.edu
+
+Abstract This paper is about non-approximate acceleration of high dimensional nonparametric operations such as k nearest neighbor classifiers and the prediction phase of Support Vector Machine classifiers. We attempt to exploit the fact that even if we want exact answers to nonparametric queries, we usually do not need to explicitly find the datapoints close to the query, but merely need to ask questions about the properties about that set of datapoints. This offers a small amount of computational leeway, and we investigate how much that leeway can be exploited. For clarity, this paper concentrates on pure k-NN classification and the prediction phase of SVMs. We introduce new ball tree algorithms that on real-world datasets give accelerations of 2-fold up to 100-fold compared against highly optimized traditional ball-tree-based k-NN. These results include datasets with up to 106 dimensions and 105 records, and show non-trivial speedups while giving exact answers. 1 Introduction Nonparametric models have become increasingly popular in the statistics communities and probabilistic AI communities. They remain hampered by their computational complexity. Spatial methods such as kd-trees [6, 17], R-trees [9], metric trees [18, 4] and ball trees [15] have been proposed and tested as a way of alleviating the computational cost of such statistics without resorting to approximate answers. They have been used in many different ways, and with a variety of tree search algorithms and with a variety of "cached sufficient statistics" decorating the internal leaves, for example in [14, 5, 16, 8]. The main concern with such accelerations is the extent to which they can survive high dimensional data. Indeed, there are some datasets in this paper for which a highly optimized conventional k nearest neighbor search based on ball trees is on average more expensive than the naive linear search algorithm,but extracting the k nearest neighbors is often not needed, even for a k nearest neighbor classifier. This paper is about the consequences of the fact that none of these three questions have the same precise meaning: (a) "What are the k nearest neighbors of t?" (b) "How many of the k nearest neighbors of t are from the positive class?" and (c) "Are at least q of the k nearest neighbors from the positive class?" The computational geometry community has focused on question (a), but uses of proximity queries in statistics far more frequently require (b) and (c) types of computations. Further, in addition to traditional K-NN, the same insight applies to many other statistical computations such as nonparametric density estimation, locally weighted regression, mixture models, k-means and the prediction phase of SVM classification.
+
+
+2 Ball trees A ball tree is a binary tree in which each node represents a set of points, called Points(Node). Given a dataset, the root node of a ball tree represents the full set of points in the dataset. A node can be either a leaf node or a non-leaf node. A leaf node explicitly contains a list of the points represented by the node. A non-leaf node does not explicitly contain a set of points. It has two child nodes: Node.child1 and Node.child2, where Points(Node.child1)Points(Node.child2) =  Points(Node.child1)Points(Node.child2) = Points(Node) Points are organized spatially. Each node has a distinguished point called a pivot. Depending on the implementation, the pivot may be one of the datapoints, or it may be the centroid of Points(Node). Each node records the maximum distance of the points it owns to its pivot. Call this the radius of the node Node.Radius = maxxPoints(Node) | Node.Pivot -x | Balls lower down the tree cover smaller volumes. This is achieved by insisting, at tree construction time, that
+
+x  Points(Node.child1) x  Points(Node.child2)  | x-Node.child1.Pivot |  | x-Node.child2.Pivot |  | x-Node.child2.Pivot |  | x-Node.child1.Pivot |
+
+Provided our distance function obeys the triangle inequality, this gives the ability to bound the distance from a target point t to any point in any ball tree node. If x  Points(Node) then we can be sure that:
+
+||x-t|  |t-Node.Pivot|+Node.Radius x-t|  |t-Node.Pivot|-Node.Radius
+
+(1) (2)
+
+Ball trees are constructed top-down. There are several ways to construct them, and practical algorithms trade off the cost of construction (it would be useless to be O(R2) given a dataset with R points, for example) against the tightness of the radius of the balls. [13] describes one fast way of constructing a ball tree appropriate for computational statistics. If a ball tree is balanced, then the construction time is O(CRlogR), where C is the cost of a pointpoint distance computation (which is O(m) if there are m dense attributes, and O( f m) if the records are sparse with only fraction f of attributes taking non-zero values). 2.1 KNS1: Conventional K nearest neighbor search with ball trees In this paper, we call conventional ball-tree-based search [18] KNS1. Let a pointset PS be a set of datapoints. We begin with the following definition: Say that PS consists of the k-NN of t in pointset V if and only if ((| V | k)  (PS are the k-NN of t in V))  ((| V |< k)  (PS = V)) (3) We now define a recursive procedure called BallKNN with the following inputs and output. PSout = BallKNN(PSin,Node) Let V = set of points searched so far, on entry. Assume PSin consists of the k-NN of t in V. This function efficiently ensures that on exit, PSout consists of the k-NN of t in
+
+V Points(Node).
+
+Let Dsofar =
+
+ maxxPSin | x-t | i f | PSin |= k i f | PSin |< k (4)
+
+Dsofar is the minimum distance within which points would become interesting to us.
+
+.parent
+
+max(|t-Node.Pivot|-Node.Radius,0) max(|t-Node.Pivot|-Node.Radius,DNode
+
+Let DNode = minp ) minp i f Node = Root i f Node = Root
+
+(5)
+
+DNode is the minimum possible distance from any point in Node to t. minp
+
+
+Procedure BallKNN (PSin,Node) begin
+
+minp
+
+else if (Node is a leaf) PSout = PSin if (DNode  Dsofar) then exit returning PSin unchanged. xif(Points(Node) add x to PSout | x-t |< Dsofar) then if (| PSout |= k +1) then remove furthest neighbor from PSout; update Dsofar else if (Node is a non-leaf) node1 = child of Node closest to t node2 = child of Node furthest from t PStemp = BallKNN(PSin,node1) PSout = BallKNN(PStemp,node2) end A call of BallKNN({},Root) returns the k nearest neighbors of t in the Ball tree. 2.2 KNS2: Faster k-NN classification for skewed-class data In several binary classification domains,one class is much more frequent than the other, For example, in High Throughput Screening datasets, [19] it is far more common for the result of an experiment to be negative than positive. In fraud detection or intrusion detection, a non-attack is far more common than an attack. The new algorithm introduced in this section, KNS2, is designed to accelerate k-NN based classification beyond the speedups already available by using KNS1 (conventional ball-tree-based k-NN). KNS2 attacks the problem by building two ball trees: Rootpos is the root of a (small) ball tree built from all the positive points in the dataset. Rootneg is the root of a (large) ball tree built from all negative points. Then, when it is time to classify a new target point t, we compute q, the number of k nearest neighbors of t that are in the positive class, in the following fashion · Step 1 -- " Find positive": Find the k nearest positive class neighbors of t (and their distances to t) using conventional ball tree search. · Step 2 -- "Insert negative": Do sufficient search of the negative tree to prove that the number of positive datapoints among k nearest neighbors is q for some value of q. Step 2 is achieved using a new recursive search called NegCount. In order to describe NegCount we need the following three definitions. · The Dists Array. Dists is an array of elements Dists1...Distsk consisting of the distances to the k nearest positive neighbors of t, sorted in increasing order of distance. We will also write Dists0 = 0 and Distsk+1 = . · Pointsets. Define pointsetV as the set of points in the negative balls visited so far. · The Counts Array (n,C). Say that (n,C) summarize interesting negative points for pointset V if and only if
+
+1. i  [0,n],
+
+2. ni =0
+
+Ci =| V {x : Distsi | x-t |< Distsi+1} |
+
+(6)
+
+Ci  k, ni=-0 Ci < k. This simply declares that the length n of the C
+
+1
+
+array is as short as possible while accounting for the k members of V that are nearest to t.
+
+
+Step 2 of KNS2 is implemented by the recursive function (nout,Cout) = NegCount(nin,Cin,Node,Dists) Assume that on entry that (nin,Cin) summarize interesting negative points for pointset V, where V is the set of points visited so far during the search. This algorithm efficiently ensures that on exit (nout,Cout) summarize interesting negative points for V Points(Node). Procedure NegCount (nin,Cin,Node,Dists) begin nout := nin; Cout := Cin T is the total number of negative points closer than the ninth positive point if (DNode  Distnin) then exit and return(nout,Cout)
+
+Let T = ni =0-1 in Ci in
+
+minp
+
+else if (Node is a leaf) x  Points(Node) Cout := Cout +1; T := T +1 Use binary search to find j  [0,nout], such that Distsj | x-t |< Distsj+1
+
+j j
+
+If T exceeds k, decrement nout until T = ni
+
+Distsnout+1 :=  if (nout = 0)exit and return(0, Cout) else if(Node is a non leaf) node1 := child of Node closest to t node2 := child of Node furthest from t
+
+=0-1 out Ci out < k.
+
+(ntemp,Ctemp) := NegCount(nin,Cin,node1,Dists) if (ntemp = 0) exit and return (0, Cout) (nout,Cout) := NegCount(ntemp,Ctemp,node2,Dists)
+
+end We can stop the procedure when nout becomes 0 (which means all the k nearest neighbors of t are in the negative class) or when we run out of nodes. The top-level call is NegCount(k,C0,NegTree.Root,Dists) where C0 is an array of zeroes and Dists are defined in Equation 6 and obtained by applying KNS1 to the (small) positive ball tree. 2.3 KNS3: Are at least q of the k nearest neighbors positive? Unfortunately, space constraints prevent us from describing the details of KNS3. KNS3 removes KNS2's constraint of an assumed skewedness in the class distribution, while introducing a new constraint: we answer the binary question "are at least q nearest neighbors positive?" (where the questioner must supply q). This is often the most statistically relevant question, for example during classification with known false positive and false negative costs. KNS3 will be described fully in a journal-article length version of the paper . 2.4 SVP1: Faster Radial Basis SVM Prediction After an SVM [3] has been trained we hit the prediction phase. Given a batch of query points q1,q2 ...qR we wish to classify each qj. Furthermore, in state-of-the-art training algorithms such as SMO, training time is dominated by SVM evaluation [12]. qj should be classified according to this rule:
+
+1
+
+ASUM(qj) =
+
+
+
+iposvecs
+
+iK(|qj -xi|) , BSUM(qj) =
+
+
+
+inegvecs
+
+iK(|qj -xi|) (7)
+
+1 available from www.autonlab.org
+
+
+Class(qj)
+
+= 1 = 0 if ASUM(qj)-BSUM(qj)  -b if ASUM(qj)-BSUM(qj) < -b
+
+Where the positive support vectors posvecs, the negative support vectors negvecs and the weights {i}, {i} and constant term b are all obtained from SVM training. We place the queries (not the support vectors) into a ball-tree. We can then apply the same kinds of tricks as KNS2 and KNS3 in which we do not need to find the explicit values of the ASUM and BSUM terms, but merely find balls in the tree in which we can prove all query points satisfy one of the above inequalities. To classify all the points in a node called Node we do the following: 1. Compute values (ASUMLO,ASUMHI) such that we can be sure qj  Node : ASUMLO  ASUM(qj)  ASUMHI (8) without iterating over the queries in Node. This is achieved simply, for example if qj  Node we know
+
+ASUM(qj)
+
+=  =
+
+
+
+iposvecs
+
+
+
+iposvecs
+
+iK(|qj -xi|) iK(|Node.pivot -xi|+Node.Radius)
+
+ASUMLO
+
+Similarly, ASUM(qj)
+
+=  =
+
+
+
+iposvecs
+
+
+
+iposvecs
+
+iK(|qj -xi|) iK(max(|Node.pivot -xi|-Node.Radius,0))
+
+ASUMHI
+
+under the assumption that the kernel function is a decreasing function of distance. This is true, for example, for Gaussian Radial Basis function kernels. 2. Similarly compute values (BSUMLO,BSUMHI). 3. If ASUMLO - BSUMHI  -b we have proved that all queries in Node should be classified positively, and we can terminate this recursive call. 4. If ASUMHI - BSUMLO < -b we have proved that all queries in Node should be classified negatively, and we can terminate this recursive call. 5. Else we recurse and apply the same procedure to the two children of Node, unless Node is a leaf node in which case we must explicitly iterate over its members. 3 Experimental Results Table 1 is a summary of the datasets in the empirical analysis. Life Sciences: These were proprietary datasets (ds1 and ds2) similar to the publicly available Open Compound Database provided by the National Cancer Institute (NCI Open Compound Database, 2000). The two datasets are sparse. We also present results on datasets derived from ds1, denoted ds1.10pca, ds1.100pca and ds2.100anchor by linear projection using principal component analysis (PCA). Link Detection: The first, Citeseer, is derived from the Citeseer web site (Citeseer,2002) and lists the names of collaborators on published materials. The goal is to predict whether J Lee ( the most common name) was a collaborator for each work based on who else is
+
+
+listed for that work. We use J Lee.100pca to represent the linear projection of the data to 100 dimensions using PCA. The second link detection dataset is derived from the Internet Movie Database (IMDB,2002) and is denoted imdb using a similar approach, but to predict the participation of Mel Blanc (again the most common participant). UCI/KDD data: We use three large datasets from KDD/UCI repository [2]. The datasets can be identified from their names. They were converted to binary classification problems. Each categorical input attribute was converted into n binary attributes by a 1-of-n encoding (where n is the attribute's arity).The post-processed versions of these datasets are at http://www.cs.cmu.edu/awm/kns 1. Letter originally had 26 classes: A-Z. We performed binary classification using the letter A as the positive class and "Not A" as negative. 2. Movie is a dataset from[11]. The TREC-2001 Video Track organized by NIST shot boundary Task. It is a 4 hours of video or 13 MPEG-1 video files at slightly over 2GB of data. 3. Ipums (from ipums.la.97). We predict farm status, which is binary. 4. Kdd99(10%) has a binary prediction: Normal vs. Attack. Table 1: Datasets
+
+Dataset ds1 Num. records 26733 Dataset ds1.10pca Num. records 26733
+
+ds1.100pca 26733
+
+ds2 Letter Movie Ipums 88358 20000 38943 70187
+
+Num. Dimensions 6348 100 1100000 16 62 60 Num. pos. 804 804 211 790 7620 119
+
+ds2.100anchor 88358
+
+J Lee.100pca Blanc Mel Kdd99(10%) 181395 186414 494021
+
+Num. Dimensions 10 100 100 10 176 Num. pos. 804 211 299 824 97278
+
+For each dataset, we tested k = 9 and k = 101. For KNS3, we used q = k/2 when k = 9 and q = pk/(n+p) when k = 101, where p = Num.positive in the dataset and n = Num.negative in the dataset. : a datapoint is classified as positive iff the majority of its k nearest neighbors are positive. Each experiment performed 10-fold cross-validation. Thus, each experiment required R k-NN classification queries (where R is the number of records in the dataset) and each query involved the k-NN among 0.9R records. A naive implementation with no ball-trees would thus require 0.9R2 distance computations.These algorithms are all exact. No approximations were used in the classifications. Table 2 shows the computational cost of naive k-NN, both in terms of the number of distance computations and the wall-clock time on an unloaded 2 GHz Pentium. We then examine the speedups of KNS1 (traditional use of Ball-trees) and our two new Ball-tree methods (KNS2 and KNS3). It is notable that for some high dimensional datasets, KNS1 does not produce an acceleration over naive. KNS2 and KNS3 do, however, and in some cases they are hundreds of times faster than KNS1. The ds2 result is particularly interesting because it involves data in over a million dimensions. The first thing to notice is that conventional ball-trees (KNS1) were slightly worse than the naive O(R2) algorithm. In only one case was KNS2 inferior to naive and KNS3 was always superior. On some datasets KNS2 and KNS3 gave dramatic speedups. Table 3 gives results for SVP1, the Ball-tree-based accelerator for SVM prediction2 In general SVP1 appears to be 2-4 times faster than SVMlight[12], with two far more dramatic speedups in the case of two classification tasks where SVP1 quickly realizes that a large node near the top of its query tree can be pruned as negative. As with previous results, SVP1 is exact, and all predictions agree with SVM-Light. All these experiments used Radial Basis kernels, with kernel width tuned for optimal test-set performance.
+
+2 Because training SVMs is so expensive, some of the results below used reduced training sets.
+
+
+Table 2: Number of distance computations and wall-clock-time for Naive k-NN classification (2nd column). Acceleration for normal use of ball-trees in col, 2 (in terms of num. distances and time). Accelerations of new methods KNS2 and KNS3 in other columns. Naive times are independent of k.
+
+ds1
+
+k=9 k=101
+
+ds1.10pca k=9 k=101 ds1.100pcak=9 k=101
+
+ds2 ds2.100-
+
+k=9 k=101 k=9 k=101
+
+J Lee.100- k=9 k=101 Blanc Melk=9 k=101
+
+Letter Movie Ipums
+
+k=9 k=101 k=9 k=101 k=9 k=101
+
+Kddcup99 k=9 (10%) k=101
+
+NAIVE dists 6.4×108 6.4×108 6.4×108 8.5×109 7.0×109 3.6×1010 3.8×1010 3.6×108 1.4×109 4.4×109 2.7×1011
+
+time (secs) 4830 420 2190 105500 24210 142000 44300 290 3100 9520 1670000
+
+KNS1 dists speedup 1.6 1.0 11.8 4.6 1.7 0.97 0.64 0.61 15.8 10.9 2.6 2.2 3.0 2.9 8.5 3.5 16.1 9.1 195 69.1 4.2 4.2
+
+time speedup 1.0 0.7 11.0 3.4 1.8 1.0 0.24 0.24 14.3 14.3 2.4 1.9 3.0 3.1 7.1 2.6 13.8 7.7 136 50.4 4.2 4.2
+
+KNS2 dists speedup 4.7 1.6 33.6 6.5 7.6 1.6 14.0 2.4 185.3 23.0 28.4 12.6 47.5 7.1 42.9 9.0 29.8 10.5 665 144.6 574 187.7
+
+time speedup 3.1 1.1 21.4 4.0 7.4 1.6 2.8 0.83 144 19.4 27.2 11.6 60.8 33 26.4 5.7 24.8 8.1 501 121 702 226.2
+
+KNS3 dists speedup 12.8 10 71 40 23.7 16.4 25.6 28.7 580 612 15.6 37.4 51.9 203 94.2 45.9 50.5 33.3 1003 5264 4 3.9
+
+time speedup 5.8 4.2 20 6.1 29.6 6.8 3.0 3.3 311 248 12.6 27.2 60.7 134.0 25.5 9.4 22.4 11.6 515 544 4.1 3.9
+
+Table 3: Comparison between SVM light and SVP1. We show the total number of distance computations made during the prediction phase for each method, and total wall-clock time.
+
+ds1 ds1.10pca ds1.100pca ds2.100pca J Lee.100pca Blanc Mel Letter Ipums Movie Kddcup99(10%)
+
+SVM light distances 6.4×107 6.4×107 6.4×107 7.0×108 6.4×106 1.2×108 2.6×107 1.9×108 1.4×108 6.3×106 SVP1 distances 1.8×107 1.8×107 2.3×107 1.4×108 2×106 3.6×107 1×107 7.7×104 4.4×107 2.8×105 SVM light seconds 394 60 259 2775 31 61 21 494 371 69 SVP1 seconds 171 23 92 762 7 26 11 1 136 1 speedup 2.3 2.6 2.8 3.6 4.4 2.3 1.9 494 2.7 69
+
+4 Comments and related work Applicability of other proximity query work. For the problem of "find the k nearest datapoints" (as opposed to our question of "perform k-NN or Kernel classification") in high dimensions, the frequent failure of traditional ball trees to beat naive has lead to some innovative alternatives, based on random projections, hashing discretized cubes, and acceptance of approximate answers. For example [7] gives a hashing method that was demonstrated to provide speedups over a ball-tree-based approach in 64 dimensions by a factor of 2-5 depending on how much error in the approximate answer was permitted. Another approximate k-NN idea is in [1], one of the first k-NN approaches to use a priority queue of nodes, in this case achieving a 3-fold speedup with an approximation to the true k-NN. However, these approaches are based on the notion that any points falling within a factor of (1+) times the true nearest neighbor distance are acceptable substitutes for the true nearest neighbor. Noting in particular that distances in high-dimensional spaces tend to occupy a decreasing range of continuous values [10], it remains an open question whether schemes based upon the absolute values of the distances rather than their ranks are relevant to the
+
+
+classification task. Our approach, because it need not find the k-NN to answer the relevant statistical question, finds an answer without approximation. The fact that our methods are easily modified to allow (1 + ) approximation in the manner of [1] suggests an obvious avenue for future research. References [1] S. Arya, D. Mount, N. Netanyahu, R. Silverman, and A. Wu. An optimal algorithm for approximate nearest neighbor searching fixed dimensions. Journal of the ACM, 45(6):891­923, 1998. [2] S. D. Bay. UCI KDD Archive [http://kdd.ics.uci.edu]. Irvine, CA: University of California, Dept of Information and Computer Science, 1999. [3] C. Burges. A tutorial on Support Vector Machines for Pattern Recognition. Data Mining and Knowledge Discovery, 2(2):955­974, 1998. [4] P. Ciaccia, M. Patella, and P. Zezula. M-tree: An efficient access method for similarity search in metric spaces. In Proceedings of the 23rd VLDB International Conference, September 1997. [5] K. Deng and A. W. Moore. Multiresolution Instance-based Learning. In Proceedings of the Twelfth International Joint Conference on Artificial Intelligence, pages 1233­1239, San Francisco, 1995. Morgan Kaufmann. [6] J. H. Friedman, J. L. Bentley, and R. A. Finkel. An algorithm for finding best matches in logarithmic expected time. ACM Transactions on Mathematical Software, 3(3):209­226, September 1977. [7] A. Gionis, P. Indyk, and R. Motwani. Similarity Search in High Dimensions via Hashing. In Proc 25th VLDB Conference, 1999. [8] A. Gray and A. W. Moore. N-Body Problems in Statistical Learning. In Todd K. Leen, Thomas G. Dietterich, and Volker Tresp, editors, Advances in Neural Information Processing Systems 13 (December 2000). MIT Press, 2001. [9] A. Guttman. R-trees: A dynamic index structure for spatial searching. In Proceedings of the Third ACM SIGACT-SIGMOD Symposium on Principles of Database Systems. Assn for Computing Machinery, April 1984. [10] J. M. Hammersley. The Distribution of Distances in a Hypersphere. Annals of Mathematical Statistics, 21:447­452, 1950. [11] CMU informedia digital video library project. The trec-2001 video trackorganized by nist shot boundary task, 2001. [12] T. Joachims. Making large-scale support vector machine learning practical. In A. Smola B. Sch¨olkopf, C. Burges, editor, Advances in Kernel Methods: Support Vector Machines. MIT Press, Cambridge, MA, 1998. [13] A. W. Moore. The Anchors Hierarchy: Using the Triangle Inequality to Survive HighDimensional Data. In Twelfth Conference on Uncertainty in Artificial Intelligence. AAAI Press, 2000. [14] S. M. Omohundro. Efficient Algorithms with Neural Network Behaviour. Journal of Complex Systems, 1(2):273­347, 1987. [15] S. M. Omohundro. Bumptrees for Efficient Function, Constraint, and Classification Learning. In R. P. Lippmann, J. E. Moody, and D. S. Touretzky, editors, Advances in Neural Information Processing Systems 3. Morgan Kaufmann, 1991. [16] D. Pelleg and A. W. Moore. Accelerating Exact k-means Algorithms with Geometric Reasoning. In Proceedings of the Fifth International Conference on Knowledge Discovery and Data Mining. ACM, 1999. [17] F. P. Preparata and M. Shamos. Computational Geometry. Springer-Verlag, 1985. [18] J. K. Uhlmann. Satisfying general proximity/similarity queries with metric trees. Information Processing Letters, 40:175­179, 1991. [19] W. Zheng and A. Tropsha. A Novel Variable Selection QSAR Approach based on the K-Nearest Neighbor Principle. J. Chem. Inf.Comput. Sci., 40(1):185­194, 2000.
+
+

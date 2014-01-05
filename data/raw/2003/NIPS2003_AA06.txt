@@ -1,0 +1,154 @@
+Learning a Distance Metric from Relative Comparisons
+
+Matthew Schultz and Thorsten Joachims Department of Computer Science Cornell University Ithaca, NY 14853 {schultz,tj}@cs.cornell.edu
+
+Abstract This paper presents a method for learning a distance metric from relative comparison such as "A is closer to B than A is to C". Taking a Support Vector Machine (SVM) approach, we develop an algorithm that provides a flexible way of describing qualitative training data as a set of constraints. We show that such constraints lead to a convex quadratic programming problem that can be solved by adapting standard methods for SVM training. We empirically evaluate the performance and the modelling flexibility of the algorithm on a collection of text documents.
+
+1 Introduction Distance metrics are an essential component in many applications ranging from supervised learning and clustering to product recommendations and document browsing. Since designing such metrics by hand is difficult, we explore the problem of learning a metric from examples. In particular, we consider relative and qualitative examples of the form "A is closer to B than A is to C". We believe that feedback of this type is more easily available in many application setting than quantitative examples (e.g. "the distance between A and B is 7.35") as considered in metric Multidimensional Scaling (MDS) (see [4]), or absolute qualitative feedback (e.g. "A and B are similar", "A and C are not similar") as considered in [11]. Building on the study in [7], search-engine query logs are one example where feedback of the form "A is closer to B than A is to C" is readily available for learning a (more semantic) similarity metric on documents. Given a ranked result list for a query, documents that are clicked on can be assumed to be semantically closer than those documents that the user observed but decided to not click on (i.e. "Aclick is closer to Bclick than Aclick is to Cnoclick"). In contrast, drawing the conclusion that "Aclick and Cnoclick are not similar" is probably less justified, since a Cnoclick high in the presented ranking is probably still closer to Aclick than most documents in the collection. In this paper, we present an algorithm that can learn a distance metric from such relative and qualitative examples. Given a parametrized family of distance metrics, the algorithms discriminately searches for the parameters that best fulfill the training examples. Taking a maximum-margin approach [9], we formulate the training problem as a convex quadratic
+
+
+program for the case of learning a weighting of the dimensions. We evaluate the performance and the modelling flexibility of the algorithm on a collection of text documents. The notation used throughout this paper is as follows. Vectors are denoted with an arrow x where xi is the ith entry in vector x. The vector 0 is the vector composed of all zeros, and 1 is the vector composed of all ones. xT is the transpose of vector x and the dot product is denoted by xT y. We denote the element-wise product of two vectors x = (x1, ..., xn)T and y = (y1, ..., yn)T as x  y = (x1y1, ..., xnyn)T . 2 Learning from Relative Qualitative Feedback
+
+We consider the following learning setting. Given is a set Xtrain of objects xi  N . As
+
+training data, we receive a subset Ptrain of all potential relative comparisons defined over the set Xtrain. Each relative comparison (i, j, k)  Ptrain with xi, xj, xk  Xtrain has the semantic xi is closer to xj than xi is to xk. The goal of the learner is to learn a weighted distance metric dw(·, ·) from Ptrain and Xtrain that best approximates the desired notion of distance on a new set of test points Xtest, Xtrain  Xtest = . We evaluate the performance of a metric dw(·, ·) by how many relative comparisons Ptest it fulfills on the test set.
+
+3 Parameterized Distance Metrics A (pseudo) distance metric d(x, y) is a function over pairs of objects x and y from some set X. d(x, y) is a pseudo metric, iff it obeys the four following properties for all x, y, and z: d(x, x) = 0, d(x, y) = d(y, x), d(x, y)  0, d(x, y) + d(y, z)  d(x, z)
+
+It is a metric, iff it also obeys d(x, y) = 0  x = y. In this paper, we consider a distance metric dA,W (x, y) between vectors x, y  eterized by two matrices, A and W. dA,W (x, y) = (x - y)T AW AT (x - y)
+
+N param-
+
+(1)
+
+W is a diagonal matrix with non-negative entries and A is any real matrix. Note that the matrix AWAT is semi-positive definite so that dA,W (x, y) is a valid distance metric. This parametrization is very flexible. In the simplest case, A is the identity matrix, I, and dI,W (x, y) = (x - y)T IW IT (x - y) = (x - y)T W (x - y) is a weighted, Euclidean distance dI,W (x, y) = Wii(xi - yi)2. In a general case, A can be any real matrix. This corresponds to applying a linear transformation to the input data with the matrix A. After the transformation, the distance becomes a Euclidean distance on the transformed input points AT x, AT y. dA,W (x, y) = ((x - y)T A)W (AT (x - y)) (2) The use of kernels K(x, y) = (x)(y) suggests a particular choice of A. Let  be the matrix where the i-th column is the (training) vector xi projected into a feature space using
+
+i
+
+
+the function (xi). Then d,W ((x), (y))
+
+= (((x) - (y))T )W (T ((x) - (y)))
+
+n
+
+(3)
+
+= is a distance metric in the feature space. Wii(K(x, xi) - K(y, xi))2 (4)
+
+i=1
+
+4 An SVM Algorithm for Learning from Relative Comparisons Given a training set Ptrain of n relative comparisons over a set of vectors Xtrain, and the matrix A, we aim to fit the parameters in the diagonal matrix W of distance metric dA,W (x, y) so that the training error (i.e. the number of violated constraints) is minimized. Finding a solution of zero training error is equivalent to finding a W that fulfills the following set of constraints. (i,j,k)  Ptrain : dA,W(xi,xk) - dA,W(xi,xj) > 0 (5) If the set of constraints is feasible and a W exists that fulfills all constraints, the solution is typically not unique. We aim to select a matrix AWAT such that dA,W (x, y) remains as close to an unweighted Euclidean metric as possible. Following [8], we minimize the norm of the eigenvalues ||||2 of AWAT . Since ||||2 = ||AWAT ||2F , this leads to the following optimization problem.
+
+min s.t.
+
+1 ||AW 2 AT ||F 2
+
+(i,j,k)Ptrain: (xi-xk)TAWAT(xi-xk) - (xi-xj)TAWAT(xi-xj)  1 Wii  0
+
+Unlike in [8], this formulation ensures that dA,W (x, y) is a metric, avoiding the need for semi-definite programming like in [11]. As in classification SVMs, we add slack variables [3] to account for constraints that cannot be satisfied. This leads to the following optimization problem.
+
+min s.t.
+
+1 ||AW 2 AT ||F + C 2 ijk
+
+i,j,k
+
+(i,j,k)Ptrain: (xi-xk)TAWAT(xi-xk) - (xi-xj)TAWAT(xi-xj)  1 - ijk ijk  0 Wii  0
+
+The sum of the slack variables ijk in the objective is an upper bound on the number of violated constraints. All distances dA,W (x, y) can be written in the following linear form. If we let w be the diagonal elements of W then the distance dA,W can be written as
+
+dA,W (x, y)
+
+= = ((x - y)T A)W (AT (x - y)) wT (AT x - AT y)  (AT x - AT y)
+
+(6)
+
+where  denotes the element-wise product. If we let xi,xj = (AT xi - AT xk)  (AT xi - AT xk), then the constraints in the optimization problem can be rewritten in the following linear form. (i,j,k)  Ptrain : wT(xi,xk - xi,xk)  1 - ijk (7)
+
+
+1a) 1b)
+
+2a) 2b)
+
+Figure 1: Graphical example of using different A matrices. In example 1, A is the identity matrix and in example 2 A is composed of the training examples projected into high dimensional space using an RBF kernel.
+
+Furthermore, the objective function is quadratic, so that the optimization problem can be written as
+
+min s.t.
+
+1 2 wT Lw + C ijk
+
+i,j,k
+
+(i,j,k)  Ptrain : wT(xi,xk - xi,xj)  1 - ijk ijk  0 Wii  0
+
+(8)
+
+For the case of A = I, ||AWAT ||2F = wT Lw with L = I. For the case of A = , we define L = (AT A)  (AT A) so that ||AWAT ||2F = wT Lw. Note that L is positive semidefinite in both cases and that, therefore, the optimization problem is convex quadratic. 5 Experiments In Figure 1, we display a graphical example of our method. Example 1 is an example of a weighted Euclidean distance. The input data points are shown in 1a) and our training constraints specify that the distance between two square points should be less than the distance to a circle. Similarly, circles should be closer to each other than to squares. Figure 1 (1b) shows the points after an MDS analysis with the learned distance metric as input. This learned distance metric intuitively correponds to stretching the x-axis and shrinking the y-axis in the original input space. Example 2 in Figure 1 is an example where we have a similar goal of grouping the squares together and separating them from the circles. In this example though, there is no way to use a linear weighting measure to accomplish this task. We used an RBF kernel and learned a distance metric to separate the clusters. The result is shown in 2b. To validate the method using a real world example, we ran several experiments on the WEBKB data set [5]. In order to illustrate the versatility of relative comparisons, we generated three different distance metrics from the same data set and ran three types of tests: an accuracy test, a learning curve to show how the method generalizes from differing amounts of training data, and an MDS test to graphically illustrate the new distance measures. The experimental setup for each of the experiments was the same. We first split X, the set of all 4,183 documents, into separate training and test sets, Xtrain and Xtest. 70% of the
+
+
+all examples X added to Xtrain and the remaining 30% are in Xtest. We used a binary feature vector without stemming or stop word removal (63,949 features) to represent each document because it is the least biased distance metric to start out with. It also performed best among several different variations of term weighting, stemming and stopword removal. The relative comparison sets, Ptrain and Ptest, were generated as follows. We present results for learning three different notions of distance. · University Distance: This distance is small when the two examples, x,y, are from the same university and larger otherwise. For this data set we used webpages from seven universities. · Topic Distance: This distance metric is small when the two examples, x,y, are from the same topic (e.g. both are student webpages) and larger when they are each from a different topic. There are four topics: Student, Faculty, Course and Project webpages. · Topic+FacultyStudent Distance: Again when two examples, x,y, are from the same topic then they have a small distance between them and a larger distance when they come from different topics. However, we add the additional constraint that the distance between a faculty and a student page is smaller than the distance to pages from other topics. To build the training constraints, Ptrain, we first randomly selected three documents, xi, xj, xk, from Xtrain. For the University Distance we added the triplet (i, j, k) to Ptrain if xi and xj were from the same university and xk was from a different university. In building Ptrain for the Topic Distance we added the (i, j, k) to Ptrain if xi and xj were from the same topic (e.g. "Student Webpages") and xk was from a different topic (e.g. "Project Webpages"). For the Topic+FacultyStudent Distance, the training triple (i, j, k) was added to Ptrain if either the topic rule occurred, when xi and xj were from the same topic and xk was from a different topic, or if xi was a faculty webpage, xj was a student webpage and xk was either a project or course webpage. Thus the constraints would specify that a student webpage is closer to a faculty webpage than a faculty webpage is to a course webpage.
+
+University Distance Topic Distance Topic+FacultyStudent Distance
+
+Learned dw(·, ·) 98.43% 75.40% 79.67% Binary 67.88% 61.82% 63.08% TFIDF 80.72% 55.57% 55.06%
+
+Table 1: Accuracy of different distance metrics on an unseen test set Ptest. The results of the learned distance measures on unseen test sets Ptest are reported in Table 1. In each experiment the regularization parameter C was set to 1 and we used A = I. We report the percentage of the relative comparisons in Ptest that were satisfied for each of the three experiments. As a baseline for comparison, we give the results for the static (not learned) distance metric that performs best on the test set. The best performing metric for all static Euclidean distances (Binary and TFIDF) used stemming and stopword removal, which our learned distance did not use. The learned University Distance satisfied 98.43% of the constraints. This verifies that the learning method can effectively find the relevant features, since pages usually mentioned which university they were from. For the other distances, both the Topic Distance and Topic+FacultyStudent Distance satisfied more than 13% more constraints in Ptest than the best unweighted distance. Using a kernel instead of A = I did not yield improved results. For the second test, we illustrate on the Topic+FacultyStudent data set how the prediction accuracy of the method scales with the number of training constraints. The learning curve
+
+
+Satisfied
+
+Constraints
+
+Set
+
+Test
+
+of
+
+0.8 0.75 0.7 0.65 0.6 0.55 0.5
+
+Learned Distance Binary L2 TFIDF L2
+
+Percent 0 50 100 150 200 250
+
+Size of Training Set in Thousands of Constraints
+
+Figure 2: Learning curves for the Topic+FacultyStudent dataset where the x axis is the size of the training set Ptrain plotted against the y axis which is the percent of constraints in Ptest that were satisfied.
+
+is shown in Figure 2 where we plot the training set size (in number of constraints) versus the percentage of test constraints satisfied. The test set Ptest was held constant and sampled in the same way as the training set (|Ptest| = 85,907). As Figure 2 illustrates, after the data set contained more than 150,000 constraints, the performance of the algorithm remained relatively constant. As a final test of our method, we graphically display our distance metrics in Table 7. We plot three distance metrics: The standard binary distance (Figure a) for the Topic Distance, the learned metric for Topic Distance (Figure b) and, and the learned metric for the Topic+FacultyStudent Distance (Figure c). To produce the plots in Table 7, all pairwise distances between the points in Xtest were computed and then projected into 2D using a classical, metric MDS algorithm [1]. Figure a) in Table 7 is the result of using the pairwise distances resulting from the unweighted, binary L2 norm in MDS. There is no clear distinction between any of the clusters in 2 dimensions. In Figure b) we see the results of the learned Topic Distance measure. The classes were reasonably separated from each other. Figure c) shows the result of using the learned Topic+FacultyStudent Distance metric. When compared to Figure b), the Faculty and Student webpages have now moved closer together as desired. 6 Related Work The most relevant related work is the work of Xing et al [11] which focused on the problem of learning a distance metric to increase the accuracy of nearest neighbor algorithms. Their work used absolute, qualitative feedback such as "A is similar to B" or "A is dissimilar to B" which is different from the relative constraints considered here. Secondly, their method does not use regularization. Related are also techniques for semi-supervised clustering, as it is also considered in [11]. While [10] does not change the distance metric, [2] uses gradient descent to adapt a parameterized distance metric according to user feedback. Other related work are dimension reduction techniques such as Multidimensional Scaling (MDS) [4] and Latent Semantic Indexing [6]. Metric MDS techniques take as input a matrix D of dissimilarities (or similarities) between all points in some collection and then seeks to arrange the points in a d-dimensional space to minimize the stress. The stress of the
+
+
+arrangement is roughly the difference between the distances in the d-dimensional space and the distances input in matrix D. LSI uses an eigenvalue decomposition of the original input space to find the first d principal eigenvectors to describe the data in d dimensions. Our work differs because the input is a set of relative comparisons, not quantitative distances and does not project the data into a lower dimensional space. Non-metric MDS is more similar to our technique than metric MDS. Instead of preserving the exact distances input, the non-metric MDS seeks to maintain the rank order of the distances. However, the goal of our method is not a low dimensional projection, but a new distance metric in the original space. 7 Conclusion and Future Work In this paper we presented a method for learning a weighted Euclidean distance from relative constraints. This was accomplished by solving a convex optimization problem similar to SVMs to find the maximum margin weight vector. One of the main benefits of the algorithm is that the new type of the constraint enables its use in a wider range of applications than conventional methods. We evaluated the method on a collection of high dimensional text documents and showed that it can successfully learn different notions of distance. Future work is needed both with respect to theory and application. In particular, we do not yet know generalization error bounds for this problem. Furthermore, the power of the method would be increased, if it was possible to learn more complex metrics that go beyond feature weighting, for example by incorporating kernels in a more adaptive way. References [1] A. Buja, D. Swayne, M. Littman, and N. Dean. Xgvis: Interactive data visualization with multidimensional scaling. Journal of Computational and Graphical Statistics, to appear. [2] D. Cohn, R. Caruana, and A. McCallum. Semi-supervised clustering with user feedback. Technical Report TR2003-1892, Cornell University, 2003. [3] Corinna Cortes and Vladimir Vapnik. Support-vector networks. Machine Learning, 20(3):273­297, 1995. [4] T. Cox and M. Cox. Multidimensional Scaling. Chapman & Hall, London, 1994. [5] M. Craven, D. DiPasquo, D. Freitag, A. McCallum, T. Mitchell, K. Nigam, and S. Slattery. Learning to extract symbolic knowledge from the world wide web. Proceedings of the 15th National Conference on Artificial Intelligence (AAAI-98), 1998. [6] Scott C. Deerwester, Susan T. Dumais, Thomas K. Landauer, George W. Furnas, and Richard A. Harshman. Indexing by latent semantic analysis. Journal of the American Society of Information Science, 41(6):391­407, 1990. [7] T. Joachims. Optimizing search engines using clickthrough data. Proceedings of the ACM Conference on Knowledge Discovery and Data Mining (KDD), 2002. [8] I.W. Tsang and J.T. Kwok. Distance metric learning with kernels. Proceedings of the International Conference on Artificial Neural Networks, 2003. [9] V. Vapnik. Statistical Learning Theory. Wiley, Chichester, GB, 1998. [10] Kiri Wagstaff, Claire Cardie, Seth Rogers, and Stefan Schroedl. Constrained K-means clustering with background knowledge. In Proc. 18th International Conf. on Machine Learning, pages 577­584. Morgan Kaufmann, San Francisco, CA, 2001. [11] E.P. Xing, A.Y. Ng, M.I. Jordan, and S. Russell. Distance metric learning, with application to clustering with side information. Advances in Neural Information Processing Systems, 2002.
+
+
+a)
+
+3 2 1 0 -1 -2 -3 Course Project Student Faculty
+
+b)
+
+-2.5 -2 -1.5 -1 -0.5 0 0.5 1 1.5 2 2.5 3 2 1 0 -1 -2 Course
+
+-3 -4
+
+-3 -2 -1 0 1
+
+Project Student Faculty 2
+
+3
+
+c)
+
+3 2 1 0 -1 -2 -3 -4
+
+-2 -1 0 1 2
+
+Course Project Student Faculty 3
+
+4
+
+Table 2: MDS plots of distance functions: a) is the unweighted L2 distance, b) is the Topic Distance, and c) is the Topic+FacultyStudent distance.
+
+

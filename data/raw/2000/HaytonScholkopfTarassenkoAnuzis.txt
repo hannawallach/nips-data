@@ -1,0 +1,403 @@
+Support Vector Novelty Detection
+Applied to Jet Engine Vibration Spectra
+Paul Hayton
+Department of Engineering Science
+University of Oxford, UK
+pmh@robots.ox.ac.uk
+Bernhard Sch˜ olkopf
+Microsoft Research
+1 Guildhall Street, Cambridge, UK
+bsc@scientist.com
+Lionel Tarassenko
+Department of Engineering Science
+University of Oxford, UK
+lionel@robots.ox.ac.uk
+Paul Anuzis
+Rolls­Royce Civil Aero­Engines
+Derby, UK
+Abstract
+A system has been developed to extract diagnostic information from jet
+engine carcass vibration data. Support Vector Machines applied to nov­
+elty detection provide a measure of how unusual the shape of a vibra­
+tion signature is, by learning a representation of normality. We describe
+a novel method for Support Vector Machines of including information
+from a second class for novelty detection and give results from the appli­
+cation to Jet Engine vibration analysis.
+1 Introduction
+Jet engines have a number of rigorous pass­off tests before they can be delivered to the
+customer. The main test is a vibration test over the full range of operating speeds. Vibration
+gauges are attached to the casing of the engine and the speed of each shaft is measured
+using a tachometer. The engine on the test bed is slowly accelerated from idle to full
+speed and then gradually decelerated back to idle. As the engine accelerates, the rotation
+frequency of the two (or three) shafts increases and so does the frequency of the vibrations
+caused by the shafts. A tracked order is the amplitude of the vibration signal in a narrow
+frequency band centered on a harmonic of the rotation frequency of a shaft, measured as
+a function of engine speed. It tracks the frequency response of the engine to the energy
+injected by the rotating shaft. Although there are usually some harmonics present, most
+of the energy in the vibration spectrum is concentrated in the fundamental tracked orders.
+These therefore constitute the ``vibration signature'' of the jet engine under test. It is very
+important to detect departures from the normal or expected shapes of these tracked orders
+as this provides very useful diagnostic information (for example, for the identification of
+out­of­balance conditions).
+The detection of such abnormalities is ideally suited to the novelty detection paradigm for
+several reasons. Usually, there are far fewer examples of abnormal shapes than normal
+ones and often there may only be a single example of a particular type of abnormality in
+
+the available database. More importantly, the engine under test may show up a type of
+abnormality which has never been seen before but which should not be missed. This is
+especially important in our current work where we are adapting the techniques developed
+for pass­off tests to in­flight monitoring.
+With novelty detection, we first of all learn a description of normal vibration shapes by
+including only examples of normal tracked orders in the training data. Abnormal shapes
+in test engines are subsequently identified by testing for novelty against the description of
+normality.
+In our previous work [2], we investigated the vibration spectra of a two­shaft jet engine,
+the Rolls­Royce Pegasus. In the available database, there were vibration spectra recorded
+from 52 normal engines (the training data) and from 33 engines with one or more unusual
+vibration feature (the test data). The shape of the tracked orders was encoded as a low­
+dimensional vector by calculating a weighted average of the vibration amplitude over six
+different speed ranges (giving an 18­D vector for three tracked orders). With so few engines
+available, the K­means clustering algorithm (with K = 4) was used to construct a very
+simple model of normality, following component­wise normalisation of the 18­D vectors.
+The novelty of the vibration signature for a test engine was assessed as the shortest dis­
+tance to one of the kernel centres in the clustering model of normality (each distance being
+normalised by the width associated with that kernel). When cumulative distributions of
+novelty scores were plotted both for normal (training) engines and test engines, there was
+little overlap found between the two distributions [2]. A significant shortcoming of the
+method, however, is the inability to rank engines according to novelty, since the shortest
+normalised distance is evaluated with respect to different cluster centres for different en­
+gines. In this paper, we re­visit the problem but for a new engine, the RB211­535. We argue
+that the SVM paradigm is ideal for novelty detection, as it provides an elegant distribution
+of normality, a direct indication of the patterns on the boundary of normality (the support
+vectors) and, perhaps most importantly, a ranking of ``abnormality'' according to distance
+to the separating hyperplane in feature space.
+2 Support Vector Machines for Novelty Detection
+Suppose we are given a set of ``normal'' data points X = fx 1 ; : : : ; x ` g. In most novelty
+detection problems, this is all we have; however, in the following we shall develop an
+algorithm that is slightly more general in that it can also take into account some examples
+of abnormality, Z = fz 1 ; : : : ; z t g. Our goal is to construct a real­valued function which,
+given a previously unseen test point x, charaterizes the ``X­ness'' of the point x, i.e. which
+takes large values for points similar to those in X. The algorithm that we shall present
+below will return such a function, along with a threshold value, such that a prespecified
+fraction of X will lead to function values above threshold. In this sense we are estimating
+a region which captures a certain probability mass.
+The present approach employs two ideas from support vector machines [6] which are cru­
+cial for their fine generalization performance even in high­dimensional tasks: maximizing
+a margin, and nonlinearly mapping the data into some feature space F endowed with a dot
+product. The latter need not be the case for the input domain X which may be a general set.
+The connection between the input domain and the feature space is established by a feature
+map \Phi : X ! F; i.e. a map such that some simple kernel [1, 6]
+k(x; y) = (\Phi(x) \Delta \Phi(y)); (1)
+such as the Gaussian
+k(x; y) = e \Gammakx\Gammayk 2 =c ; (2)
+
+provides a dot product in the image of \Phi. In practice, we need not necessarily worry about
+\Phi, as long as a given k satisfies certain positivity conditions [6].
+As F is a dot product space, we can use tools of linear algebra and geometry to construct
+algorithms in F , even if the input domain X is discrete. Below, we derive our results in F ,
+using the following shorthands:
+x i = \Phi(x i ); z n = \Phi(z n ) (3)
+X = fx 1 ; : : : ; x ` g; Z = fz 1 ; : : : ; z t g (4)
+Indices i and j are understood to range over 1; : : : ; ` (in compact notation: i; j 2 [`]), sim­
+ilarly, n; p 2 [t]. Bold face greek letters denote `­dimensional vectors whose components
+are labelled using normal face typeset.
+In analogy to an algorithm recently proposed for the estimation of a distribution's sup­
+port [5], we seek to separate X from the centroid of Z with a large margin hyperplane
+committing few training errors. Projections on the normal vector of the hyperplane then
+characterize the ``X­ness'' of test points, and the area where the decision function takes the
+value 1 can serve as an approximation of the support of X . While X is the set of normal
+examples, the (possibly empty) set Z thus only plays the role of, in some weak and possibly
+imprecise sense, modeling what the unknown ``other'' examples might look like.
+The decision function is found by minimizing a weighted sum of a support vector type
+regularizer and an empirical error term depending on an overall margin variable ae and
+individual errors ¸ i ,
+min
+w2F;¸2R ` ;ae2R
+1
+2
+kwk 2 + 1
+š`
+P
+i ¸ i \Gamma ae (5)
+subject to (w \Delta (x i \Gamma 1
+t
+P
+n z n )) – ae \Gamma ¸ i ; ¸ i – 0: (6)
+The precise meaning of the parameter š governing the trade­off between the regularizer and
+the training error will become clear later. Since nonzero slack variables ¸ i are penalized in
+the objective function, we can expect that if w and ae solve this problem, then the decision
+function
+f(x) = sgn((w \Delta (x \Gamma 1
+t
+X
+n
+z n )) \Gamma ae) (7)
+will be positive for many examples x i contained in X , while the SV type regularization
+term kwk will still be small. This can be shown to correspond to a large margin of separa­
+tion from 1
+t
+P
+n z n .
+We next compute a dual form of this optimization problem. The details of the calculation,
+which uses standard techniques of constrained optimization, can be found in [4]. We in­
+troduce a Lagrangian and set the derivatives with respect to w equal to zero, yielding in
+particular
+w =
+X
+i
+ff i (x i \Gamma 1
+t
+X
+n
+z n ): (8)
+All patterns fx i : i 2 [`]; ff i ? 0g are called Support Vectors. The expansion (8)
+turns the decision function (7) into a form which only depends on dot prducts, f(x) =
+sgn((
+P
+i ff i (x i \Gamma 1
+t
+P
+n z n ) \Delta (x \Gamma 1
+t
+P
+n z n )) \Gamma ae): By multiplying out the dot prod­
+ucts, we obtain a form that can be written as a nonlinear decision function on the in­
+put domain X in terms of a kernel (1) (cf. (3)). A short calculation yields f(x) =
+sgn
+i P
+i ff i k(x i ; x) \Gamma 1
+t
+P
+n k(zn ; x) + 1
+t 2
+P
+np k(z n ; z p ) \Gamma 1
+t
+P
+in ff i k(z n ; x i ) \Gamma ae
+j
+: In
+the argument of the sgn, only the first two terms depend on x, therefore we may absorb the
+
+next terms in the constant ae, which we have not fixed yet. To compute ae in the final form
+of the decision function
+f(x) = sgn
+/ X
+i
+ff i k(x i ; x) \Gamma 1
+t
+X
+n
+k(z n ; x) \Gamma ae
+!
+; (9)
+we employ the Karush­Kuhn­Tucker (KKT) conditions of the optimization problem [6,
+e.g.]. They state that for points x i where 0 ! ff i ! 1=(š`), the inequality constraints
+(6) become equalities (note that in general, ff i 2 [0; 1=(š`)]), and the argument of the
+sgn in the decision function should equal 0, i.e. the corresponding x i sits exactly on the
+hyperplane of separation.
+The KKT conditions also imply that only those points x i can have a nonzero ff i for which
+the first inequality constraint in (6) is precisely met; therefore the support vectors x i with
+ff i ? 0 will often form but a small subset of X.
+Substituting (8) (the derivative of the Lagrangian by w) and the corresponding conditions
+for ¸ and ae into the Lagrangian, we can eliminate the primal variables to get the dual
+problem. A short calculation shows that it consists of minimizing the quadratic form
+W (ff) =
+1
+2
+X
+ij
+ff i ff j (k(x i ; x j ) + q \Gamma q j \Gamma q i ) ; (10)
+where q = 1
+t 2
+P
+np k(z n ; z p ) and q j = 1
+t
+P
+n k(x j ; zn ), subject to the constraints
+0 Ÿ ff i Ÿ 1=(š`);
+X
+i
+ff i = 1: (11)
+This convex quadratic program can be solved with standard quadratic programming tools.
+Alternatively, one can employ the SMO algorithm described in [3], which was found to
+approximately scale quadratically with the training set size.
+To illustrate the idea presented in this section, figure 1 shows a 2D example of separating
+the data from the mean of another data set in feature space.
+Figure 1: Separating one class of data from the mean of a second data set. The first class is
+a mixture of three gaussians; the SVM algorithm is used to find the hyperplane in feature
+space that separates the data from the second set (another Gaussian ­ the black dots). The
+image intensity represents the SVM output value which is the measure of novelty.
+
+We next state a few theoretical results, beginning with a characterization of the influence
+of š. To this end, first note that the constraints (11) rule out solutions where š ? 1, as in
+that case, the ff i cannot sum up to 1. Negative values of š are ruled out, too, since they
+would amount to encouraging (rather than penalizing) training errors in (5). Therefore, in
+the primal problem (5) only š 2 (0; 1] makes sense. We shall now explain that š actually
+characterizes how many points of X are allowed to lie outside the region where the decision
+function is positive. To this end, we introduce the term outlier to denote points x i that have
+a nonzero slack variable ¸ i , i.e. points that lie outside of the estimated region. By the
+KKT conditions, all outliers are also support vectors; however there can be support vectors
+(sitting exactly on the margin) that are not outliers.
+Proposition 1 (š­property) Assume the solution of (5) satisfies ae 6= 0. The following
+statements hold:
+(i) š is an upper bound on the fraction of outliers.
+(ii) š is a lower bound on the fraction of SVs.
+(iii) Suppose the data (4) were generated independently from a distribution P (x) which
+does not contain discrete components. Suppose, moreover, that the kernel is analytic and
+non­constant. With probability 1, asymptotically, š equals both the fraction of SVs and the
+fraction of outliers.
+The proof can be found in [4]. We next state another desirable theoretical result:
+Proposition 2 (Resistance [3]) Local movements of outliers parallel to w do not change
+the hyperplane.
+Essentially, this result is due to the fact that the errors ¸ i enter in the objective function only
+linearly. To determine the hyperplane, we need to find the (constrained) extremum of the
+objective function, and in finding the extremum, the derivatives are what counts. For the
+linear error term, however, those are constant, so they do not depend on how far away from
+the hyperplane an error point lies.
+We conclude this section by noting that if Z is empty, the algorithm is trying to separate
+the data from the origin in F , and both the decision function and the optimization problem
+reduce to what is described in [5].
+3 Application of SVM to Jet Engine Pass­off Tests
+The Support Vector machine algorithm for novelty detection is applied to the pass­off data
+from a set of 162 Rolls­Royce jet engines. The shape of the tracked order of interest is en­
+coded by calculating a weighted average of the vibration amplitude over ten speed ranges,
+thereby generating a 10D shape vector. The available data was split into the following three
+sets:
+ffl 99 Normal Engines to be used as training data;
+ffl 40 Normal Engines to be used as validation data;
+ffl 23 engines labelled as having at least one abnormal aspect in their vibration sig­
+nature (the ``test'' data).
+Using the training dataset, the SVM algorithm finds the hyperplane that separates the nor­
+mal data from the origin in feature space with the largest margin. The number of support
+vectors gives an indication of how well the algorithm is generalising (if all data points were
+support vectors, the algorithm would have memorized the data). A Gaussian kernel was
+
+used with a width c = 40:0 in equation 2 which was chosen by starting with a small kernel
+width (so that the algorithm memorizes the data), increasing the width and stopping when
+similar results are obtained on the training and validation data.
+Cumulative novelty distributions are plotted for two different values of š and these are
+shown in figure 2. The curves show a slight overlap between the normal and test engines.
+Although it is not given here, a ranking of the engines according to their novelty is also
+provided to the Rolls­Royce test engineers.
+5
+10
+15
+20
+25
+30
+35
+40
+­0.1 ­0.05 0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35
+­0.15
+Novelty
+No. of Engines
+Validation Engines
+Test Engines
+5
+10
+15
+20
+25
+30
+35
+40
+­0.1 ­0.05 0.0 0.05 0.1 0.15 0.2 0.25 0.3
+Novelty
+No. of Engines
+Validation Engines
+Test Engines
+(a) š = 0:1 (b) š = 0:2
+Figure 2: Cumulative novelty distributions for two different values of š. The curves show
+that there is a slight overlap in the data; For š = 0:1, there are 11 validation engines over
+the SVM decision boundary and 2 test engines inside the boundary.
+Separating the Normal Engines from the Test Engines. In a retrospective analysis such
+as described in this paper (for which the test engines with unusual vibration signatures have
+already been identified as such by the Rolls­Royce experts), the SVM algorithm can be re­
+run to find the hyperplane that separates the normal data from the mean of the test data in
+feature space with the largest margin (instead of separating from the origin). The algorithm
+is trained on the 99 training engines and 22 of the 23 test engines. Each test engine is left
+out in turn and the algorithm re­trained to compute its novelty. Cumulative distributions are
+again plotted (see figure 3) and these show an improved separation between the two sets of
+engines. It should be noted however, that the improvement is less for the validation engines
+than for the training engines. Nevertheless, there is an improvement for the validation
+engines seen from the higher intersection of the distribution with the axis.
+10
+20
+30
+40
+50
+60
+70
+80
+90
+100
+­0.1 ­0.05 0.0 0.05 0.1 0.15 0.2 0.25
+Test Engines
+Training Engines
+No. of Engines
+Novelty
+­0.1 ­0.05 0.0 0.05 0.1 0.15 0.2 0.25
+5
+10
+15
+20
+25
+30
+35
+40
+Test Engines
+Validation Engines
+No. of Engines
+Novelty
+(a) (š = 0:1) (b)
+Figure 3: Cumulative novelty distributions showing the variation of novelty with number
+of engines for (a) the training data versus the test data (each test engine omitted from the
+training phase in turn to compute its novelty) and (b) the validation data versus the test data.
+
+4 Discussion
+This paper has presented a novel application of Support Vector Machines and introduced
+a method for including information from a second data set when considering novelty de­
+tection. The results on the Jet Engine data show very good separation between normal and
+test engines. We believe Support Vector Machines are an ideal framework for novelty de­
+tection and indeed, we have obtained better results than with our previous clustering based
+algorithms for detecting novel Jet Engine signatures.
+The present work builds on a previous algorithm for estimating a distribution's support
+[5]. That algorithm, separating the data from the origin in feature space, suffered from the
+drawback that the origin played a special role. One way to think of it is as a prior on where,
+in a novelty detection context, the unknown ``other'' class lies. The present work alleviates
+this problem by allowing for the possibility to separate from a point inferred from the data,
+either from the same class, or from some other data.
+There is a concern that one could put forward about one of the variants of the presently
+proposed approach, namely about the case where X and Z are disjoint, and we are sep­
+arating X from Z's centroid: why not actually train a full binary classifier separating X
+from all examples from Z, rather that just from its mean? Indeed there might be situations
+where this is appropriate. More specifically, whenever Z is representative of the instances
+of the other class that we expect to see in the future, then a binary classification is certainly
+preferable. However, there can be situations where Z is not representative for the other
+class, for instance due to nonstationarity. Z may even only consists of artificial examples.
+In this situation, the only real training examples are the positive ones. In this case, separat­
+ing the data from the mean of some artificial, or non­representative examples, provides a
+way of taking into account some information from the other class which might work better
+than simply separating the positive data from the origin.
+The philosophy behind our approach is the one advocated by [6]. If you are trying to solve
+a learning problem, do it directly, rather than solving a more general problem along the
+way. Applied to the estimation of a distribution's support, this means: do not first estimate
+a density and then threshold it to get an estimate of the support.
+Acknowledgments. Thanks to John Platt, John Shawe­Taylor, Alex Smola and Bob
+Williamson for helpful discussions.
+References
+[1] B. E. Boser, I. M. Guyon, and V. N. Vapnik. A training algorithm for optimal margin classifiers.
+In D. Haussler, editor, Proceedings of the 5th Annual ACMWorkshop on Computational Learning
+Theory, pages 144--152, Pittsburgh, PA, July 1992. ACM Press.
+[2] A. Nairac, N. Townsend, R. Carr, S. King, P. Cowley, and L. Tarassenko. A system for the
+analysis of jet engine vibration data. Integrated Computer­Aided Engineering, 6:53 -- 65, 1999.
+[3] B. Sch˜olkopf, J. Platt, J. Shawe­Taylor, A.J. Smola, and R.C. Williamson. Estimating the support
+of a high­dimensional distribution. TR MSR 99 ­ 87, Microsoft Research, Redmond, WA, 1999.
+[4] B. Sch˜olkopf, J. Platt, and A.J. Smola. Kernel method for percentile feature extraction. TR MSR
+2000 ­ 22, Microsoft Research, Redmond, WA, 2000.
+[5] B. Sch˜olkopf, R. C. Williamson, A. J. Smola, J. Shawe­Taylor, and J. C. Platt. Support vector
+method for novelty detection. In S.A. Solla, T.K. Leen, and K.­R. M˜uller, editors, Advances in
+Neural Information Processing Systems 12, pages 582--588. MIT Press, 2000.
+[6] V. Vapnik. The Nature of Statistical Learning Theory. Springer, N.Y., 1995.
+

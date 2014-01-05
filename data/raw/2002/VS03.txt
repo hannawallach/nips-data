@@ -1,0 +1,1238 @@
+Fast Transformation-Invariant Factor Analysis
+
+  ¡  
+
+Anitha Kannan
+
+ 
+
+Nebojsa Jojic Brendan Frey
+
+¢
+
+University of Toronto, Toronto, Canada anitha, frey @psi.utoronto.ca Microsoft Research, Redmond, WA, USA jojic@microsoft.com
+
+£
+
+¡
+
+Abstract Dimensionality reduction techniques such as principal component analysis and factor analysis are used to discover a linear mapping between high dimensional data samples and points in a lower dimensional subspace. In [6], Jojic and Frey introduced mixture of transformation-invariant component analyzers (MTCA) that can account for global transformations such as translations and rotations, perform clustering and learn local appearance deformations by dimensionality reduction. However, due to enormous computational requirements of the EM algorithm for learning the model, O( ) where is the dimensionality of a data sample, MTCA was not practical for most applications. In this paper, we demonstrate how fast Fourier transforms can reduce the computation to the order of log . With this speedup, we show the effectiveness of MTCA in various applications - tracking, video textures, clustering video sequences, object recognition, and object detection in images. 1 Introduction Dimensionality reduction techniques such as principal component analysis [7] and factor analysis [1] linearly map high dimensional data samples onto points in a lower dimensional subspace. In factor analysis, this mapping is defined by subspace origin and the subspace bases stored in the columns of the factor loading matrix, . A mixture of factor analyzers learn to place the data into several learned subspaces. In computer vision, this approach has been widely used in face modeling for learning facial expressions (e.g. [2] , [12] ). When the variability in the data is due, in part, to small transformations such as translations, scales and rotations, factor analyzer learns a linearized transformation manifold which is often sufficient ( [4], [11]). However, for large transformations present in the data, linear approximation is insufficient. For instance, a factor analyzer trained on a video sequence of a person walking tries to capture a linearized model of large translations (fig. 2a.) as opposed to learning local deformations such as motion of legs and hands (fig. 2c.). In [6], it was shown that a discrete hidden transformation variable , enables clustering and learning subspaces within clusters, invariant to global transformations. However, experiments were done on images of very low resolution due to enormous computational cost of EM algorithm used for learning the model. It is known that fast Fourier transform(FFT)
+
+¡
+
+¤ ¤
+
+¤ ¤
+
+¥
+
+¦
+
+§
+
+
+Figure 1: Mixture of transformed component analyzers (MTCA). (a) The generative model with
+
+¢¡
+
+cluster index c, subspace coordinates
+
+ 
+
+generated final image
+
+ 
+
+, latent image
+
+¡£¢¥¤§¦©¨ 
+
++noise; transformation
+
+
+
+
+
+and
+
+ 
+
++noise; (b) An example of the generative process, where subspace
+
+coordinates , and image position , are inferred from a captured video sequence
+
+is very useful in dealing with transformations in images ( [3], [13]). The main purpose of this work is to show that under very mild assumptions, we can have an effective implemen-
+
+tation of MTCA that reduces the complexity from
+
+the number of factors, N is the size of input,
+
+#
+
+"!#£!$ %!#&!
+
+¡ ¡
+
+to log , where ¤ is
+
+is the set of all possible transformations.
+
+This means that for 256x256 images, the current implementation will be 4000 times faster. We present experimental results showing the effectiveness of MTCA in various applications - tracking, video textures, clustering video sequences, object recognition and detection. 2 Fast inference and learning in MTCA Mixture of transformation-invariant component analyzers (MTCA) is used for transformation-invariant clustering and learning a subspace representation within each cluster. The set of transformations, , to which the model is invariant is specified a priori.
+
+#
+
+Fig. 1a. shows a generative model for MTCA. The vector
+
+sian
+
+$)(
+
+0 I random variable. Cluster index, c is a C-valued discrete random variable with
+
+0 1
+
+'
+
+is a dimensional Gaus-
+
+probability distribution,
+
+3A@ B3C'
+
+¦ ¥
+
+243
+
+. The ¤
+
+, and diagonal covariance,
+
+for class c. An observation
+
+tribution
+
+PRQ
+
+G
+
+DE3dimensionalx
+
+; the ¤
+
+( ¤
+
+65758F3
+
+matrix ¦
+
+)latent image,
+
+#9
+
+has mean,
+
+is the factor loading matrix
+
+is obtained by applying a transformation
+
+9
+
+IH
+
+§
+
+) on the latent image and adding independent Gaussian noise,
+
+S,
+
+(with dis. Fig. 1b
+
+illustrates this generative process for a one class MTCA. The subspace coordinates , are
+
+used to generate a latent image,
+
+position
+
+UT WV
+
+and §
+
+9
+
+(without noise), and the horizontal and vertical image
+
+are used to shift the latent image to obtain . In fact, ,
+
+G
+
+and §
+
+'
+
+'G FT WV
+
+§ §
+
+(see sec. 3). shown in the figure are actually inferred from the captured video sequence
+
+The joint distribution over all variables is [6],
+
+X ('Y0a`b09c0 d0Ge1gff 'h1'Yq 90 'Y0`i1X G 9c0 U1Cp U1Cp `i1
+
+0 I
+
+X$)(( X
+
+( ! ( ! ( (
+
+§
+
+1$)(9cq 3A@ F3'Y0rDE3r1$)(Gsq W9c0rSt1uP Q 2v3
+
+§ §
+
+¥ ¦ §
+
+
+Figure 2: Means
+
+¤
+
+and components in
+
+¨
+
+learned using (a) FA, (b) FA applied on data normalized
+
+using a correlation tracker, and (c) transformed component analysis (TCA) applied directly on data.
+
+Performing inference on transformations and class,
+
+¢
+
+( § §
+
+§ ¥
+
+p Gs0a`b0 B1 f pGX G ` 0fU1Cp£3¥¤ `i1CpQ§¦©¨ U1$)(Gsqf Gsq3 3 0 B3 3£@¡ DF3r1 @ S 1 P Q 2 3
+
+¡ ¡
+
+§ § ¦ ¦
+
+The likelihood of is £
+
+0 F3 3 @ DF3r1 @ S 1uP Q 2 3 ¡
+
+§ ¦ ¦ § ¥
+
+ 
+
+(
+
+( ! (Ge1
+
+( ( $)( ( ! p `b0( Ge1
+
+§
+
+requires evaluating the joint,
+
+(1) (2)
+
+The parameters of the model are learned from i.i.d training examples by maximizing their
+
+
+
+likelihood (
+
+1
+
+) using an exact EM algorithm. The only inputs to the EM are the
+
+training examples, the number of factors,
+
+possible transformations,
+
+#
+
+, the number of clusters,  , and the set of all
+
+X
+
+(G
+
+. Starting at a random initialization, EM algorithm for MTCA
+
+iterates between E step, where it probabilistically fills in for hidden variables by finding the exact posterior and M step in which it updates the parameters. The likelihood of the data (eqn. 2) requires summing over all possible transformations and is very expensive. In fact, each of inference and update equations in [6] has a complexity of . In this section, we show how these equations can be derived and evaluated in
+
+§
+
+!# !
+
+"!#&!
+
+¡
+
+(' !d0` (9 !0`b0Ge1
+
+¤
+
+¡
+
+Fourier domain at a considerably lower computational cost of
+
+inferring the means of
+
+0CGe1
+
+and
+
+X X
+
+log . We focus on ¤
+
+as examples for efficient computation. §
+
+X ('Y0a9 ! 0a`b0 Ge1
+
+Similar mathematical manipulations will result in the inferences provided in the appendix. We assume that data is represented in a coordinate system in which transformations are discrete shifts with wrap-around. For translations, it is 2D rectangular grid, while for rotations and scales it is shifts in a radial grid (c.f. [3] [13]). We also assume that the post-
+
+transformation noise is isotropic,
+
+and COV"
+
+preset 
+
+! ' d0`b0G$#
+
+S f!
+
+, so that covariances matrices,COV"
+
+become independent of . In fact, for isotropic
+
+S
+
+! 9 d0` 0CG$#
+
+§
+
+, it is possible to § §
+
+(in our experiments we set it to .001). By presetting the sensor noise, , to small
+
+value, if the actual value in the data is larger, it can be accounted for in
+
+D
+
+.
+
+First, we describe the notation that simplifies expressions for transformation that corre-
+
+sponds to a shift in input coordinates. Define % to be an integer vector in the coordinate
+
+system in which1 input1 is measured.1 For 2D nxn image, (
+
+where %
+
+such as
+
+Gs0H 09
+
+¢
+
+¥
+
+()1
+
+(
+
+¡
+
+0 132 f54768696@&s0 f4769686@&
+
+¡   ¡
+
+¤
+
+f'& G 1
+
+), % is the %)()0 element
+
+ 
+
+£
+
+. Vectors in the input coordinate system
+
+are defined this way. For diagonal matrices such as
+
+D D 1
+
+, %
+
+(
+
+defines the ele-
+
+ment corresponding to pixel at coordinate . This notation enables treating transformations %
+
+corresponding to a shift be represented as a vector
+
+9
+
+by is represented as
+
+9 @ U1
+
+% § such that %
+
+(
+
+@ ¥f @BA §  
+
+§
+
+()1in
+
+the same system, so that a shift of
+
+1
+
+mod mod .  
+
+s0& @BA
+
+¡ ¡
+
+e1&
+
+§
+
+
+Figure 3: Transformation invariant clustering with and without a subspace model: (a) Parameters of a three-cluster TMG [6], and a three-cluster MTCA (b) Frames from the video sequence , corresponding TMG mean and the object appearance in the corresponding subspace of MTCA; (c) An illustration of the role of components for the first class. Factor tends to model
+
+¤  ¤  ¦ ¨    
+
+ ¡   £¢
+
+lighting variation and tends to model small out-of-plane rotations
+
+In the appendix, we show that all expensive operations in inference and learning involve computing correlation (¤¦¥¨§ ), or convolution(¤©§ ). These operations is only
+
+ (!#&!  (   (!#&!
+
+, i.e. for all shifts in frequency domain, while it is in
+
+the pixel domain. For notational ease, we represent 
+
+(t1
+
+1 1
+
+¤ ¤ ¤ ¤
+
+()0 column and row of a matrix, , by
+
+"!$# % 
+
+1(t1
+
+ and 
+
+&%'# !
+
+respectively. Also, diag( ) extracts the diagonal elements of matrix
+
+and ¤)(0§ defines an element wise product between ¤ and § . In principal component analysis (PCA), where there is no noise, the data is projected to subspace through the projection matrix. Similarly, in MTCA, we can derive that when
+
+¡
+
+f
+
+and
+
+(
+
+f D 3 @ S&1,
+
+S f (
+
+the projection matrix is 132
+
+f5462 U38732
+
+¦
+
+and it accounts for
+
+f
+
+§ §
+
+variances. 7 2
+
+¡
+
+3
+
+7 2
+
+ 
+
+3 @ i1A9CB
+
+@9 is the inverse of noise variances in input space, and 4 2
+
+
+
+¦ ¦
+
+is the inverse of the noise variances in the projected subspace. The mean
+
+
+
+of subspace for a given
+
+image
+
+D
+
+"
+
+' G 0 d0` 4f#
+
+ ¥ 
+
+!
+
+§
+
+D 
+
+"
+
+%
+
+
+
+' G 0 d0` 4f# §
+
+! 3 G
+
+ , c, and
+
+E1 2
+
+(
+
+§
+
+is obtained by subtracting the mean of the latent
+
+from the transformation-normalized
+
+¡ GF
+
+H
+
+G
+
+
+
+( § £
+
+¥
+
+I 1 2 1 G I
+
+%¡#
+
+3(1.
+
+G
+
+ and applying the projection matrix:
+
+For each factor,
+
+
+
+(
+
+F %  U1 3 1C1Yf F
+
+% ¥
+
+('
+
+%
+
+, it reduces to
+
+(
+
+" 1 2
+
+1 %¡# ! ¥ §
+
+¤  
+
+(G
+
+
+
+ F
+
+¥
+
+3 1¥#
+
+As the summation over for all % § is a correlation, it can be efficiently computed for all §
+
+at the same time in the frequency domain in
+
+The inference on the latent image
+
+D 
+
+"  #
+
+3 f
+
+¡
+
+¦ ¦
+
+¤
+
+log
+
+¤
+
+time.
+
+9 `b0CG fEPF3 E3 3 @9 DF3a1 3A@ E3P S
+
+! (
+
+COV"
+
+! 9 d0a`b0CG
+
+§
+
+is given by its expected value:
+
+£
+
+Q7¦©¨
+
+9 9  
+
+¥
+
+ 
+
+where P
+
+p ` 0CG 1 G
+
+ ¡
+
+
+
+§ §
+
+( ! 
+
+
+
+  #
+
+p `b0G 1 
+
+
+
+§
+
+Q§¦©¨ p `G0CG 1 G 
+
+is independent of
+
+the model can be easily computed. Q
+
+with the probability map
+
+( !
+
+( !
+
+§
+
+defined for all
+
+
+
+and¡ . The first term, dictated by , as a particular element in the sum  G  §
+
+ is a convolution of  § 
+
+§
+
+
+Figure 4: Comparison of FA applied on data normalized for translations using correlation tracker and TCA. (a)Frames from sequence. (b) shift normalized frames, using correlation-based tracker and
+
+¤&¦§¨ ¤£ ¡¦¥§£ ¤ ¦§¨  ¤£  ¢¡  ¢¡  ¢¡
+
+obtained through factor analysis model. (c) and for the TCA model.
+
+Figure 5: Simulated walk sequence synthesized after training an AR model on the subspace and image motion parameters. The sequence enlarged for better viewing of translations. The first row contains a few frames from the sequence simulated directly from the model. The second row contains a few frames from the video texture generated by picking the frames in the original sequence for which the recent subspace trajectory was similar to the one generated by the AR model.
+
+ 
+
+( ! (
+
+is Q Q§¦©¨ p `b0CG 1 G
+
+ 
+
+!
+
+§
+
+D  " 
+
+  F
+
+%
+
+U1. § We can efficiently compute this sum for all : %
+
+
+
+9 `b0G 4f# E3P F3 3£@ DF3r1 3h@ E3P S p ` 0CG 1 ©G ¡ 9 9       © ¦ ¦ ¥
+
+§
+
+( ©¨ ( !
+
+ 
+
+Note that multiplication with ¤ x ¤ matrices above can be done efficiently by factorizing
+
+them and applying a sequence of vector multiplication from right to left. 3 Experimental Results Clustering face poses. In Fig. 3b the first column shows examples from a video sequence of one person with different facial poses walking across cluttered background. We trained a transformation-invariant mixture of Gaussians (TMG) [6] with 3 clusters that learned means shown in Fig. 3b. TMG captures the three generic poses in the data.However, due to presence of lighting variations and small out-of-plane rotations in addition to big pose changes, it is difficult for TMG to learn these variations without many more classes. We trained a MTCA model with 3 classes and 2 factors, initializing the parameters to those learned by TMG. Fig. 3a compares TMG means and components to those learned using MTCA. The MTCA model learns to capture small variations around the cluster means. For example, for the first cluster, the two subspace coordinates tend to model out-of-plane
+
+D
+
+rotations and illumination changes (Fig. 3c). In Fig. 3b, we compare
+
+(
+
+( ! ` f "! 3ap ` Ge1),
+
+"
+
+! 3 @ 3 ' G$#,
+
+¦ ¥
+
+of TMG and MTCA for various training examples, illustrating
+
+better tracking and appearance modelling of MTCA.
+
+
+Figure 6: Clustering faces extracted from a personal database prepared using face detector. (a)£ Training examples (b) Means, variances and components for two classes learned using MTCA. (c)  ¢¡ column contains several photos in which the detector [8] failed to find the face. ¤¦¥ column contains
+
+§
+
+  ¡ §
+
+central 100x100 portion of
+
+¡¦¥ £.¨©
+
+column contains central 100x100 portion of
+
+  ¡ ¤  ¦E¨   ¥ £.
+
+Modeling a walking person. Fig. 4a. shows three 165x285 frames from a video sequence of a person walking. For effective summarization, we need to learn a compact representation for the dynamically and periodically changing hand and leg movements. A regular PCA or FA will learn a representation that focuses more on learning linearized shifts, and less on the more interesting motion of hands and legs (Fig. 2a.). The traditional approach is to track the object using, for example,a correlation tracker and then learn the subspace model on normalized images. The parameters learned in this fashion are shown in Fig. 2b. Without previously learning a good model, the tracker fails to provide the perfect tracking necessary for precise subspace modelling of limb motion and thus the inferred subspace projection is blurred. (Fig. 2b). As TCA performs tracking and learns appearance model at the same time, not only does it avoids the tracker initialization that plagues the "tracking first" approaches, but also proThe TCA model can be used to create video textures based on frame reshuffling similar to [10]. However, instead of shuffling frames based directly on pixel similarity, we use
+
+D
+
+! 9 G
+
+" $#
+
+D vides perfectly aligned and infers a much cleaner projection " ! @ U' G$#.
+
+¦ ¥
+
+the subspace position
+
+( ' 1
+
+and image position  ( generated from an AR process [9],
+
+
+
+and for each t find the best frame u in the original video D  D
+
+"  #
+
+' G 0 ' G
+
+"  9 #   
+
+0¢ ' G
+
+D "  9 # is the most similar to 
+
+D
+
+erated transformation is applied on the normalized image §
+
+! ! !
+
+G'9
+
+"
+
+§
+
+  (
+
+!G
+
+
+
+0 0' for which the window  # . The result is shown   ( 9 . Then, gen-
+
+in fig. 5b and contains a bit sharper images than the ones simulated directly from the generative model, fig. 5a. We let the simulated walk last longer than in the original sequence letting MTCA live on twice as wide frames. Clustering and face recognition We used a standard face detector [8] to obtain 85 32x32 images of faces of 2 persons, from a personal photo database of a mother and her daughter. In fig. 6a. we present examples from the training set.
+
+
+We learned a MTCA model with 2 classes and 4 factors. To model global lighting variation, we preset one of the factors to be uniform at .01 (see fig. 6b.). This handles linearized version of ambient lighting condition. We also preset another factor to be smoothly varying in brightness (see fig. 6b.) to capture side illumination. The other two components are learned and they model slight appearance deformation such as facial expressions. The model learned to cluster faces in the training example with  ¢¡  ¤£¦¥ accuracy.
+
+4
+
+An interesting application is to use the learned representation of the faces to detect and recognize faces in the original photos. For instance, the face detector did not recognize faces in many photographs (for eg.,fig. 6c), which we were able to using the learned model olution of photos (640x480), padding around the original parameters with uniform mean, zero factors and high variance. Then, we performed inference, inferring most likely class,c, as possible transformations, in addition to all possible shifts. In fig. 6c , we present three examples which were not in the training set and the face detector we used failed. In all three cases MTCA detected and recognized the face correctly as belonging to class 2. 4 Conclusion Mixture of transformation-invariant component analyzers is a technique for modeling visual data that finds major clusters and major transformations in the data and learns subspace models of appearance. In this paper, we have described how a fast implementation of learning the model is possible through efficient use of identities from matrix algebra and the use of fast Fourier transforms. Appendix: EM updates Before performing inference in Estep, we pre-compute,for all classes the
+
+(fig. 6c). We increased the resolution of model parameters 3 0 F3i0 DU3
+
+¦
+
+to match the res¥
+
+D most likely, for that class and
+
+§
+
+"
+
+! 9 Gs0a`
+
+# . We also incorporated 3 rotations and 4 scales
+
+¢¢#  ¨  4¦ ¢¢¨"!¨ ¨  ¦¨
+
+¢© ¦$%  ¢ ¨'!   ¨
+
+quantities that are independent of training examples:
+
+  §©¨
+
+¨   ¨
+
+¨ )0¨
+
+ 
+
+I
+
+ 
+
+3
+
+§©¨ ( ¨ ¨
+
+# ¨ & ¨
+
+1 ¨
+
+    
+
+¨ #
+
+§¨ ¨
+
+¢4%§©¨657§¨ ¨  ¨"!  ¤ FE"¥
+
+¨ §©¨
+
+For each training example BA CD , Computing posteriors over
+
+ ¢¡
+
+ !  ¨  ¦
+
+ 
+
+GA C©HQP £ ¢SRT&
+
+C9DIH
+
+¢#  ¨ ¦¢©¤(
+
+¨
+
+©  
+
+¨
+
+  I 
+
+8
+
+  ¨ ¨
+
+ 
+
+cA ¥dHIPe
+
+ ¤  !2 5 ¨  T`
+
+ ¨ 9@!
+
+2 ¢©¨ !  
+
+©
+
+IEVU WIXY GA CD
+
+is evaluated and saved.
+
+and c, requires evaluating ab CD ¡
+
+(eqn. 1). To compute this
+
+¥©HQP £
+
+and the Mahalanobis distribution, we require the determinant of covariance matrix, COV A CD
+
+distance between input and the transformed latent image. The determinant is simplified to
+
+ 
+
+ 
+
+The Mahalanobis distance between
+
+   ¢¡y
+
+ ! A C9D  ! §¨
+
+ 
+
+! A CD qprH s
+
+5
+
+i¤¤ !   ¦ ¤ ! ¤    ¥dH  £
+
+§©¨
+
+! A CD
+
+IEVU WVX 
+
+§¨ 5 A C9D !
+
+!  
+
+ut y
+
+¨ A CD qvcw U¨ W U E
+
+i # #  ¨ ¨
+
+3 ¨
+
+cAC9D
+
+and the latent image is
+
+¨
+
+¥COV¡BAC9D ¥dHIP £ ¥ ¢ ¥  ¦$ ¥¥¨ !  ¦f0 ¨  ¦hg ¥
+
+i u ¢
+
+i  ! PH A C9D  ¡ ¡ ¥ u £ ¢
+
+¦
+
+¦
+
+y y
+
+ ¢¡ ¢
+
+     ¡   ¥dH  £
+
+ ¨  ¦
+
+   I   8 ¨
+
+A C9D IExU WxX
+
+¨ W UE
+
+t AC9D 
+
+i # 
+
+¢
+
+¨ 5 y 
+
+    E  W U E
+
+     
+
+ 
+
+i #  i #  ¨
+
+  q PVH A C9D  A C9D  
+
+      ¢ ¢ 5
+
+
+
+ed  qf W U Eg¤q
+
+i
+
+E9  
+
+
+
+ wcjlk
+
+ ¥
+
+¤ ¨
+
+¢  ¥   ¢
+
+¨ ¢
+
+¨   ¥
+
+¨ 
+
+A CD  qprH i 'It AC9DTh
+
+
+
+E9  
+
+qf W U EGRi qf W U ¨ ¨
+
+The summation over
+
+ ¢¡
+
+¡¦¥ £ ¢ A C9D H@P
+
+
+
+takes only
+
+¦ # ¨
+
+¥p ¥
+
+   time, after qpoH
+
+A CD  qprH i u'i 'T`on qmTH
+
+i
+
+u'¦q"p 
+
+3 ¨
+
+  R  PVH AC9D   
+
+ ¥  t ¦
+
+A CD `
+
+and ( ¨
+
+is computed in r
+
+¥p ¥logs
+
+g 2   R  PH A CD 
+
+¨    ¥  §
+
+time. A CD ` h
+
+
+ ¢¡     ¥ £ ¢ ! ¡  UC A C9D H@P
+
+ ¢¡yi 
+
+ ¨ ¡  UC ¦  wcjlk q PVH AC9D   ¥ 
+
+ ¢¡  ¢ ¥ uH £¢   ¥ CH £
+
+C A CD dH@P
+
+¡ ¤  ¨    ¡ ¤  ¨    ¥ £ ¢ 5 5 9 5 5
+
+ ! A CD HIP
+
+ W U E dg¤
+
+¦ 
+
+E9  
+
+¨ 
+
+  ¡yi
+
+AC9D dHIP  ! PVH AC9D 
+
+ ¢¡
+
+¡ ¡ ¥ u b¦£ ¤  s¤ 
+
+¨      ¥ £W
+
+! A C9D H@P U E
+
+ ¢¡
+
+5 ¤
+
+ ¢¡ ¡   ¥PHu £
+
+! A C9D h
+
+5
+
+i¤¤  ¡¦¥PHu %¦£ ¨   ¥PH  £F ¤ 
+
+ A C9D ¤  A CD
+
+3 ¨
+
+
+
+E    PVH A C9D 9qvcw U¨ W U E
+
+ ¥ 
+
+ ¢¡  ¢¡
+
+  ¡ ¡ ¡ ¥PHu £u  ¨  ¢ ¦ ! A C9D    8
+
+¨
+
+¦
+
+ #
+
+ ¢¡
+
+¨ ¦ ( ¨ ¨ £   
+
+2   g   E  
+
+ ¢¡
+
+ ¥PH  A CD 9qvcw U¨ W UE §
+
+` ) ¨
+
+A CD h
+
+¡   ¥PVH  R¢£ ! A C9D R
+
+¡ ¡ ¥PVHu £  ¨ ¡¦¥PHu £¤   ¨ 
+
+! AC9D 
+
+  5 A CD !      ¢¡
+
+¤¦¥¨§
+
+¢©%( ¤ 0)
+
+¦
+
+©  ¤
+
+A
+
+ ¢¡A
+
+
+
+!#"
+
+%$
+
+Defining, 
+
+! "
+
+%$
+
+D'&D
+
+, in the Mstep, parameters are updated according to
+
+¡¦¥PHu £ ¨   ¥PHu £§
+
+A CD 5  ¢¡
+
+¤
+
+
+
+
+
+)
+
+ ¢¡yi
+
+ ¢¡
+
+
+
+)
+
+¡   ¥PH  £ ¤    ¥PVH  £§1¤  c  ¥PVHu £§ ! A C9D 5 A C9D A CD
+
+¡ ¤  ¨  ¢¡ b9!¡ ¤  ¨   b ¥! £§
+
+5 5 5 ! A C9D H P
+
+ ¢¡
+
+A CD 5
+
+¨  ¤   
+
+References
+
+[1] Everitt, B.S. An Introduction to Latent variable models Chapman and Hall, New York NY 1984 [2] Frey, B.J. , Colmenarez, A. & Huang, T.S. Mixtures of local linear subspaces for face recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 1998 IEEE Computer Society Press: Los Alamitos, CA. [3] Frey, B.J. & Jojic, N. Fast, large-scale transformation-invariant clustering. In Advances in Neural Information Processing Systems 14. Cambridge, MA: MIT Press 2002 [4] Ghahramani, Z. & Hinton, G. The EM Algorithm for Mixtures of Factor Analyzers University of Toronto Technical Report CRG-TR-96-1, 1996 [5] Hinton, G., Dayan, P. & Revow, M. Modeling the manifolds of images of handwritten digits In IEEE Transactions on Neural Networks 1997 [6] Jojic, N. & Frey, B.J. Topographic transformation as a discrete latent variable In Advances in Neural Information Processing Systems 13. Cambridge, MA: MIT Press 1999 [7] Jolliffe,I.T. Principal Component Analysis Springer-Verlag, New York NY, 1986. [8] Li, S.Z., Zhu.L , Zhang, Z.Q. & Zhang,H.J. Learning to Detect Multi-View Faces in Real-Time In Proceedings of the 2nd International Conference on Development and Learning, June, 2002. [9] Neumaier, A. & Schneider,T. Estimation of parameters and eigenmodes of multivariate autoregressive models In ACM Transactions on Math Software 2001. [10] Schdl,A. Szeliski,R.,Salesin,D.& Irfan Essa Video textures In Proceedings of SIGGRAPH2000 [11] Simard, P. , LeCun, Y. & Denker, J. Efficient pattern recognition using a new transformation distance In Advances in Neural Information Processing Systems 1993 [12] Turk, M. & Pentland, A. Face recognition using eigenfaces In Proceedings of IEEE Conference on Computer Vision and Pattern Recognition Maui, Hawaii, 1991 [13] Wolberg,G. & Zokai,S. Robust image registration using log-polar transform In Proceedings IEEE Intl. Conference on Image Processing, Canada 2000.
+
+

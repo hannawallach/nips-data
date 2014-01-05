@@ -1,0 +1,524 @@
+Robust Novelty Detection with
+Single-Class MPM
+Gert R.G. Lanckriet
+EECS, U.C. Berkeley
+gert@eecs.berkeley.edu
+Laurent El Ghaoui
+EECS, U.C. Berkeley
+elghaoui@eecs.berkeley.edu
+Michael I. Jordan
+Computer Science and
+Statistics, U.C. Berkeley
+jordan@cs.berkeley.edu
+Abstract
+In this paper we consider the problem of novelty detection, pre-
+senting an algorithm that aims to nd a minimal region in input
+space containing a fraction  of the probability mass underlying
+a data set. This algorithm|the \single-class minimax probabil-
+ity machine (MPM)"|is built on a distribution-free methodology
+that minimizes the worst-case probability of a data point falling
+outside of a convex set, given only the mean and covariance matrix
+of the distribution and making no further distributional assump-
+tions. We present a robust approach to estimating the mean and
+covariance matrix within the general two-class MPM setting, and
+show how this approach specializes to the single-class problem. We
+provide empirical results comparing the single-class MPM to the
+single-class SVM and a two-class SVM method.
+1 Introduction
+Novelty detection is an important unsupervised learning problem in which test data
+are to be judged as having been generated from the same or a dierent process as
+that which generated the training data. In essence, we wish to estimate a quantile
+of the distribution underlying the training data: for a xed constant  2 (0; 1],
+we attempt to nd a (small) set Q such that Prfy 2 Qg = , where, for novelty
+detection,  is typically chosen near one (Scholkopf and Smola, 2001, Ben-David
+and Lindenbaum, 1997). This formulation of novelty detection in terms of quantile
+estimation is to be compared to the (costly) approach of estimating a density based
+on the training data and thresholding the estimated density.
+Although of reduced complexity when compared to density estimation, multivariate
+quantile estimation is still a challenging problem, necessitating computationally
+e∆cient methods for representing and manipulating sets in high dimensions. A
+signicant step forward in this regard was provided by Scholkopf and Smola (2001),
+who treated novelty detection as a \single-class" classication problem in which
+data are separated from the origin in feature space. This allowed them to invoke
+the computationally-e∆cient technology of support vector machines.
+In the current paper we adopt the \single-class" perspective of Scholkopf and Smola
+(2001), but make use of a dierent kernel-based technique for nding discriminant
+
+boundaries|the minimax probability machine (MPM) of Lanckriet et al. (2002).
+To see why the MPM should be particularly appropriate for quantile estimation,
+consider the following theorem, which lies at the core of the MPM. Given a random
+vector y with mean 
+y and covariance matrix  y , and given arbitrary constants
+a 6= 0; b such that a T 
+y  b, we have (for a proof, see Lanckriet et al., 2002):
+inf
+y( y;y )
+Prfa T y  bg   , b a T  y  ()
+q
+a T ya; (1)
+where () =
+p
+=1 , and  2 [0; 1). Note that this is a \distribution-free"
+result|the inmum is taken over all distributions for y having mean 
+y and covari-
+ance matrix  y (assumed to be positive denite for simplicity). While Lanckriet
+et al. (2002) were able to exploit this theorem to design a binary classication al-
+gorithm, it is clear that the theorem provides even more direct leverage on the
+\single-class" problem|it directly bounds the probability of an observation falling
+outside of a given set.
+There is one important aspect of the MPM formulation that needs further consider-
+ation, however, if we wish to apply the approach to the novelty detection problem.
+In particular,  y and  y are usually unknown in practice and must be estimated
+from data. In the classication setting, Lanckriet et al. (2002) successfully made
+use of plug-in estimates of these quantities|in some sense the bias incurred by the
+use of plug-in estimates in the two classes appears to \cancel" and have diminished
+overall impact on the discriminant boundary. In the one-class setting, however, the
+uncertainty due to estimation of 
+y and  y translates directly into movement of the
+discriminant boundary and cannot be neglected.
+We begin in Section 2 by revisiting the MPM and showing how to account for
+uncertainty in the means and covariance matrices within the framework of robust
+estimation. Section 3 then applies this robust estimation approach to the single-
+class MPM problem. We present empirical results in Section 4 and present our
+conclusions in Section 5.
+2 Robust Minimax Probability Machine (R-MPM)
+Let x; y 2 R n denote random vectors in a binary classication problem, modelling
+data from each of two classes, with means and covariance matrices given by 
+x;  y 2
+R n , and x ; y 2 R nn (both symmetric and positive semidenite), respectively.
+We wish to determine a hyperplane H(a; b) = fz j a T z = bg, where a 2 R n nf0g
+and b 2 R, that maximizes the worst-case probability  that future data points
+are classied correctly with respect to all distributions having these means and
+covariance matrices:
+max
+;a6=0;b
+ s.t. inf
+x( x;x )
+Prfa T x  bg   (2)
+inf
+y( y;y )
+Prfa T y  bg  ;
+where x  ( x;  x ) refers to the class of distributions that have mean 
+x and covari-
+ance  x , but are otherwise arbitrary; likewise for y. The worst-case probability of
+misclassication is explicitly obtained and given by 1 .
+Solving this optimization problem involves converting the probabilistic constraints
+in Eq. (2) into deterministic constraints, a step which is achieved via the theorem
+referred to earlier in Eq. (1). This eventually leads to the following convex optimiza-
+tion problem, whose solution determines an optimal hyperplane H(a; b) (Lanckriet
+
+et al., 2002):
+ 1
+ := min
+a
+p
+a T xa +
+q
+a T ya s.t. a T ( x 
+y) = 1; (3)
+where b is set to the value b  = a T
+ 
+x  
+p
+a T
+ xa  , with a  an optimal solution
+of Eq. (3). The optimal worst-case misclassication probability is obtained via
+1   = 1=(1 +  2
+ ). Once an optimal hyperplane is found, classication of a new
+data point z new is done by evaluating sign(a T
+ z new b  ): if this is +1, z new is
+classied as belonging to class x, otherwise z new is classied as belonging to class
+y.
+While in our earlier work, we simply computed sample-based estimates of means
+and covariance matrices and plugged them into the MPM optimization problem in
+Eq. (3), we now show how to treat this estimation problem within the framework
+of robust optimization. Assume the mean and covariance matrix of each class are
+unknown but lie within specied convex sets: ( x; x ) 2 X , with X  R n  fM 2
+R nn jM = M T ; M  0g, and ( y;  y ) 2 Y , with Y  R n  fM 2 R nn jM =
+M T ; M  0g. We now want the probabilistic guarantees in Eq. (2) to be robust
+against variations of the mean and covariance matrix within these sets:
+max
+;a6=0;b
+ s.t. inf
+x( x;x )
+Prfa T x  bg   8 ( x; x ) 2 X ; (4)
+inf
+x( y;y )
+Prfa T y  bg   8 ( y;  y ) 2 Y :
+In other words, we would like to guarantee a worst-case misclassication proba-
+bility for all distributions which have unknown-but-bounded mean and covariance
+matrix, but which are otherwise arbitrary. The complexity of this problem depends
+obviously on the structure of the uncertainty sets X ; Y . We now consider a specic
+choice for X and Y , motivated both statistically and numerically:
+X =
+
+( x;  x ) : ( x 
+x 0 ) T x 1 ( x 
+x 0 )   2 ; kx x 0 kF  
+	
+;
+Y =
+
+( y; y ) : ( y  y 0 ) T y 1 ( y 
+y 0 )   2 ; k y y 0 kF  
+	
+; (5)
+with 
+x 0 ;  x
+0 the \nominal" mean and covariance estimates and with ;   0 xed
+and, for simplicity, assumed equal for X and Y . Section 4 discusses how their values
+can be determined. The matrix norm is the Frobenius norm: kAk 2
+F = Tr(A T A).
+Our model for the uncertainty in the mean assumes the mean of class y belongs to
+an ellipsoid | a convex set | centered around 
+y 0 , with shape determined by the
+(unknown) y . This is motivated by the standard statistical approach to estimating
+a region of condence based on Laplace approximations to a likelihood function. The
+covariance matrix belongs to a matrix norm ball | a convex set | centered around
+y 0 . This uncertainty model is perhaps less classical from a statistical viewpoint,
+but it will lead to a regularization term of a classical form.
+In order to solve Eq. (4), we apply Eq. (1) and notice that
+b a T 
+y  ()
+q
+a T  y a; 8( y; y ) 2 Y , b max
+( y;y )2Y
+a T 
+y  ()
+r
+max
+( y;y )2Y
+a T ya;
+where the right-hand side guarantees the constraint for the worst-case estimate of
+the mean and covariance matrix within the bounded set Y . For given a and 
+y 0 :
+min
+ y : ( y  y 0 ) T y 1 ( y  y 0 ) 2
+a T 
+y = a T 
+y 0 
+q
+a T  y a: (6)
+Indeed, the Lagrangian is L( y; ) = a T 
+y + (( y 
+y 0 ) T  y
+1 ( y  y 0 )  2 ) and
+is to be maximized with respect to   0 and minimized with respect to  y. At the
+
+optimum, we have @
+@ y L( y; ) = 0 and @
+@ L( y; ) = 0, leading to 
+y =  y 0 + 1
+2 ya
+and  =
+p
+a T ya=4 which eventually leads to Eq. (6). For given a and  y
+0 :
+max
+y : ky y 0 kF 
+a T ya = a T y 0 + I n
+
+a; (7)
+where I n is the nn identity matrix. Indeed, without loss of generality, we can let
+ be of the form  =  0 + . We then obtain
+max
+y : ky y 0 kF 
+a T  y a = a T  y
+0 a+ max
+y : kykF 1
+a T  y a = a T  y
+0 a+a T a;
+(8)
+using the Cauchy-Schwarz inequality and compatibility of the Frobenius matrix
+norm and the Euclidean vector norm:
+a T a  kak 2 kak 2  kak 2 kkF kak 2  kak 2
+2 ;
+because kkF  1. For  = I n , this upper bound is attained and we get
+Eq. (7). Combining this with Eq. (6) leads to the robust version of Eq. (1):
+inf
+y( y;y )
+Prfa T y  bg  ; 8( y;  y ) 2 Y , b a T  y 0  (()+)
+q
+a T ( y
+0 + I n )a:
+(9)
+Applying this result to Eq. (4) thus shows that the optimal robust minimax proba-
+bility classier for X , Y given by Eq. (5) can be obtained by solving problem Eq. (3),
+with  x =  x
+0 +In , y =  y
+0 +In . If  1
+ is the optimal value of that problem,
+the corresponding worst-case misclassication probability is
+1   = 1
+1 + max(0; (  )) 2 :
+With only uncertainty in the mean ( = 0), the robust hyperplane is the same as the
+non-robust one; the only change is in the increase in the worst-case misclassication
+probability. Uncertainty in the covariance matrix adds a term I n to the covariance
+matrices, which can be interpreted as regularization term. This aects the hyper-
+plane and increases the worst-case misclassication probability as well. If there is
+too much uncertainty in the mean (i.e.,   < ), the robust version is not feasible:
+no hyperplane can be found that separates the two classes in the robust minimax
+probabilistic sense and the worst-case misclassication probability is 1   = 1.
+This robust approach can be readily generalized to allow nonlinear decision bound-
+aries via the use of Mercer kernels (Lanckriet et al., 2002).
+3 Single-class MPM for robust novelty detection
+We now turn to the quantile estimation problem. Recall that for  2 (0; 1], we
+wish to nd a small region Q such that Prfx 2 Qg = . Let us consider data
+x  ( x; x ) and let us focus (for now) on the linear case where Q is a half-space
+not containing the origin.
+We seek a half-space Q(a; b) = fz j a T z  bg, with a 2 R n nf0g and b 2 R, and
+not containing 0, such that with probability at least , the data lies in Q, for every
+distribution having mean 
+x and covariance matrix x . We assume again that the
+real  x; x are unknown but bounded in a set X as specied in Eq. (5):
+inf
+x( x;x )
+Prfa T x  bg   8( x; x ) 2 X :
+
+We want the region Q to be tight, so we maximize its Mahalanobis distance (with
+respect to  x ) to the origin in a robust way, i.e., for the worst-case estimate of
+ x |the matrix that gives us the smallest Mahalanobis distance:
+max
+a6=0;b
+min
+( x;x )2X
+b
+p
+a T xa
+s.t. inf
+x( x;x )
+Prfa T x  bg   8( x; x ) 2 X : (10)
+Note that Q(a; b) does not contain 0 if and only if b > 0. Also, the optimization
+problem in Eq. (10) is positively homogeneous in (a; b). Thus, without loss of
+generality, we can set b = 1 in problem Eq. (10). Furthermore, we can use Eq. (7)
+and Eq. (9) and get (where superscript 0 for the estimates has been omitted):
+min
+a
+q
+a T (x + I n )a s.t. a T 
+x 1  (() + )
+q
+a T ( x + I n )a; (11)
+where a 6= 0 can be omitted since the constraint never holds in this case. Again,
+we obtain a (convex) second order cone programming problem. The worst-case
+probability of occurrence outside region Q is given by 1 . Notice that the
+particular choice of  2 (0; 1] must be feasible, i.e.,
+9 a : a T 
+x 1  (() + )
+q
+a T (x + I n )a:
+For  6= 0,  x + I n is certainly positive denite and the halfspace is unique.
+Furthermore, it can be determined explicitly. To see this, we write Eq. (11) as:
+min
+a
+k(x + I n ) 1=2 ak 2 s.t. a T 
+x  1 + (() + ) k(x + I n ) 1=2 ak 2 (12)
+Decomposing a as (x + I n ) 1 
+x + z, where the variable z satises z T  x = 0,
+we easily obtain that at the optimum, z = 0. In other words, the optimal a is
+parallel to  x, in the form a = (x + I n ) 1 
+x, and the problem reduces to the
+one-dimensional problem:
+min
+
+jj k( x +In ) 1=2 
+xk 2 :  x T ( x +In ) 1 
+x  1+(()+) k(x+In ) 1=2 
+xk 2 jj:
+The constraint implies that   0, hence the problem reduces to
+min
+0
+ :   2 (() + )
+
+ 1: (13)
+with  2 = 
+x T ( x + I n ) 1  x > 0 (because Eq. (12) implies 
+x 6= 0). Because   0,
+this can only be satised if  2 (() + )  0, which is nothing other than the
+feasibility condition for :
+ 2 (() + )  0 , ()    ,   ( ) 2
+1 + ( ) 2 :
+If this is fullled, the optimization in Eq. (13) is feasible and boils down to:
+min
+0
+ s.t.   1
+ 2 (() + ) :
+It's easy to see that the optimal  is given by   = 1=( 2 (() + )), yielding:
+a  = (x + I n ) 1  x
+ 2 (() + ) ; b  = 1; with  =
+q
+ x T ( x + I n ) 1 
+x: (14)
+Notice that the uncertainty in the covariance matrix  x leads to the typical, well-
+known regularization for inverting this matrix. If the choice of  is not feasible or
+if  x = 0 (in this case, no  2 (0; 1] will be feasible), Eq. (10) has no solution.
+
+Future points z for which a T
+ z  b  can then be considered as outliers with respect
+to the region Q, with worst-case probability of occurrence outside Q given by 1 .
+One can obtain a nonlinear region Q in R n for the single-class case, by mapping
+the data into a feature space R f : x 7! '(x)  ('(x);  '(x) ), and expressing and
+solving Eq. (10) in the feature space, using '(x); '(x) and  '(x) . This is achieved
+using a kernel function K(z 1 ; z 2 ) = '(z 1 ) T '(z 2 ) satisfying Mercer's condition as in
+the classication setting. Notice that maximizing the Mahanalobis distance of Q
+to the origin in R f makes sense for novelty detection. For example, if we consider
+a Gaussian kernel K(x; y) = e kx yk 2 = , all mapped data points have unit length
+and positive dot products, so they all lie in the same orthant, on the unit ball, and
+are linearly separable from the origin.
+Our nal result is thus the following: If the choice of  is feasible, i.e.,
+9  :  T k 1  (() + )
+q
+ T (L T L + K);
+then an optimal region Q(; b) can be determined by solving the (convex) second
+order cone programming problem:
+min 
+q
+ T (L T L + K) s.t.  T k 1  (() + )
+q
+ T (L T L + K); (15)
+where () =
+p
+=1  and b = 1, with ; k 2 R N , [k] i = 1
+N
+P N
+j=1 K(x j ; x i ) and
+fx i g N
+i=1 the N given data points. L is dened as L = (K 1N k T )=
+p
+N , where 1m
+is a column vector with ones of dimension m. K is the Gram matrix and dened
+as K ij = '(z i ) T '(z j ) = K(z i ; z j ).
+The worst-case probability of a point lying outside the region Q is given by 1 .
+If L T L + K is positive denite, the optimal half-space is unique and determined
+by:
+  = (L T L + K) 1 k
+ 2 (() + )
+with  =
+q
+k T (L T L + K) 1 k; (16)
+if the choice of  is such that ()    or   ( ) 2
+1+( ) 2 . If the choice of  is not
+feasible or if k = 0 (in this case, no  2 (0; 1] will be feasible), the problem does
+not have a solution.
+To solve the single-class problem, we can solve the second-order cone progam
+Eq. (15) or directly use result Eq. (16): when numerically regularizing L T L + K
+with an extra term I N , this unique solution can always be determined. Instead
+of explicitly inverting the matrix, we can solve a system iteratively. All of these
+approaches have a worst-case complexity of O(N 3 ), comparable to the quadratic
+program for single-class SVM (Scholkopf and Smola, 2001).
+Once an optimal decision region is found, future points z for which a T
+ '(z) =
+P N
+i=1 [  ] i K(x i ; z)  b  (notice that this can be evaluated only in terms of the
+kernel function), can then be considered as outliers with respect to the region Q,
+with the worst-case probability of occurrence outside Q given by 1 .
+4 Experiments
+In this section we report the results of experiments comparing the robust single-
+class MPM to the single-class SVM of Scholkopf and Smola (2001) and to a two-
+class SVM approach where an articial \negative class" is obtained by generat-
+ing data points uniformly in T = fz 2 R n j minf[x 1 ] i ; [x 2 ] i ; : : : ; [x N ] i g  [z] i 
+maxf[x 1 ] i ; [x 2 ] i ; : : : ; [x N ] i gg.
+
+For the benchmark binary classication data sets we studied, we converted the data
+sets into two single-class problems by treating each class in a separate experiment.
+We chose 80% of the data points as training and the remaining 20% of the data
+points as test, lumping the latter with the data points of the negative class (the class
+of the binary classication data, not used for training). We report false positive and
+false negative rates averaged over 30 random partitions in Table 1. 1
+We used a Gaussian kernel, K(x; y) = e kx yk 2 = , of width . The kernel pa-
+rameter  was tuned using cross-validation over 20 random partitions, as was the
+hyperparameter . For simplicity, we set the hyperparameter  = 0 for the ro-
+bust single-class MPM. Note that this choice has no impact on the MPM solution;
+according to Eq. (16) its only eect is to alter the estimated false-negative rate.
+The parameter  was varied throughout a range of values so as to explore the
+tradeo between the false positive (FP) rate and the false negative (FN) rate. A
+small value  yields a good FP but poor FN, and large  yields good FN but
+poor FP. For the single-class SVM and the two-class SVM, we varied the analogous
+parameters| (the fraction of support vectors and outliers) and C (the soft margin
+weight parameter)|to cover a similar range of the FP/FN tradeo. We envision
+the end user deciding where he or she wishes to operate along the FP/FN tradeo,
+and tuning ,  or C accordingly. Thus we compare the dierent algorithms by
+presenting in Table 1 an overview of the full tradeo curves (essentially the ROC
+curves). The specic values of ,  and C are chosen in each row so as to roughly
+match corresponding points on the ROC curves. We use italic font to indicate the
+best performing algorithm on a given row, choosing the algorithm with the best FP
+rate if FN rates are similar and with the best FN rate if FP rates are similar.
+The performance of the single-class MPM is clearly competitive with that of the
+other algorithms, providing joint FP/FN values that equal or improve upon the
+other algorithms in many cases, and spanning a broad range of FP/FN tradeo.
+Note that the two-class SVM can perform well if low FP rate is desired and high
+FN rate is tolerated. However, the two-class SVM sometimes fails to provide an
+extensive range of FP/FN tradeo; in particular, with the twonorm dataset, the
+algorithm is unable to provide solutions with small FN rate and large FP rate.
+Note that the value 1  (the worst-case probability of false negatives for the robust
+single-class MPM) is indeed an upper bound for the average FN rate in all cases
+except for the sonar dataset. Thus the simplifying assumption  = 0 appears to be
+reasonable in all cases except the sonar case.
+Finally, it is also worth noting that while the MPM algorithm is insensitive to the
+choice of , it is sensitive to the choice of . When we xed  = 0 (allowing no
+uncertainty in the covariance estimate) we obtained poor performance, in particular
+obtaining a small FP rate but a very poor FN rate.
+5 Conclusions
+We have presented a new algorithm for novelty detection, an important machine
+learning problem with numerous real-world applications. Our \single-class MPM"
+joins the \single-class SVM" of Scholkopf and Smola (2001) as a computationally-
+e∆cient, kernel-based method for solving this problem and the more general quantile
+estimation problem. We view the single-class MPM as particularly appropriate for
+these problems, given its formulation directly in terms of a worst-case probability
+1 The Wisconsin breast cancer dataset contained 16 missing examples which were not
+used. Data for the twonorm problem were generated as specied by Breiman (1997).
+
+Table 1: Performance for single-class problems; the best performance in each row is
+indicated in italic; FP = false positives (out-of-class data detected as in-class-data);
+FN = false negatives (in-class-data detected as out-of-class-data).
+Dataset Single Class MPM Single Class SVM Two-Class SVM approach
+ FP FN  FP FN C FP FN
+Sonar 0.2 24.7 % 64.0 % 0.6 26.9 % 65.4 % 0.1 23.8 % 68.6 %
+class +1 0.8 44.6 % 39.6 % 0.2 47.3 % 42.1 % 0.2 48.3 % 42.3 %
+0.95 69.3 % 17.3 % 0.0005 75.4 % 16.2 % 1 75.2 % 16.0 %
+Sonar 0.6 5.4 % 51.7 % 0.4 8.5 % 53.7 % 0.1 9.7 % 70.0 %
+class -1 0.9 10.0 % 37.4 % 0.001 15.7 % 41.3 % 0.2 34.6 % 40.6 %
+0.95 19.1 % 29.7 % 0.0006 36.1 % 28.4 % 0.35 47.7 % 26.0 %
+0.99 56.1 % 5.7 % 0.0003 82.6 % 6.3 % 1 67.9 % 6.1 %
+Breast 0.6 0.0 % 8.8 % 0.14 0.0 % 14.6 % 0.005 0.4 % 8.0 %
+Cancer 0.8 1.8 % 5.9 % 0.001 2.4 % 6.1 % 0.1 0.9 % 4.3 %
+class +1 0.2 10.5 % 2.7 % 0.0003 11.5 % 3.1 % 10 12.3 % 3.1 %
+Breast 0.01 2.4 % 26.5 % 0.4 2.5 % 41.4 % 0.8 0.9 % 47.9 %
+Cancer 0.03 2.9 % 13.5 % 0.2 2.8 % 25.0 % 1 11.0 % 45 %
+class -1 0.05 3.0 % 8.3 % 0.1 3.1 % 11.3 % 2 89.2 % 38.2 %
+0.14 5.9 % 1.9 % 0.0005 9.2 % 3.4 % 100 98.0 % 23.5 %
+Twonorm 0.01 6.3 % 43.2 % 0.4 6.2 % 42.8 % 0.13 6.8 % 37.3 %
+class +1 0.2 13.9 % 22.5 % 0.2 12.7 % 22.8 % 0.17 12.0 % 24.2 %
+0.4 22.5 % 11.9 % 0.0008 23.3 % 9.6 % 5 25.9 % 10.5 %
+0.6 36.9 % 4.5 % 0.0003 33.4 % 4.5 %
+Twonorm 0.1 5.6 % 43.7 % 0.4 6.0 % 44.1 % 0.35 6.1 % 49.8 %
+class -1 0.4 11.3 % 23.1 % 0.15 11.8 % 24.6 % 0.5 24.5 % 23.7 %
+0.6 16.9 % 12.1 % 0.0005 35.9 % 12.0 % 10 30.1 % 10.0 %
+0.8 30.1 % 6.9 % 0.0003 39.3 % 6.9 %
+Heart 0.46 13.4 % 46.2 % 0.4 13.5 % 47.8 % 0.05 11.9 % 46.4 %
+class +1 0.52 24.0 % 30.9 % 0.05 24.8 % 36.7 % 0.07 22.1 % 30.3 %
+0.54 33.5 % 22.6 % 0.0008 38.8 % 27.0 % 0.1 35.8 % 22.9 %
+Heart 0.0001 15.9 % 41.3 % 0.4 20.8 % 50.7 % 0.08 13.9 % 43.8 %
+class -1 0.0006 21.2 % 37.2 % 0.002 26.3 % 43.8 % 0.09 21.0 % 37.5 %
+0.003 36.3 % 27.2 % 0.0007 43.7 % 29.2 % 0.11 39.2 % 31.8 %
+0.01 56.9 % 15.9 % 0.0005 58.4 % 18.09 % 0.2 68.6 % 16.7 %
+of falling outside of a given convex set in feature space.
+While our simulation experiments illustrate the application of generic classication
+techniques to the novelty detection problem|via the generation of data from an
+articial \negative class" enclosing the data|we view the single-class methods as
+the more viable general technology. In particular, in high-dimensional problems it
+is di∆cult to specify a \negative class" in a way that yields comparable size training
+sets while still yielding a good characterization of a discriminant boundary.
+Acknowledgements
+We acknowledge support from ONR MURI N00014-00-1-0637 and NSF grant IIS-
+9988642. Sincere thanks to Alex Smola for helpful conversations and suggestions.
+References
+S. Ben-David and M. Lindenbaum. Learning distributions by their density levels: A
+paradigm for learning without a teacher. Journal of Computer and System Sciences, 55:
+171{182, 1997.
+L. Breiman. Arcing classiers. Technical Report Technical Report 460, Statistics Depart-
+ment, University of California, 1997.
+G. Lanckriet, L. El Ghaoui, C. Bhattacharyya, and M. I. Jordan. A robust minimax
+approach to classication. Journal of Machine Learning Research, 3:555{582, 2002.
+B. Scholkopf and A. Smola. Learning with Kernels. MIT Press, Cambridge, MA, 2001.
+

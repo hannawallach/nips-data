@@ -1,0 +1,214 @@
+Learning Sparse Multiscale Image Representations
+
+Phil Sallee Department of Computer Science and Center for Neuroscience, UC Davis 1544 Newton Ct. Davis, CA 95616 sallee@cs.ucdavis.edu Bruno A. Olshausen Department of Psychology and Center for Neuroscience, UC Davis 1544 Newton Ct. Davis, CA 95616 baolshausen@ucdavis.edu
+
+Abstract We describe a method for learning sparse multiscale image representations using a sparse prior distribution over the basis function coefficients. The prior consists of a mixture of a Gaussian and a Dirac delta function, and thus encourages coefficients to have exact zero values. Coefficients for an image are computed by sampling from the resulting posterior distribution with a Gibbs sampler. The learned basis is similar to the Steerable Pyramid basis, and yields slightly higher SNR for the same number of active coefficients. Denoising using the learned image model is demonstrated for some standard test images, with results that compare favorably with other denoising methods. Introduction
+
+1
+
+Increasing interest has been given to the use of overcomplete representations for natural scenes, where the number of basis functions exceeds the number of image pixels. One reason for this is that overcompleteness allows for more stable, and thus arguably more meaningful, representations in which common image features can be well described by only a few coefficients, regardless of where they are located in the image, how they are rotated, or how large they are [8, 6]. This may translate into gains in coding efficiency for image compression, and improved accuracy for tasks such as denoising. Overcomplete representations have been shown to reduce Gibbs-like artifacts common to thresholding methods employing critically sampled wavelets [4, 3, 9]. Common wavelet denoising approaches generally apply either a hard or softthresholding function to coefficients which have been obtained by filtering an image with a the basis functions. One can view these thresholding methods as a means of selecting coefficients for an image based on an assumed sparse prior on the coefficients [1, 2]. This statistical framework provides a principled means of selecting an appropriate thresholding function. When such thresholding methods are applied to overcomplete representations, however, problems arise due to the dependencies between coefficients. Choosing optimal thresholds for a non-orthogonal basis is still
+
+
+an unsolved problem. In one approach, orthogonal subgroups of an overcomplete shift-invariant expansion are thresholded separately and then the results are combined by averaging [4, 3]. In addition, if the coefficients are obtained by filtering the noisy image, there will be correlations in the noise that should be taken into account. Here we address two major issues regarding the use of overcomplete representations for images. First, current methods make use of various overcomplete wavelet bases. What is the optimal basis to use for a specific class of data? To help answer this question, we describe how to adapt an overcomplete wavelet basis to the statistics of natural images. Secondly, we address the problem of properly inferring the coefficients for an image when the basis is overcomplete. We avoid problems associated with thresholding by using the wavelet basis as part of a generative model, rather than a simple filtering mechanism. We then sample the coefficients from the resulting posterior distribution by simulating a Markov process known as a Gibbs-sampler. Our previous work in this area made use of a prior distribution peaked at zero and tapering away smoothly to obtain sparse coefficients [7]. However, we encountered a number of significant limitations with this method. First, the smooth priors do not force inactive coefficients to have values exactly equal to zero, resulting in decreased coding efficiency. Efficiency may be partially regained by thresholding the near-zero coefficients, but due to the non-orthogonality of the representation this will produce sub-optimal results as previously mentioned. The maximum a posteriori (MAP) estimate also introduced biases in the learning process. These effects can be partially compensated for by renormalizing the basis functions, but other parameters of the model such as those of the prior could not be learned. Finally, the gradient ascent method has convergence problems due to the power spectrum of natural images and the overcompleteness of the representation. Here we resolve these problems by using a prior distribution which is composed of a mixture of a Gaussian and a Dirac delta function, so that inactive coefficients are encouraged to have exact zero values. Similar models employing a mixture of two Gaussians have been used for classifying wavelet coefficients into active (high variance) and inactive (low variance) states [2, 5]. Such a classification should be even more advantageous if the basis is overcomplete. A method for performing Gibbs-sampling for the Delta-plus-Gaussian prior in the context of an image pyramid is derived, and demonstrated to be effective at obtaining very sparse representations which match the form of the imposed prior. Biases in the learning are overcome by sampling instead of using a MAP estimate. 2 Wavelet image model Each observed image I is assumed to be generated by a linear superposition of basis functions which are columns of an N by M weight matrix W, with the addition of Gaussian noise : I = W a + , (1) where I is an N-element vector of image pixels and a is an M-element vector of basis coefficients. In order to achieve a practical implementation which can be seamlessly scaled to any size image, we assume that the basis function matrix W is composed of a small set of spatially localized mother wavelet functions i(x, y), which are shifted to each position in the image and rescaled by factors of two. Unlike typical wavelet transforms which use a single 1-D mother wavelet function to generate 2-D functions by inner product, we do not constrain the functions i(x, y) to be 1-D separable.
+
+
+The functions i(x, y) provide an efficient way to perform computations involving W by means of convolutions. Basis functions of coarser scales are produced by upsampling the i(x, y) functions and blurring with a low-pass filter (x, y), also known as the scaling function. The image model above may be re-expressed to make these parameters explicit:
+
+I(x, y) gl(x, y) = = g0(x, y) + (x, y) al(x, y)
+
+gl +1 (x, y)  2  (x, y) + i ali(x, y)  i(x, y)
+
+l < L - 1 l = L - 1
+
+(2) (3)
+
+where the coefficients ali(x, y) are indexed by their position (x, y), band (i) and level of resolution (l) within the pyramid (l = 0 is the highest resolution level). The symbol  denotes convolution, and  2 denotes upsampling by two and is defined as
+
+) f(x, y)  2  f( x2 , 0 y 2 x even & y even otherwise (4)
+
+The probability of generating an image I, given coefficients a, parameters , assuming Gaussian i.i.d. noise  (with variance 1/N ), is
+
+P (I|a, ) = 1 ZN e- N 2 |I-W a|2 . (5)
+
+The prior probability over each coefficient ai is modeled as a mixture of a Gaussian distribution and a Dirac delta function (ai). A binary state variable si for each coefficient indicates whether the coefficient ai is active (any real value), or inactive (zero). The probability of a coefficient vector a given a binary state vector s and model parameters  = {W, N , a, s} is defined as P (a|s, ) = (6)
+
+i
+
+P (ai|si, ) (ai)
+
+1 Za e- ai 2 a2i
+
+i
+
+P (ai|si, ) = if if si = 0, si = 1 (7)
+
+where a is a vector with elements ai. The probability of a binary state s is
+
+T s  s
+
+s
+
+P (s|) = 1 Z e- 12 . (8)
+
+s
+
+Matrix s is assumed to be diagonal (for now), with nonzero elements si. The form of the prior is shown graphically in figure 1. Note that the parameters W, a, and s are themselves parameterized by a much smaller set of parameters. Only the mother wavelet function i(x, y) and a single si and ai parameter need to be learned for each wavelet band, since we are assuming translation invariance. The total image probability is obtained by marginalizing over the possible coefficient and state values: P (I|) = P (s|) P (I|a, )P (a|s, ) da (9)
+
+s
+
+3 Sampling and Inference
+
+We show how to sample from the posterior distribution P (a, s|I, ) for an image I using a Gibbs sampler. For each coefficient and state variable pair (ai,si), we
+
+
+10 0
+
+101
+
+102
+
+103
+
+104
+
+105
+
+10-6 0.5
+
+0.4 0.3 0.2 0.1 0 0.1 0.2 0.3 0.4 0.5
+
+Figure 1: Prior distribution (dashed), and histogram of samples taken from the posterior distribution (solid) plotted for a single coefficient. The y-axis is plotted on a log scale. sample from the posterior distribution conditioned on the image and the remaining coefficients a¯i: P (ai, si|I, a¯i, s¯i, ). After all coefficients (and state variables) have been updated, this process is repeated until the system has reached equilibrium. To infer an optimal representation a for an image I (for coding or denoising purposes), we can either average a number of samples to estimate the posterior mean, or with minor adjustment locate a posterior maximum by raising the posterior distribution to a power (1/T ) and annealing T to zero. To sample from P (ai, si|I, a¯i, s¯i, ), we first draw a value for si from P (si|I, a¯i, s¯i, ), then draw ai from P (ai|si, I, a¯i, s¯i, ). For P (si|I, a¯i, s¯i, ) we have: P (si|I, a¯i, s¯i, )  P(si|s¯i, ) P (I|ai, a¯i, )P (ai|si, )dai (10) where
+
+P (si|s¯i, ) P (I|ai, a¯i, ) = = 1 Zsi|s¯i 1 Zn
+
+e- si 2 si ,
+
+(11) (12)
+
+e- ni 2 (ai-bi)2 ,
+
+i
+
+and
+
+ni = N |Wi|2, Wi · (I - W ai |Wi|2 =0 bi = ) . (13)
+
+The notation Wi denotes column i of matrix W, |Wi| is the length of vector Wi, bi denotes the value for ai which minimizes the reconstruction error (while holding a¯i constant). Since si can only take on two values, we can compute equation 10 for si = 0 and si = 1, integrating over the possible coefficient values. This yields the following sigmoidal activation rule as a function of bi:
+
+and ai =0 denotes the current coefficient vector a except with ai set to zero. Thus,
+
+P (si =1|I, a¯i, s¯i, ) = 1 1 + e-i(b2i (14)
+
+-ti)
+
+where
+
+1 2ni
+
+i = , ti =
+
+2 ni + ai
+
+ni + ai 2ni si - log ai ni + ai . (15)
+
+
+For P (ai|si, I, a¯i, s¯i, ) we have: P (ai|si, I, a¯i, s¯i, ) =
+
+(ai) N(n
+
+ni bi
+
+i +ai
+
+, 1 ni +ai )
+
+if if si = 0, si = 1 (16)
+
+To perform this procedure on a wavelet pyramid, the inner product computations necessary to compute bi can be performed efficiently by means of convolutions with the mother wavelet functions i(x, y). The N , si and ai parameters may be adapted to a specific image during the inference process by use of the update rules described in the next section. This method was found to be particularly useful for denoising, when the variance of the noise was assumed to be unknown. 4 Learning Our objective for learning is to adjust the parameters, , to maximize the average log-likelihood of images under the model: ^ = arg max log P (I|) (17) The parameters are updated by gradient ascent on this objective, which results in the following update rules:
+
+
+
+si  1 2 1 1 + e 2
+
+1
+
+- si (18) si
+
+P (a,s|I,)
+
+ai  1 2 si 1 ai - a2i (19)
+
+P (a,s|I,)
+
+i(x, y)  N e(x, y) ai(x, y) P (a,s|I,) (20)
+
+where denotes cross correlation and e(x, y) is the reconstruction error computed
+
+by e = I - W a. Only a center portion of the cross correlation with the extent of the i(x, y) functions is computed to update the parameters. The outer brackets denotes averaging over many images. The notation denotes averaging the quantity in brackets while sampling from the specified distribution. 5 Results The image model was trained on 22 512x512 pixel grayscale natural images (not whitened). These images were generated from color images taken from a larger randomly for sampling during training. To simplify the learning procedure, sampling was performed on a single spatial frequency scale. Each image was bandpass filtered for an octave range before sampling from the posterior for that scale. The Greenspun.
+
+P ()
+
+database of photographic images 1 . Smaller images (64x64 pixels) were selected
+
+1 Images were downloaded from philip.greenspun.com with permission from Philip
+
+
+(a) (b)
+
+Figure 2: (a) Mother wavelet functions i(x, y) adapted for 2, 4 and 6 bands and corresponding power spectra showing power as a function of spatial frequency in the 2D Fourier plane. (b) Equivalent mother wavelets and spectra for the 4-band Steerable Pyramid.
+
+ai and si parameters were constrained to be the same for all orientation bands and were adapted over many images with N fixed. Shown in figure 2 are the learned i(x, y) which parameterize W , with their corresponding 2D spectra. Three different degrees of overcompleteness were tested. The results are shown for 2 band, 4 band and 6 band wavelet bases. As the degree of overcompleteness increases, the resulting functions show tighter tuning to orientation. The basis filters for a 4 band Steerable Pyramid [10] are also shown for comparison, to illustrate the similarity to the learned functions.
+
+learned steer
+
+B)d(
+
+SNR
+
+27 26.5 26 25.5 25 24.5 24 23.5 23 22.5
+
+1.0
+
+2.0 % nonzeros 3.0 4.0 5.0
+
+Figure 3: Sparsity comparison between the learned basis (top) and the steerable basis (bottom). The y axis represents the signal-to-noise ratio (SNR) in dB achieved for each method for a given percentage of nonzeros.
+
+5.1 Sparsity
+
+We evaluated the sparsity of the representations obtained with the four band learned functions and the sampling method with those obtained using the same sampling method and the four band Steerable Pyramid filters [10]. In order to explore the SNR curves for each basis, we used a variety of values for s so as to obtain different levels of sparsity. The same images were used for both bases. The results are given in figure 3. Each dot on the line represents a different value of s. The results were similar, with the learned basis yielding slightly higher SNR (about 0.5 dB) for the same number of active coefficients.
+
+
+5.2 Denoising
+
+We evaluated our inference method and learned basis functions by denoising images containing known amounts of additive i.i.d. Gaussian noise. Denoising was accomplished by averaging samples taken from the posterior distribution for each image via Gibbs sampling to approximate the posterior mean. Gibbs sampling was performed on a four level pyramid using the 6 band learned wavelet basis, and also using the 6 band Steerable basis. The N , si and ai parameters were adapted to each noisy image during sampling for blind denoising in which the noise variance was assumed to be unknown. We compared these results to the wiener2 function in MATLAB, and also to BayesCore [9], a Bayesian method for computing an optimal soft thresholding, or coring, function for a generalized Laplacian prior. For wiener2, the best neighborhood size was used for each image. Table 1 gives the SNR results for each method when applied to some standard test images for three different levels of i.i.d. Gaussian noise with standard deviation . Figure 4 shows a cropped subregion of the results for the "Einstein" image with  = 10.
+
+6 Summary and Conclusions
+
+We have shown that a wavelet basis and a mixture prior composed of a Dirac delta function and a Gaussian can be adapted to natural images resulting in very sparse image representations. The resulting basis is very similar to a Steerable basis, both in appearance and sparsity of the resulting image representations. It appears that the Steerable basis may be nearly optimal for producing sparse representations of natural scenes. Denoising results indicate that using a sparse prior and an inference method to properly account for the non-orthogonality of the representation may yield a significant improvement over wavelet coring methods that use filtered coefficients. More work needs to be done to determine whether the coding gains achieved are due to the choice of prior versus the basis or inference/estimation method used. Acknowledgments Supported by NIMH R29-MH057921. Phil Sallee's work was also supported in part by a United States Department of Education Government Assistance in Areas of National Need (DOE-GAANN) grant #P200A980307.
+
+Image Einstein
+
+Lena
+
+Goldhill
+
+Fruit
+
+noise level  = 10  = 20  = 30  = 10  = 20  = 30  = 10  = 20  = 30  = 10  = 20  = 30 noisy 12.40 6.40 2.89 13.61 7.59 4.07 13.86 7.83 4.28 16.25 10.24 6.70 wiener2 15.80 12.61 10.95 19.05 15.51 13.25 17.56 14.32 12.64 21.87 18.15 15.97 BayesCore S6 16.36 13.44 11.81 19.91 16.88 14.99 18.14 15.18 13.61 22.09 18.97 17.21 D+G S6 16.47 13.80 12.28 20.37 17.46 15.48 18.10 15.41 13.92 22.78 19.61 17.72 D+G L6 16.19 13.79 12.29 20.21 17.54 15.55 17.90 15.41 13.95 22.38 19.42 17.66
+
+Table 1: SNR values (in dB) for noisy and denoised images contaminated with additive i.i.d. Gaussian noise of std.dev. . "D+G" means Delta-plus-Gaussian prior, "S6" means 6-Band Steerable basis, and "L6" means 6-Band Learned basis.
+
+
+original noisy (=10) SNR=12.3983 wiener2 SNR=15.8033
+
+BayesCore steer6 SNR=16.3591 D+G steer6 SNR=16.4714 D+G learned6 SNR=16.1939
+
+Figure 4: Denoising example. A cropped subregion of the Einstein image and
+
+denoised images for each noise reduction method for noise std.dev. =10.
+
+References
+
+[1] Abromovich F, Sapatinas T, Silverman B (1996), Wavelet Thresholding via a Bayesian Approach, preprint. [2] Chipman H, Kolaczyk E, McCulloch R (1997) Adaptive bayesian wavelet shrinkage, J. Amer. Statist. Assoc. 92(440): 1413-1421. [3] Chang SG, Yu B, Vetterli M (2000). Spatially Adaptive Wavelet Thresholding with Context Modelling for Image Denoising. IEEE Trans. on Image Proc., 9(9): 1522-1531. [4] Coifman RR, Donoho DL (1995). Translation-invariant de-noising, in Wavelets and Statistics, A.Antoniadis and G. Oppenheim, Eds. Berlin, Germany: Springer-Varlag. [5] Crouse MS, Nowak RD and Baraniuk RG (1998) Wavelet-based Statistical Signal Processing using Hidden Markov Models, IEEE Trans. Signal Proc., 46(4): 886-902. [6] Freeman WT, Adelson EH (1991) The Design and Use of Steerable Filters. IEEE Trans. Patt. Anal. and Machine Intell., 13(9): 891-906. [7] Olshausen BA, Sallee P, Lewicki MS (2001) Learning sparse image codes using a wavelet pyramid architecture, Adv. in Neural Inf. Proc. Sys., 13: 887-893. [8] Simoncelli EP, Freeman WT, Adelson EH, Heeger DJ (1992) Shiftable multiscale transforms, IEEE Transactions on Information Theory, 38(2): 587-607. [9] Simoncelli EP, Adelson EH (1996) Noise removal via Bayesian wavelet coring, Presented at: 3rd IEEE International Conf. on Image Proc., Laussanne Switzerland. [10] Simoncelli EP, Freeman WT (1995). The Steerable Pyramid: A Flexible Architecture for Multi-scale Derivative Computation, IEEE Int. Conf. on Image Processing.
+
+

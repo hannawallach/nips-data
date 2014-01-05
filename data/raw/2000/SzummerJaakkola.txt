@@ -1,0 +1,465 @@
+Kernel expansions with unlabeled examples
+Martin Szummer
+MIT AI Lab & CBCL
+Cambridge, MA
+szummer@ai.mit.edu
+Tommi Jaakkola
+MIT AI Lab
+Cambridge, MA
+tommi@ai.mit.edu
+Abstract
+Modern classification applications necessitate supplementing the few
+available labeled examples with unlabeled examples to improve classi­
+fication performance. We present a new tractable algorithm for exploit­
+ing unlabeled examples in discriminative classification. This is achieved
+essentially by expanding the input vectors into longer feature vectors via
+both labeled and unlabeled examples. The resulting classification method
+can be interpreted as a discriminative kernel density estimate and is read­
+ily trained via the EM algorithm, which in this case is both discriminative
+and achieves the optimal solution. We provide, in addition, a purely dis­
+criminative formulation of the estimation problem by appealing to the
+maximum entropy framework. We demonstrate that the proposed ap­
+proach requires very few labeled examples for high classification accu­
+racy.
+1 Introduction
+In many modern classification problems such as text categorization, very few labeled ex­
+amples are available but a large number of unlabeled examples can be readily acquired.
+Various methods have recently been proposed to take advantage of unlabeled examples to
+improve classification performance. Such methods include the EM algorithm with naive
+Bayes models for text classification [1], the co­training framework [2], transduction [3, 4],
+and maximum entropy discrimination [5].
+These approaches are divided primarily on the basis of whether they employ generative
+modeling or are motivated by robust classification. Unfortunately, the computational effort
+scales exponentially with the number of unlabeled examples for exact solutions in discrim­
+inative approaches such as transduction [3, 5]. Various approximations are available [4, 5]
+but their effect remains unclear.
+In this paper, we formulate a complementary discriminative approach to exploiting unla­
+beled examples, effectively by using them to expand the representation of examples. This
+approach has several advantages including the ability to represent the true Bayes optimal
+decision boundary and making explicit use of the density over the examples. It is also
+computationally feasible as stated.
+The paper is organized as follows. We start by discussing the kernel density estimate and
+providing a smoothness condition, assuming labeled data only. We subsequently introduce
+unlabeled data, define the expansion and formulate the EM algorithm for discriminative
+
+training. In addition, we provide a purely discriminative version of the parameter estima­
+tion problem and formalize it as a maximum entropy discrimination problem. We then
+demonstrate experimentally that various concerns about the approach are not warranted.
+2 Kernel density estimation and classification
+We start by assuming a large number of labeled examples D = f(x 1 ; ~
+y 1 ); : : : ; (xN ; ~ yN )g,
+where ~
+y i 2 f1; 1g and x i 2 R d . A joint kernel density estimate can be written as
+P (x; y) =
+1
+N
+N
+X
+i=1
+Æ(y; ~
+y i ) K(x; x i ) (1)
+where
+R
+K(x; x i )d(x) = 1 for each i. With an appropriately chosen kernel K, a function
+of N; P (x; y) will be consistent in the sense of converging to the joint density as N !1.
+Given a fixed number of examples, the kernel functions K(x; x i ) may be viewed as con­
+ditional probabilities P (xji), where i indexes the observed points. For the purposes of this
+paper, we assume a Gaussian form K(x; x i ) = N(x; x i ;  2 I ). The labels ~ y i assigned
+to the sampled points x i may themselves be noisy and we incorporate P (yji), a location­
+specific probability of labels. The resulting joint density model is
+P (x; y) =
+1
+N
+N
+X
+i=1
+P (yji) P (xji) y x
+Interpreting 1=N as a prior probability of the index variable i = 1; : : : ; N , the resulting
+model conforms to the graph depicted above. This is reminiscent of the aspect model for
+clustering of dyadic data [6]. There are two main differences. First, the number of aspects
+here equals the number of examples and the model is not suitable for clustering. Second, we
+do not search for the probabilities P (xji) (kernels), instead they are associated with each
+observed example and are merely adjusted in terms of scale (kernel width). This restriction
+yields a significant computational advantage in classification, which is the objective in this
+paper.
+The posterior probability of the label y given an example x is given by P (yjx) =
+P
+i P (yji)P (ijx), where P (ijx) / P (xji)=P (x) as P (i) is assumed to be uniform. The
+quality of the posterior probability depends both on how accurately P (yji) are known as
+well as on the properties of the membership probabilities P (ijx) (always known) that must
+be relatively smooth.
+Here we provide a simple condition on the membership probabilities P (ijx) so that any
+noise in the sampled labels for the available examples would not preclude accurate deci­
+sions. In other words, we wish to ensure that the conditional probabilities P (yjx) can be
+evaluated accurately on the basis of the sampled estimate in Eq. (1). Removing the label
+noise provides an alternative way of setting the width parameter  of the Gaussian kernels.
+The simple lemma below, obtained via standard large deviation methods, ties the appro­
+priate choice of the kernel width  to the squared norm of the membership probabilities
+P (ijx j ).
+Lemma 1 Let I N = f1; : : : ; Ng. Given any Æ > 0;  > 0, and any collection of distribu­
+tions p ijk  0,
+P
+i2IN p ijk = 1 for k 2 I N , such that kp jk k 2  =
+p
+2 log(2N=Æ),8k 2
+I N , and independent samples ~ y i 2 f1; 1g from some P (yji); i 2 I N , then
+P (9k 2 I N : j
+P N
+i=1 ~
+y i p ijk
+P N
+i=1 w i p ijk j > )  Æ where w i = P (y = 1ji) P (y =
+1ji) and the probability is taken over the independent samples.
+
+The lemma applies to our case by setting p ijk = P (ijx k ), f~y i g represents the sampled
+labels for the examples, and by noting that the sign of
+P
+w i P (ijx) is the MAP decision
+rule from our model, P (y = 1jx) P (y = 1jx). The lemma states that as long as the
+membership probabilities have appropriately bounded squared norm, the noise in the label­
+ing is inconsequential for the classification decisions. Note, for example, that a distribution
+p ijk = 1=N has kp jk k 2 = 1=
+p
+N implying that the conditions are achievable for large
+N . The squared norm of P (ijx) is directly controlled by the kernel width  2 and thus the
+lemma ties the kernel width with the accuracy of estimating the conditional probabilities
+P (yjx). Algorithms for adjusting the kernel width(s) on the basis of this will be presented
+in a longer version of the paper.
+3 The expansion and EM estimation
+A useful way to view the resulting kernel density estimate is that each example x is rep­
+resented by a vector of membership probabilities P (ijx), i = 1; : : : ; N . Such mixture
+distance representations have been used extensively; it can also be viewed as a Fisher score
+vector computed with respect to adjustable weighting P (i). The examples in this new
+representation are classified by associating P (yji) with each component and computing
+P (yjx) =
+P
+i P (yji)P (ijx). An alternative approach to exploiting kernel density esti­
+mates in classification is given by [7].
+We now assume that we have labels for only a few examples, and our training data is
+f(x 1 ; ~
+y 1 ); : : : ; (xL ; ~
+yL ); xL+1 ; : : : ; xN g. In this case, we may continue to use the model
+defined above and estimate the free parameters, P (yji), i = 1; : : : ; N , from the few labeled
+examples. In other words, we can maximize the conditional log­likelihood
+L
+X
+l=1
+log P (~y l jx l ) =
+L
+X
+l=1
+log
+N
+X
+i=1
+P (~y l ji)P (ijx l ) (2)
+where the first summation is only over the labeled examples and L  N . Since P (ijx l )
+are fixed, this objective function is jointly concave in the free parameters and lends itself
+to a unique maximum value. The concavity also guarantees that this optimization is easily
+performed via the EM algorithm [8].
+Let p ijl be the soft assignment for component i given (x l ; ~ y l ), i.e., p ijl = P (ijx l ; ~ y l ) /
+P (~y l ji)P (ijx l ). The EM algorithm iterates between the E­step, where p ijl are recom­
+puted from the current estimates of P (yji), and the M­step where we update P (yji)
+P
+l:~y l =y p ijl =
+P
+l p ijl .
+This procedure may have to be adjusted in cases where the overall frequency of different
+labels in the (labeled) training set deviates significantly from uniform. A simple rescaling
+P (yji)   P (yji)=L y by the frequencies L y and renormalization after each M­step would
+probably suffice.
+The runtime of this algorithm is O(LN). The discriminative formulation suggests that EM
+will provide reasonable parameter estimates P (yji) for classification purposes. The qual­
+ity of the solution, as well as the potential for overfitting, is contingent on the smoothness
+of the kernels or, equivalently, smoothness of the membership probabilities P (ijx). Note,
+however, that whether or not P (yji) will converge to the extreme values 0 or 1 is not an in­
+dication of overfitting. Actual classification decisions for unlabeled examples x i (included
+in the expansion) need to be made on the basis of P (yjx i ) and not on the basis of P (yji),
+which function as parameters.
+
+4 Discriminative estimation
+An alternative discriminative formulation is also possible, one that is more sensitive to the
+decision boundary rather than probability values associated with the labels. To this end,
+consider the conditional probability P (yjx) =
+P
+i P (yji)P (ijx). The decisions are made
+on the basis of the sign of the discriminant function
+f(x) = P (y = 1jx) P (y = 1jx) =
+N
+X
+i=1
+w i P (ijx) (3)
+where w i = P (y = 1ji) P (y = 1ji). This is similar to a linear classifier and there
+are many ways of estimating the weights w i discriminatively. The weights should remain
+bounded, however, i.e., w i 2 [ 1; 1], so long as we wish to maintain the kernel density
+interpretation. Estimation algorithms with Euclidean norm regularization such as SVMs
+would not be appropriate in this sense. Instead, we employ the maximum entropy discrim­
+ination (MED) framework [5] and rely on the relation w i = Efy i g =
+P
+y i =1 y i P (y) to
+estimate the distribution P (y) over all the labels y = [y 1 ; : : : ; yN ]. Here y i is a parame­
+ter associated with the i th example and should be distinguished from any observed labels.
+We can show that in this case the maximum entropy solution factors across the examples
+P (y 1 ; : : : ; yN ) =
+Q
+i P i (y i ) and we can formulate the estimation problem directly in terms
+of the marginals P i (y i ).
+The maximum entropy formalism encodes the principle that label assignments P i (y i ) for
+the examples should remain uninformative to the extent possible given the classification
+objective. More formally, given a set of L labeled examples (x 1 ; ~
+y 1 ); : : : ; (xL ; ~
+yL ), we
+maximize
+P N
+i=1 H(y i ) C
+P
+l  l subject to the classification constraints
+~
+y l
+" N
+X
+i=1
+X
+y i =1
+y i P i (y i )P (ijx l )
+#
++  l   8l 2 [1 : : : L] (4)
+where H(y i ) is the entropy of y i relative to the marginal P i (y i ). Here  specifies the target
+separation ( 2 [0; 1]) and the slack variables  l  0 permit deviations from the target to
+ensure that a solution always exists. The solution is not very sensitive to these parameters,
+and  = 0:1 and C = 40 worked well for many problems. The advantage of this formula­
+tion is that effort is spent only on those training examples whose classification is uncertain.
+Examples already classified correctly with a margin larger than  are effectively ignored.
+The optimization problem and algorithms are explained in the appendix.
+5 Discussion of the expanded representation
+The kernel expansion enables us to represent the Bayes optimal decision boundary provided
+that the kernel density estimate is sufficiently accurate. With this representation, the EM
+and MED algorithms actually estimate decision boundaries that are sensitive to the density
+P (x). For example, labeled points in high­density regions will influence the boundary
+more than in low­density regions. The boundary will partly follow the density, but unlike in
+unsupervised methods, will adhere strongly to the labeled points. Moreover, our estimation
+techniques limit the effect of outliers, as all points have a bounded weight w i = [ 1; 1]
+(spurious unlabeled points do not adversely affect the boundary).
+As we impose smoothness constraints on the membership probabilities P (ijx), we also
+guarantee that the capacity of the resulting classifier need not increase with the number
+of unlabeled examples (in the fat shattering sense). Also, in the context of the maximum
+entropy formulation, if a point is not helpful for the classification constraints, then entropy
+
+is maximized for P i (y = 1) = 0:5, implying w i = 0, and the point has no effect on the
+boundary.
+If we dispense with the conditional probability interpretation of the kernels K, we are
+free to choose them from a more general class of functions. For example, the kernels
+no longer have to integrate to 1. An expansion of x in terms of these kernels can still
+be meaningful; as a special case, when linear kernels are chosen, the expansion reduces
+to weighting distances between points by the covariance of the data. Distinctions along
+high variance directions then become easier to make, which is helpful when between­class
+scatter is greater than within­class scatter.
+Thus, even though the probabilistic interpretation is missing, a simple preprocessing step
+can still help, e.g., support vector machines to take advantage of unlabeled data: we can
+expand the inputs x in terms of kernels G from labeled and unlabeled points as in (x) =
+1
+Z [G(x; x 1 ); : : : ; G(x; xN )], where Z optionally normalizes the feature vector.
+6 Results
+We first address the potential concern that the expanded representation may involve too
+many degrees of freedom and result in poor generalization. Figure 1a) demonstrates that
+this is not the case and, instead, the test classification error approaches the limiting asymp­
+totic rate exponentially fast. The problem considered was a DNA splice site classification
+problem with 500 examples for which d = 100. Varying sizes of random subsets were
+labeled and all the examples were used in the expansion as unlabeled examples. The er­
+ror rate was computed on the basis of the remaining 500 L examples without labels,
+where L denotes the number of labeled examples. The results in the figure were averaged
+across 20 independent runs. The exponential rate of convergence towards the limiting rate
+is evidenced by the linear trend in the semilog figure 1a). The mean test errors shown in fig­
+ure 1b) indicate that the purely discriminative training (MED) can contribute substantially
+to the accuracy. The kernel width in these experiments was simply fixed to the median
+distance to the 5th nearest neighbor from the opposite class. Results from other methods
+of choosing the kernel width (the squared norm, adaptive) will be discussed in the longer
+version of the paper.
+Another concern is perhaps that the formulation is valid only in cases where we have a
+large number of unlabeled examples. In principle, the method could deteriorate rapidly
+after the kernel density estimate no longer can be assumed to give reasonable estimates.
+Figure 2a) illustrates that this is not a valid interpretation. The problem here is to classify
+DNA microarray experiments on the basis of the leukemia types that the tissues used in
+the array experiments corresponded to. Each input vector for the classifier consists of the
+expression levels of over 7000 genes that were included as probes in the arrays. The number
+of examples available was 38 for training and 34 for testing. We included all examples
+as unlabeled points in the expansion and randomly selected subsets of labeled training
+examples, and measured the performance only on the test examples (which were of slightly
+different type and hence more appropriate for assessing generalization). Figure 2 shows
+rapid convergence for EM and the discriminative MED formulation. The ``asymptotic''
+level here corresponds to about one classification error among the 34 test examples. The
+results were averaged over 20 independent runs.
+7 Conclusion
+We have provided a complementary framework for exploiting unlabeled examples in dis­
+criminative classification problems. The framework involves a combination of the ideas of
+kernel density estimation and representational expansion of input vectors. A simple EM
+
+a) 0 5 10 15 20 25 30
+10 -3
+10 -2
+10 -1
+10 0
+mean
+error
+-
+asymptotic
+error
+labeled examples b) 0 5 10 15 20 25 30
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+mean
+test
+error
+labeled examples
+SVM
+EM
+MED
+Figure 1: A semilog plot of the test error rate for the EM formulation less the asymptotic
+rate as a function of labeled examples. The linear trend in the figure implies that the error
+rate approaches the asymptotic error exponentially fast. b) The mean test errors for EM,
+MED and SVM as a function of the number of labeled examples. SVM does not use
+unlabeled examples.
+0 5 10 15 20 25
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+number of labeled examples
+mean
+test
+error
+MED
+EM
+Figure 2: The mean test errors for the leukemia classification problem as a function of the
+number of randomly chosen labeled examples. Results are given for both EM (lower line)
+and MED (upper line) formulations.
+algorithm is sufficient for finding globally optimal parameter estimates but we have shown
+that a purely discriminative formulation can yield substantially better results within the
+framework.
+Possible extensions include using the kernel expansions with transductive algorithms that
+enforce margin constraints also for the unlabeled examples [5]. Such combination can be
+particularly helpful in terms of capturing the lower dimensional structure of the data. Other
+extensions include analysis of the framework similarly to [9].
+Acknowledgments
+The authors gratefully acknowledge support from NTT and NSF. Szummer would also like
+to thank Thomas Minka for many helpful discussions and insights.
+References
+[1] Nigam K., McCallum A., Thrun S., and Mitchell T. (2000) Text classification from
+labeled and unlabeled examples. Machine Learning 39 (2):103--134.
+[2] Blum A., Mitchell T. (1998) Combining Labeled and Unlabeled Data with Co­
+Training. In Proc. 11th Annual Conf. Computational Learning Theory, pp. 92--100.
+
+[3] Vapnik V. (1998) Statistical learning theory. John Wiley & Sons.
+[4] Joachims, T. (1999) Transductive inference for text classification using support vector
+machines. International Conference on Machine Learning.
+[5] Jaakkola T., Meila M., and Jebara T. (1999) Maximum entropy discrimination. In
+Advances in Neural Information Processing Systems 12.
+[6] Hofmann T., Puzicha J. (1998) Unsupervised Learning from Dyadic Data. Interna­
+tional Computer Science Institute, TR­98­042.
+[7] Tong S., Koller D. (2000) Restricted Bayes Optimal Classifiers. Proceedings AAAI.
+[8] Miller D., Uyar T. (1996) A Mixture of Experts Classifer with Learning Based on
+Both Labelled and Unlabelled Data. In Advances in Neural Information Processing
+Systems 9, pp. 571--577.
+[9] Castelli V., Cover T. (1996) The relative value of labeled and unlabeled samples in
+pattern recognition with an unknown mixing parameter. IEEE Transactions on infor­
+mation theory 42 (6): 2102--2117.
+A Maximum entropy solution
+The unique solution to the maximum entropy estimation problem is found via introducing
+Lagrange multipliers f l g for the classification constraints. The multipliers satisfy  l 2
+[0; C], where the lower bound comes from the inequality constraints and the upper bound
+from the linear margin penalties being minimized. To represent the solution and find the
+optimal setting of  l we must evaluate the partition function
+Z() = e
+P L
+l  l 
+X
+y1 ;:::;y N
+N
+Y
+i=1
+e
+P L
+l ~ y l  l y i P (ijx l ) = (5)
+= e
+P L
+l  l 
+N
+Y
+i=1
+
+e
+P L
+l ~ y l  l P (ijx l ) + e
+P L
+l ~
+y l  l P (ijx l )
+
+(6)
+that normalizes the maximum entropy distribution. Here ~ y denote the observed labels.
+Minimizing the jointly convex log­partition function log Z() with respect to the Lagrange
+multipliers leads to the optimal setting f 
+l g. This optimization is readily done via an axis
+parallel line search (e.g. the bisection method). The required gradients are given by
+@log Z()
+@ k
+=  +
+N
+X
+i=1
+tanh
+  L
+X
+l=1
+~
+y l  
+l P (ijx l )
+!
+~
+y k P (ijx k ) = (7)
+=  + ~
+y k
+N
+X
+i=1
+EP 
+i
+f y i gP (ijx k ) (8)
+(this is essentially the classification constraint). The expectation is taken with respect to
+the maximum entropy distribution P  (y 1 ; : : : ; yN ) = P 
+1 (y 1 )    P 
+N (y N ) where the com­
+ponents are P 
+i (y i ) / expf
+P
+l ~
+y l  l y i P (ijx)g: The label averages w 
+i = EP  f y i g =
+P
+y i y i P 
+i (y i ) are needed for the decision rule as well as in the optimization. We can iden­
+tify these from above w 
+i = tanh(
+P
+l ~
+y l  
+l P (ijx l )) and they are readily evaluated. Finding
+the solution involves O(L 2 N) operations.
+Often the numbers of positive and negative training labels are imbalanced. The MED
+formulation (analogously to SVMs) can be adjusted by defining the margin penalties as
+C +
+P
+l:~y l =1  l +C
+P
+l:~y l = 1  l , where, for example, L + C + = L C that equalizes the
+mean penalties. The coefficients C + and C can also be modified adaptively during the
+estimation process to balance the rate of misclassification errors across the two classes.
+

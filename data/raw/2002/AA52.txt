@@ -1,0 +1,462 @@
+Feature Selection and Classification on Matrix Data: From Large Margins To Small Covering Numbers
+
+Sepp Hochreiter and Klaus Obermayer Department of Electrical Engineering and Computer Science Technische Universit¨at Berlin 10587 Berlin, Germany {hochreit,oby}@cs.tu-berlin.de
+
+Abstract We investigate the problem of learning a classification task for datasets which are described by matrices. Rows and columns of these matrices correspond to objects, where row and column objects may belong to different sets, and the entries in the matrix express the relationships between them. We interpret the matrix elements as being produced by an unknown kernel which operates on object pairs and we show that - under mild assumptions - these kernels correspond to dot products in some (unknown) feature space. Minimizing a bound for the generalization error of a linear classifier which has been obtained using covering numbers we derive an objective function for model selection according to the principle of structural risk minimization. The new objective function has the advantage that it allows the analysis of matrices which are not positive definite, and not even symmetric or square. We then consider the case that row objects are interpreted as features. We suggest an additional constraint, which imposes sparseness on the row objects and show, that the method can then be used for feature selection. Finally, we apply this method to data obtained from DNA microarrays, where "column" objects correspond to samples, "row" objects correspond to genes and matrix elements correspond to expression levels. Benchmarks are conducted using standard one-gene classification and support vector machines and K-nearest neighbors after standard feature selection. Our new method extracts a sparse set of genes and provides superior classification results. 1 Introduction Many properties of sets of objects can be described by matrices, whose rows and columns correspond to objects and whose elements describe the relationship between them. One typical case are so-called pairwise data, where rows as well as columns of the matrix represent the objects of the dataset (Fig. 1a) and where the entries of the matrix denote similarity values which express the relationships between objects.
+
+
+Pairwise Data (a)
+
+A B C D E F G H I J K L
+
+0.9 -0.1 -0.8 0.5 0.2 -0.5 -0.7 -0.9 0.2 -0.7 0.4 -0.3
+
+-0.1 -0.8 0.5 0.9 0.6 0.3 0.6 0.9 0.2
+
+0.3 -0.7 -0.6
+
+0.2 -0.6
+
+0.9 0.7
+
+0.7
+
+0.6 0.1
+
+0.3 0.5
+
+0.7 -0.3 -0.8 -0.7 -0.9
+
+0.2 -0.7 -0.5 -0.1
+
+Feature Vectors (b)
+
+A B C D E F G
+
+1.3 -1.8 1.2 3.7 9.2 -2.2 -1.6 -1.1 7.2 1.9 -2.9 0.8 -0.6 -9.4 -8.3
+
+7.8 6.6 2.3 9.0 -2.2 -4.4
+
+2.5 9.2
+
+-7.5 -4.8 3.8 3.9 -4.7 -8.4
+
+            A B C D E F G H I J K L
+
+0.2 -0.7 -0.6
+
+-0.5 -0.6
+
+-0.7 -0.9 0.3 0.7
+
+0.6 0.5
+
+0.3 -0.1 0.6 0.9 -0.9
+
+0.9 -0.9 -0.5 0.4 0.1 -0.3 -0.6
+
+0.6 -0.1 0.7
+
+0.1 -0.9 0.3 -0.5 0.9 0.9
+
+0.9 -0.2 -0.6 -0.5 -0.4 -0.3
+
+0.9 -0.3 -0.3 0.6
+
+-0.7 0.4 0.8
+
+0.2 -0.1 0.4 -0.2 -0.3
+
+0.2 -0.3 -0.7 -0.7 -0.8 -0.5
+
+0.6 0.1 -0.6 -0.3
+
+0.9 -0.3 -0.5
+
+0.4 -0.7 -0.1 -0.9 -0.6 -0.4
+
+-0.3 -0.9 0.6 -0.1
+
+0.6 0.9
+
+0.9 0.2 -0.9
+
+0.2 -0.9
+
+0.9 0.3
+
+0.9 -0.3 -0.7
+
+-0.3 0.9 -0.1 -0.5
+
+0.3 -0.7 -0.1 0.4 0.8 -0.5
+
+0.7 -0.3 -0.7
+
+0.9 0.1 0.1 0.9
+
+-5.7 0.1 -0.3
+
+-2.4 -3.9 1.9
+
+-7.7 8.6 -9.7
+
+-4.8 0.7 0.1 -1.7
+
+-7.4 2.6
+
+-1.2 0.9 0.2 0.3 -7.2 -1.8
+
+6.9 2.7 2.9 0.2
+
+4.6 2.6
+
+-6.2 -6.2 1.8 9.0 4.8 -8.3 6.2 9.0 1.5
+
+9.6 7.0
+
+3.6 -0.7 -9.4
+
+-0.8 -2.0
+
+0.9
+
+4.4 -1.9
+
+-1.1 7.7 8.4
+
+2.5 -4.3 -5.4 0.7
+
+-2.1 1.2
+
+Figure 1: Two typical examples of matrix data (see text). (a) Pairwise data. Row (A-L) and column (A-L) objects coincide. (b) Feature vectors. Column objects (A-G) differ form row objects ( - ). The latter are interpreted as features.
+
+Another typical case occurs, if objects are described by a set of features (Fig. 1b). In this case, the column objects are the objects to be characterized, the row objects correspond to their features and the matrix elements denote the strength with which a feature is expressed in a particular object. In the following we consider the task of learning a classification problem on matrix data. We consider the case that class labels are assigned to the column objects of the training set. Given the matrix and the class labels we then want to construct a classifier with good generalization properties. From all the possible choices we select classifiers from the support vector machine (SVM) family [1, 2] and we use the principle of structural risk minimization [15] for model selection - because of its recent success [11] and its theoretical properties [15]. Previous work on large margin classifiers for datasets, where objects are described by feature vectors and where SVMs operate on the column vectors of the matrix, is abundant. However, there is one serious problem which arise when the number of features becomes large and comparable to the number of objects: Without feature selection, SVMs are prone to overfitting, despite the complexity regularization which is implicit in the learning method [3]. Rather than being sparse in the number of support vectors, the classifier should be sparse in the number of features used for classification. This relates to the result [15] that the number of features provide an upper bound on the number of "essential" support vectors. Previous work on large margin classifiers for datasets, where objects are described by their mutual similarities, was centered around the idea that the matrix of similarities can be interpreted as a Gram matrix (see e.g. Hochreiter & Obermayer [7]). Work along this line, however, was so far restricted to the case (i) that the Gram matrix is positive definite (although methods have been suggested to modify indefinite Gram matrices in order to restore positive definiteness [10]) and (ii) that row and column objects are from the same set (pairwise data) [7].
+
+
+In this contribution we extend the Gram matrix approach to matrix data, where row and column objects belong to different sets. Since we can no longer expect that the matrices are positive definite (or even square), a new objective function must be derived. This is done in the next section, where an algorithm for the construction of linear classifiers is derived using the principle of structural risk minimization. Section 3 is concerned with the question under what conditions matrix elements can indeed be interpreted as vector products in some feature space. The method is specialized to pairwise data in Section 4. A sparseness constraint for feature selection is introduced in Section 5. Section 6, finally, contains an evaluation of the new method for DNA microarray data as well as benchmark results with standard classifiers which are based on standard feature selection procedures. 2 Large Margin Classifiers for Matrix Data In the following we consider two sets X and Z of objects, which are described by feature vectors x and z. Based on the feature vectors x we construct a linear classifier defined through the classification function f(x) = w,x + b, (1) where .,. denotes a dot product. The zero isoline of f is a hyperplane which is
+
+parameterized by its unit normal vector w and by its perpendicular distance b/ w ^ from the origin. The hyperplane's margin  with respect to X is given by
+
+ = min | w,x + b/ w ^ xX 2 |.
+
+2
+
+(2)
+
+Setting  = w
+
+-1 2
+
+allows us to treat normal vectors w which are not normalized,
+
+if the margin is normalized to 1. According to [15] this is called the "canonical form" of the separation hyperplane. The hyperplane with largest margin is then It has been shown [14, 13, 12] that the generalization error of a linear classifier, eq. (1), can be bounded from above with probability 1 -  by the bound B,
+
+obtained by minimizing w 2 2 for a margin which equals 1.
+
+B(L,a/,) = 2 L log2 EN  2 a, F,2L + log2 4 L a   , (3)
+
+provided that the training classification error is zero and f(x) is bounded by -a  f(x)  a for all x drawn iid from the (unknown) distribution of objects. L denotes the number of training objects x,  denotes the margin and EN ( ,F,L) the expected -covering number of a class F of functions that map data objects from T to [0,1] (see Theorem 7.7 in [14] and Proposition 19 in [12]). In order to obtain a classifier with good generalization properties we suggest to minimize a/ under proper constraints. a is not known in general, however, because the probability distribution of objects (in particular its support) is not known. In order to avoid this values in the training set and minimize the quantity B(L,m/,) instead of eq. (3). Let X := x1, x2,... , xL be the matrix of feature vectors of L objects from the set X and Z := z1,z2,... ,zP be the matrix of feature vectors of P objects from the set Z. The objects of set X are labeled, and we summarize all labels using a label matrix Y : [Y ]ij := yiij  RL×L, where  is the Kronecker-Delta. Let us consider the case that the feature vectors X and Z are unknown, but that we are given the matrix K := XT Z of the corresponding scalar products. The training set is then given by the data matrix K and the corresponding label matrix Y . The principle of structural risk minimization is implemented by minimizing an upper bound on
+
+problem we approximate a by the range m = 0.5 maxi w, xi - mini w, xi ^ ^ of
+
+
+(m/)2 given by XT w , as can be seen from m/  w 2 2
+
+( w, xi )2 =
+
+2 ^ maxi | w, xi | 
+
+i XT w . The constraints f(xi) = yi imposed by the training 2
+
+set are taken into account using the expressions 1 - i
+
+1 + i , where i ,i
+
+- + -
+
++  yi w, xi + b 
+
+ 0 are slack variables which should also be minimized. We
+
+thus obtain the optimization problem min XT w
+
+w,b,+,-
+
+s.t.
+
+1 2 Y Y
+
+-1 -1
+
+2 2 + M+ 1T + + M- 1T - (4)
+
+XT w + b1 - 1 + +  0 XT w + b1 - 1 - -  0
+
++, -  0 . M+ penalizes wrong classification and M- absolute values exceeding 1. For classification M- may be set to zero. Note, that the quadratic expression in the objective
+
+function is convex, which follows from XT w that X XT is positive semidefinite. Let  , 
+
+2 2 = wT X XT w and the fact
+
+~+ ~- be the dual variables for the constraints imposed by the training set, must be treated:  is not unique or does not exist. First, if  is not unique we choose  according to Section 5. Second, if  does not exist we set  = optimality conditions require that the following derivatives of the Lagrangian L are ~± + µ±, where µ+, µ-  0 are the Lagrange multipliers for the slack variables. We obtain ZT X XT (w - Z ) = 0 which is ensured by w = Z ,
+
+ := 
+
+~+ -  , and  a vector with  = Y ~-
+
+~
+
+XT Z . Two cases
+
+~
+
+ZT X Y -T -1 -1 Y XT Z ZT X Y -T , where Y ~ -T Y -1 is the identity. The
+
+zero: L/b = 1T Y M±1 -  -1 , L/w = X XT w - X Y ~ -1 , L/± = ~
+
+0 = 1T XT Z conditions give b =
+
+, i ~  M+, and -i ~  M-. The Karush­Kuhn­Tucker
+
+1TY 1 / 1T1 if i < M+ and -i < M-. ~ ~
+
+In the following we set M+ = M- = M and C := M Y
+
+   C implies  ~   Y XT Z row  
+
+XT Z -1 row so that
+
+ M, where . row is the
+
+row-sum norm. We then obtain the following dual problem of eq. (4): min T KT K  - 1T Y K 
+
+
+
+subject to
+
+1 2
+
+1T K  = 0 , |i|  C.
+
+(5)
+
+If M+ = M- we must add another constraint. For M- = 0, for example, we have to add Y K (+ - -)  0. If a classifier has been selected according to eq. (5), a new example u is classified according to the sign of f(u) = w,u + b = i zi, u + b. (6)
+
+P
+
+i=1
+
+The optimal classifier is selected by optimizing eq. (5), and as long as a = m holds true for all possible objects x (which are assumed to be drawn iid), the generalization error is bounded by eq. (3). If outliers are rejected, condition a = m can always be enforced. For large training sets the number of rejections is small: The probability P{| w,x | > m} that an outlier occurs can be bounded with confidence 1- using the additive Chernoff bounds (e.g. [15]):
+
+P{| w,x | > m}  -log 2L . (7)
+
+But note, that not all outliers are misclassified, and the trivial bound on the generalization error is still of the order L- . 1
+
+
+3 Kernel Functions, Measurements and Scalar Products In the last section we have assumed that the matrix K is derived from scalar products between the feature vectors x and z which describe the objects from the sets X and Z. For all practical purposes, however, the only information available is summarized in the matrices K and Y . The feature vectors are not known and it is even unclear whether they exist. In order to apply the results of Section 2 to practical problems the following question remains to be answered: What are the conditions under which the measurement operator k(., z) can indeed be interpreted as a scalar product between feature vectors and under which the matrix K can be interpreted as a matrix of kernel evaluations? In order to answer these questions, we make use of the following theorems. Let
+
+L2(H) denote the set of functions h from H with h2(x)dx <  and
+
+of infinite vectors (a1,a2,... ) where i a2i converges.
+
+2
+
+the set
+
+Theorem 1 (Singular Value Expansion) Let H1 and H2 be Hilbert spaces. Let  be from L2(H1) and let k be a kernel from L2(H2,H1) which defines a HilbertSchmidt operator Tk : H1  H2
+
+(Tk)(x) = f(x) = Then there exists an expansion k(x,z) =
+
+k(x,z) (z) dz . (8)
+
+n
+
+sn en(z) gn(x) which converges in
+
+the L2-sense. The sn  0 are the singular values of Tk, and en  H1, gn  H2 are the corresponding orthonormal functions. Corollary 1 (Linear Classification in ) Let the assumptions of Theorem 1 hold and let (k(x, z))2 be the a dot product in H1. We define w := ( ,e1 ,...), and (x) := (s1g1(x),s2g2(x),...).
+
+2
+
+dz  K2 for all x. Let .
+
+H1 , ,e2 H1
+
+H1 H1
+
+Then the following holds true: · w,(x)  , where w
+
+2
+
+· f 2 H2 = Tk Tk,  H1
+
+2 2 = 
+
+, where Tk is the adjoint operator of Tk,
+
+2 H1 
+
+, and
+
+and the following sum convergences absolutely and uniformly:
+
+f(x) = w,(x) 2 = sn ,en H1 gn(x) . (9)
+
+n
+
+.  maps vectors from H2 into the feature space. We Eq. (9) is a linear classifier in 2
+
+define a second mapping from H1 to the feature space by  (z) := (e1(z),e2(z),... ).
+
+For  = P i=1
+
+i(zi), where (zi) is the Dirac delta, we recover the discrete
+
+classifier (6) and w =
+
+P i=1 i  zi . We observe that f
+
+2 H2
+
+= T KTK  =
+
+XT w . A problem may arise if zi belongs to a set of measure zero which does not obey the singular value decomposition of k. If this occurs (zi) may be set to the zero function. Theorem 1 tells us that any measurement kernel k applied to objects x and z can be expressed for almost all x and z as k(x, z) = (x), (z) , where . defines a dot product in some feature space for almost all x, z. Hence, we can define the a matrix X :=  x1 , x2 ,... , xL of feature vectors for the L column
+
+objects and a matrix Z :=  z1 , z2 ,... , zP P row objects and apply the results of Section 2. of feature vectors for the
+
+2 2
+
+
+4 Pairwise Data An interesting special case occurs if row and column objects coincide. This kind of data is known as pairwise data [5, 4, 8] where the objects to be classified serve as features and vice versa. Like in Section 3 we can expand the measurement kernel via singular value decomposition but that would introduce two different mappings ( and ) into the feature space. We will use one map for row and column objects and perform an eigenvalue decomposition. The consequence is that that eigenvalues may be negative (see the following theorem). Theorem 2 (Eigenvalue Expansion) Let definitions and assumptions be as in Theorem 1. Let H1 = H2 = H and let k be symmetric. Then there exists an expansion k(x,z) = n en(z) en(x) which converges in the L2-sense. The n are the eigenvalues of Tk with the corresponding orthonormal eigenfunctions en. Corollary 2 (Minkowski Space Classification) Let the assumptions of Theo-
+
+n
+
+rem 2 and ( |1| ,e1
+
+to denote 2
+
+(k(x, z))2
+
+dz
+
+H
+
+ K2 for all x hold true. We define w :=
+
+H
+
+H , |2| ,e2 ,...), (x) := ( |1|e1(x), |2|e2(x),...), and 2 S
+
+with a given signature S = (sign(1),sign(2),... ).
+
+Then the following holds true:
+
+w 2 2 S =
+
+2
+
+2 S
+
+sign(n) |n| ,en n 2
+
+H = n n ,en 2 H = Tk, , H
+
+(x) = n n en(x)2 = k(x, x) in the L2 sense, and the following sum
+
+convergences absolutely and uniformly:
+
+f(x) = w,(x) 2 S = n ,en H en(x) .
+
+2 S
+
+(10)
+
+n
+
+Eq. (10) is a linear classifier in the Minkowski space
+
+ = P i=1
+
+i(zi), the normal vector is w =
+
+P i=1
+
+. For the discrete case
+
+i zi . In comparison to
+
+Corollary 1, we have w
+
+2
+
+2 S
+
+= TK . and must assume that (x) 2 2 S does
+
+converge. Unfortunately, this can be assured in general only for almost all x. If k is both continuous and positive definite and if H is compact, then the sum converges uniformly and absolutely for all x (Mercer). 5 Sparseness and Feature Selection As mentioned in the text after optimization problem (4)  may be not u nique and an additional regularization term is needed. We choose the regularization term such that it enforces sparseness and that it also can be used for feature selection.
+
+We choose "  ", where 1
+
+is the regularization parameter. We separate  into
+
+a positive part + and a negative part - with  = + - - and i ,i [11]. The dual optimization problem is then given by
+
+T
+
++ - - KT K + - - - min
+
+
+
+1 2
+
++ -  0
+
+(11)
+
+1TY K + - - + 1T + + -
+
+s.t. 1T K + - - = 0 , C1  +,-  0 .
+
+If  is sparse, i.e. if many i = i
+
+f(u) = w,u + b =
+
+P i=1
+
++
+
+i
+
++
+
+- i
+
+-
+
+- i
+
+-
+
+are zero, the classification function zi, u + b contains only few terms.
+
+This saves on the number of measurements zi, u for new objects and yields to improved classification performance due to the reduced number of features zi [15].
+
+
+6 Application to DNA Microarray Data We apply our new method to the DNA microarray data published in [9]. Column objects are samples from different brain tumors of the medullablastoma kind. The samples were obtained from 60 patients, which were treated in a similar way and the samples were labeled according to whether a patient responded well to chemoor radiation therapy. Row objects correspond to genes. Transcriptions of 7,129 genes were tagged with fluorescent dyes and used as a probe in a binding assay. For every sample-gene pair, the fluorescence of the bound transcripts - a snapshot of the level of gene expression - was measured. This gave rise to a 60 × 7, 129 real valued sample-gene matrix where each entry represents the level of gene expression in the corresponding sample. For more details see [9]. The task is now to construct a classifier which predicts therapy outcome on the basis of samples taken from new patients. The major problem of this classification task is the limited number of samples - given the large number of genes. Therefore, feature selection is a prerequisite for good generalization [6, 16]. We construct the classifier using a two step procedure. In a first step, we apply our new method on a 59 × 7, 129 matrix, where one column object was withhold to avoid biased feature selection. We choose to be fairly large in order to obtain a sparse set of features. In a second step, we use the selected features only and apply our method once more on the reduced sample-gene matrix, but now with a small value of . The C-parameter is used for regularization instead.
+
+Feature Selection / Classification TrkC statistic / SVM statistic / Comb1 statistic / KNN statistic / Comb2
+
+# F 1
+
+Feature Selection / Classification P-SVM / C-SVM P-SVM / C-SVM P-SVM / P-SVM C 1.0 0.01 0.1 # F 40/45/50 40/45/50 40/45/50 # E 5/4/5 5/5/5 4/4/5
+
+8
+
+# E 20 15 14 13 12
+
+Table 1: Benchmark results for DNA microarray data (for explanations see text). The table shows the classification error given by the number of wrong classifications ("E") for different numbers of selected features ("F") and for different values of the parameter C. The feature selection method is signal-to-noise-statistic and t-statitic denoted by "statistic" or our method P-SVM. Data are provided for "TrkC"-Gene classification, standard SVMs, weighted "TrkC"/SVM (Comb1), K nearest neighbor (KNN), combined SVM/TrkC/KNN (Comb2), and our procedure (P-SVM) used for classification. Except for our method (P-SVM), results were taken from [9]. Table 1 shows the result of a leave-one-out cross-validation procedure, where the classification error is given for different numbers of selected features. Our method (P-SVM) is compared with "TrkC"-Gene classification (one gene classification), standard SVMs, weighted "TrkC"/SVM-classification, K nearest neighbor (KNN), and a combined SVM/TrkC/KNN classifier. For the latter methods, feature selection was based on the correlation of features with classes using signal-to-noisestatistics and t-statistics [3]. For our method we use C = 1.0 and 0.1   1.5 for feature selection in step one which gave rise to 10 - 1000 selected features. The feature selection procedure (also a classifier) had its lowest misclassification rate between 20 and 40 features. For the construction of the classifier we used in step two = 0.01. Our feature selection method clearly outperforms standard methods -- the number of misclassification is down by a factor of 3 (for 45 selected genes).
+
+
+Acknowledgments We thank the anonymous reviewers for their hints to improve the paper. This work was funded by the DFG (SFB 618). References [1] B. E. Boser, I. M. Guyon, and V. N. Vapnik. A training algorithm for optimal margin classifiers. In Proc. of the 5th Annual ACM Workshop on Computational Learning Theory, pages 144­152. ACM Press, Pittsburgh, PA, 1992. [2] C. Cortes and V. N. Vapnik. Support vector networks. Machine Learning, 20:273­297, 1995. [3] R. Golub, D. K. Slonim, P. Tamayo, C. Huard, M. Gaasenbeek, J. P. Mesirov, H. Coller, M. Loh, J. R. Downing, M. A. Caligiuri, C. D. Bloomfield, and E. S. Lander. Molecular classification of cancer: Class discovery and class prediction by gene expression monitoring. Science, 286(5439):531­537, 1999. [4] T. Graepel, R. Herbrich, P. Bollmann-Sdorra, and K. Obermayer. Classification on pairwise proximity data. In NIPS 11, pages 438­444, 1999. [5] T. Graepel, R. Herbrich, B. Sch¨olkopf, A. J. Smola, P. L. Bartlett, K.-R. M¨uller, K. Obermayer, and R. C. Williamson. Classification on proximity data with LP­machines. In ICANN 99, pages 304­309, 1999. [6] I. Guyon, J. Weston, S. Barnhill, and V. Vapnik. Gene selection for cancer classification using support vector machines. Mach. Learn., 46:389­422, 2002. [7] S. Hochreiter and K. Obermayer. Classification of pairwise proximity data with support vectors. In The Learning Workshop. Y. LeCun and Y. Bengio, 2002. [8] T. Hofmann and J. Buhmann. Pairwise data clustering by deterministic annealing. IEEE Trans. on Pat. Analysis and Mach. Intell., 19(1):1­14, 1997. [9] S. L. Pomeroy, P. Tamayo, M. Gaasenbeek, L. M. Sturla, M. Angelo, M. E. McLaughlin, J. Y. H. Kim, L. C. Goumnerova, P. M. Black, C. Lau, J. C. Allen, D. Zagzag, J. M. Olson, T. Curran, C. Wetmore, J. A. Biegel, T. Poggio, S. Mukherjee, R. Rifkin, A. Califano, G. Stolovitzky, D. N. Louis, J. P. Mesirov, E. S. Lander, and T. R. Golub. Prediction of central nervous system embryonal tumour outcome based on gene expression. Nature, 415(6870):436­442, 2002. [10] V. Roth, J. Buhmann, and J. Laub. Pairwise clustering is equivalent to classical k-means. In The Learning Workshop. Y. LeCun and Y. Bengio, 2002. [11] B. Sch¨olkopf and A. J. Smola. Learning with kernels -- Support Vector Machines, Reglarization, Optimization, and Beyond. MIT Press, Cambridge, 2002. [12] J. Shawe-Taylor, P. L. Bartlett, R. C. Williamson, and M. Anhtony. A framework for structural risk minimisation. In Comp. Learn. Th., pages 68­76, 1996. [13] J. Shawe-Taylor, P. L. Bartlett, R. C. Williamson, and M. Anhtony. Structural risk minimization over data-dependent hierarchies. IEEE Transactions on Information Theory, 44:1926­1940, 1998. [14] J. Shawe-Taylor and N. Cristianini. On the generalisation of soft margin algorithms. Technical Report NC2-TR-2000-082, NeuroCOLT2, Department of Computer Science, Royal Holloway, University of London, 2000. [15] V. Vapnik. The nature of statistical learning theory. Springer, NY, 1995. [16] J. Weston, S. Mukherjee, O. Chapelle, M. Pontil, T. Poggio, and V. Vapnik. Feature selection for SVMs. In NIPS 12, pages 668­674, 2000.
+
+

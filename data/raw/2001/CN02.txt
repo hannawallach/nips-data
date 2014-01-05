@@ -1,0 +1,577 @@
+Variance Reduction Techniques for Gradient
+Estimates in Reinforcement Learning
+Evan Greensmith
+Australian National University
+evan@csl.anu.edu.au
+Peter L. Bartlett #
+BIOwulf Technologies
+Peter.Bartlett@anu.edu.au
+Jonathan Baxter #
+WhizBang! Labs, East
+jbaxter@whizbang.com
+Abstract
+We consider the use of two additive control variate methods to reduce
+the variance of performance gradient estimates in reinforcement learn­
+ing problems. The first approach we consider is the baseline method,
+in which a function of the current state is added to the discounted value
+estimate. We relate the performance of these methods, which use sam­
+ple paths, to the variance of estimates based on iid data. We derive the
+baseline function that minimizes this variance, and we show that the vari­
+ance for any baseline is the sum of the optimal variance and a weighted
+squared distance to the optimal baseline. We show that the widely used
+average discounted value baseline (where the reward is replaced by the
+difference between the reward and its expectation) is suboptimal. The
+second approach we consider is the actor­critic method, which uses an
+approximate value function. We give bounds on the expected squared
+error of its estimates. We show that minimizing distance to the true value
+function is suboptimal in general; we provide an example for which the
+true value function gives an estimate with positive variance, but the op­
+timal value function gives an unbiased estimate with zero variance. Our
+bounds suggest algorithms to estimate the gradient of the performance of
+parameterized baseline or value functions. We present preliminary exper­
+iments that illustrate the performance improvements on a simple control
+problem.
+1 Introduction, Background, and Preliminary Results
+In reinforcement learning problems, the aim is to select a controller that will maximize
+the average reward in some environment. We model the environment as a partially ob­
+servable Markov decision process (POMDP). Gradient ascent methods (e.g., [7, 12, 15])
+estimate the gradient of the average reward, usually using Monte Carlo techniques to cal­
+# Most of this work was performed while the authors were with the Research School of Information
+Sciences and Engineering at the Australian National University.
+
+culate an average over a sample path of the controlled POMDP. However such estimates
+tend to have a high variance, which means many steps are needed to obtain a good esti­
+mate. GPOMDP [4] is an algorithm for generating an estimate of the gradient in this way.
+Compared with other approaches, it is suitable for large systems, when the time between
+visits to a state is large but the mixing time of the controlled POMDP is short. However, it
+can suffer from the problem of producing high variance estimates. In this paper, we investi­
+gate techniques for variance reduction in GPOMDP. One generic approach to reducing the
+variance of Monte Carlo estimates of integrals is to use an additive control variate (see, for
+example, [6]). Suppose we wish to estimate the integral of f : X # R, and we know the
+integral of another function # : X # R. Since # X f = # X
+(f - #) + # X #, the integral
+of f - # can be estimated instead. Obviously if # = f then the variance is zero. More
+generally, Var(f - #) = Var(f) - 2Cov(f, #) + Var(#), so that if # and f are strongly
+correlated, the variance of the estimate is reduced.
+In this paper, we consider two approaches of this form. The first (Section 2) is the technique
+of adding a baseline. We find the optimal baseline and we show that the additional variance
+of a suboptimal baseline can be expressed as a weighted squared distance from the optimal
+baseline. Constant baselines, which do not depend on the state or observations, have been
+widely used [13, 15, 9, 11]. In particular, the expectation over all states of the discounted
+value of the state is a popular constant baseline (where, for example, the reward at each
+step is replaced by the difference between the reward and the expected reward). We give
+bounds on the estimation variance that show that, perhaps surprisingly, this may not be the
+best choice.
+The second approach (Section 3) is the use of an approximate value function. Such actor­
+critic methods have been investigated extensively [3, 1, 14, 10]. Generally the idea is
+to minimize some notion of distance between the fixed value function and the true value
+function. In this paper we show that this may not be the best approach: selecting the fixed
+value function to be equal to the true value function is not always the best choice. Even
+more surprisingly, we give an example for which the use of a fixed value function that is
+different from the true value function reduces the variance to zero, for no increase in bias.
+We give a bound on the expected squared error (that is, including the estimation variance)
+of the gradient estimate produced with a fixed value function. Our results suggest new
+algorithms to learn the optimum baseline, and to learn a fixed value function that minimizes
+the bound on the error of the estimate. In Section 5, we describe the results of preliminary
+experiments, which show that these algorithms give performance improvements.
+POMDP with Reactive, Parameterized Policy
+A partially observable Markov decision process (POMDP) consists of a state space, S,
+a control space, U , an observation space, Y , a set of transition probability matrices
+{P(u) : u # U}, each with components p ij (u) for i, j # S, u # U , an observation pro­
+cess # : S # PY , where PY is the space of probability distributions over Y , and a
+reward function r : S # R. We assume that S, U , Y are finite, although all our re­
+sults extend easily to infinite U and Y , and with more restrictive assumptions can be
+extended to infinite S. A reactive, parameterized policy for a POMDP is a set of map­
+pings {µ(·, #) : Y # PU |# # R K
+}. Together with the POMDP, this defines the con­
+trolled POMDP (S, U , Y , P , #, r, µ). The joint state, observation and control process,
+{X t , Y t , U t }, is Markov. The state process, {X t }, is also Markov, with transition prob­
+abilities p ij (#) = # y#Y,u#U # y (i)µ u (y, #)p ij (u), where # y (i) denotes the probability of
+observation y given the state i, and µ u (y, #) denotes the probability of action u given pa­
+rameters # and observation y. The Markov chain M(#) = (S, P(#)) then describes the
+behaviour of the process {X t }.
+
+Assumption 1 The controlled POMDP (S, U , Y , P , #, r, µ) satisfies:
+For all # # R K there exists a unique stationary distribution satisfying # # (#) P(#) = # # (#).
+There is an R < # such that, for all i # S, |r(i)| # R.
+There is a B < # such that, for all u # U , y # Y and # # R K the deriva­
+tives #µ u (y, #)/## k (1 # k # K) exist, and the vector of these derivatives satisfies
+##µ u (y, #)/µ u (y, #)# # B, where # · # denotes the Euclidean norm on R K .
+We consider the average reward, #(#) def = lim T## E # 1
+T # T-1
+t=0
+r(X t ) # . Assumption 1
+implies that this limit exists, and does not depend on the start state X 0 . The aim is to
+select a policy to maximize this quantity. Define the discounted value function, J # (i, #) def =
+lim T## E # # T-1
+t=0 # t r(X t ) # # # X 0 = i # . Throughout the rest of the paper, dependences
+upon # are assumed, and dropped in the notation. For a random vector A, we denote
+Var(A) = E # (A - E [A]) 2
+# , where a 2 denotes a # a, and a # denotes the transpose of the
+column vector a.
+GPOMDP Algorithm
+The GPOMDP algorithm [4] uses a sample path to estimate the gradient approximation
+# # # def = E # #µu (y)
+µu (y)
+J # (j) # . As # # 1, # # # approaches the true gradient ##, but the
+variance increases. We consider a slight modification [2]: with J t
+def =
+# 2T
+s=t # s-t r(X s ),
+# T
+def
+= 1
+T
+T-1
+# t=0
+#µ U t
+(Y t )
+µU t
+(Y t ) J t+1 . (1)
+Throughout this paper the process {X t , Y t , U t , X t+1 } is generally understood to be gen­
+erated by a controlled POMDP satisfying Assumption 1, with X 0 ## (ie the initial state
+distributed according to the stationary distribution). That is, before computing the gradient
+estimates, we wait until the process has settled down to the stationary distribution.
+Dependent Samples
+Correlation terms arise in the variance quantities to be analysed. We show here that con­
+sidering iid samples gives an upper bound on the variance of the general case. The mixing
+time of a finite ergodic Markov chain M = (S, P) is defined as
+# def = min # t > 1 : max
+i,j
+d TV # # P t
+# i , # P t
+# j # # e -1 # ,
+where [P t ] i denotes the ith row of P t and d TV is the total variation distance, d TV (P, Q) =
+# i |P (i) -Q(i)|.
+Theorem 1 Let M = (S, P) be a finite ergodic Markov chain, with mixing time # , and
+let # be its stationary distribution. There are constants L < # 2|S|e and 0 # # <
+exp(-1/(2#)), which depend only on M , such that, for all f : S # R and all t,
+# # Cov #
+f (t) # # # L# t Var # (f), where Var # (f) is the variance of f under #, and Cov #
+f (t) is
+the auto­covariance of the process {f(X t )}, where the process {X t } is generated by M
+with initial distribution #. Hence, for some
+constant# # # 4L# ,
+Var # 1
+T
+T-1
+# t=0
+f(X t ) #
+##
+#
+T
+Var # (f).
+
+We call (L, #) the mixing constants of the Markov chain M (or of the controlled POMDP
+D; ie the Markov chain (S, P)). We omit the proof (all proofs are in the full version [8]).
+Briefly, we show that for a finite ergodic Markov chain M , # # Cov #
+f (t) # # # R t (M)Var # (f),
+for some R t (M). We then show that R t (M) 2
+< 2|S| exp(- # t
+# # ). In fact, for a reversible
+chain, we can choose L = 1 and # = |# 2 |, the second largest magnitude eigenvalue of P .
+2 Baseline
+We consider an alteration of (1),
+# T
+def = 1
+T
+T-1
+# t=0
+#µ U t
+(Y t )
+µU t
+(Y t ) (J t+1 -A r (Y t )) . (2)
+For any baseline A r : Y # R, it is easy to show that E [# T ] = E [# T ]. Thus, we select
+A r to minimize variance. The following theorem shows that this variance is bounded by a
+variance involving iid samples, with J t replaced by the exact value function.
+Theorem 2 Suppose that D = (S, U , Y , P , #, r, µ) is a controlled POMDP satisfying
+Assumption 1, D has mixing constants (L, #), {X t , Y t , U t , X t+1 } is a process generated
+by D with X 0 ## ,A r : Y # R is a baseline that is uniformly bounded by M, and J (j)
+has the distribution of
+# # s=0 # s r(X t ), where the states X t are generated by D starting in
+X 0 = j. Then there are constants C # 5B 2 R(R +M)
+and# # 4L# ln(eT ) such that
+Var 1
+T
+T-1
+# t=0
+#µU t
+(Y t )
+µU t
+(Y t ) (J t+1 -A r (Y t )) #
+## T
+Var # # #µ u (y)
+µ u (y) (J # (j)-A r (y)) #
++# T
+E # #µ u (y)
+µ u (y) (J (j) - J # (j)) # 2
++
+## T
++ 1 # C
+(1 - #) 2
+# T ,
+where, as always, (i, y, u, j) are generated iid with i##, y##(i), u#µ(y) and j#P i (u).
+The proof uses Theorem 1 and [2, Lemma 4.3]. Here we have bounded the variance of (2)
+with the variance of a quantity we may readily analyse. The second term on the right hand
+side shows the error associated with replacing an unbiased, uncorrelated estimate of the
+value function with the true value function. This quantity is not dependent on the baseline.
+The final term on the right hand side arises from the truncation of the discounted reward---
+and is exponentially decreasing. We now concentrate on minimizing the variance
+# 2
+r = Var # # #µ u (y)
+µ u (y) (J # (j) -A r (y)) # , (3)
+which the following lemma relates to the variance # 2 without a baseline,
+# 2 = Var # # #µ u (y)
+µ u (y) J # (j) # .
+Lemma 3 Let D = (S, U , Y , P , #, r, µ) be a controlled POMDP satisfying Assumption 1.
+For any baseline A r : Y # R, and for i##, y##(i), u#µ(y) and j#P i (u),
+# 2
+r = # 2 + E # A 2
+r (y) E # # #µ u (y)
+µ u (y) # 2
+# # # # # y # - 2A r (y)E # # #µ u (y)
+µ u (y) # 2
+J # (j) # # # # # y ## .
+From Lemma 3 it can be seen that the task of finding the optimal baseline is in effect that
+of minimizing a quadratic for each observation y # Y . This gives the following theorem.
+
+Theorem 4 For the controlled POMDP as in Lemma 3,
+min
+Ar
+# 2
+r = # 2
+- E # # # E # # #µ u (y)
+µ u (y) # 2
+J # (j) # # # # #
+y ## 2
+/E # # #µ u (y)
+µ u (y) # 2
+# # # # #
+y # # # ,
+and this minimum is attained with the baseline
+A # r (y) = E # # #µ u (y)
+µ u (y) # 2
+J # (j) # # # # #
+y # /E # # #µ u (y)
+µ u (y) # 2
+# # # # #
+y # .
+Furthermore, the optimal constant baseline is
+A # r = E # # #µ u (y)
+µ u (y) # 2
+J # (j) # /E # #µ u (y)
+µ u (y) # 2
+.
+The following theorem shows that the variance of an estimate with an arbitrary baseline
+can be expressed as the sum of the variance with the optimal baseline and a certain squared
+weighted distance between the baseline function and the optimal baseline function.
+Theorem 5 If A r : Y # R is a baseline function, A # r is the optimal baseline defined in
+Theorem 4, and # 2
+r# is the variance of the corresponding estimate, then
+# 2
+r = # 2
+r# + E # # #µ u (y)
+µ u (y) # 2
+(A r (y) -A # r (y)) 2 # ,
+where i##, y##(i), and u#µ(y). Furthermore, the same result is true for the case of
+constant baselines, with A r (y) replaced by an arbitrary constant baseline A r , and A # r (y)
+replaced by A # r , the optimum constant baseline defined in Theorem 4.
+For the constant baseline A r = E i## [J # (i)], Theorem 5 implies that # 2
+r is equal to
+min
+Ar#R
+# 2
+r + # E # #µ u (y)
+µ u (y) # 2
+E [J # (j)] - E # # #µ u (y)
+µ u (y) # 2
+J # (j) ## 2
+/E # #µ u (y)
+µ u (y) # 2
+.
+Thus, its performance depends on the random variables (#µ u (y)/µ u (y)) 2 and J # (j); if
+they are nearly independent, E [J # ] is a good choice.
+3 Fixed Value Functions: Actor­Critic Methods
+We consider an alteration of (1),
+”
+# T
+def = 1
+T
+T-1
+# t=0
+#µ U t
+(Y t )
+µU t
+(Y t )
+”
+J # (X t+1 ), (4)
+for some fixed value function ” J # : S # R. Define
+A # (j) def = E # #
+# k=0
+# k d(X k , X k+1 ) # # # # #
+X 0 = j # ,
+where d(i, j) def = r(i) + # ”
+J # (j) - ” J # (i) is the temporal difference. Then it is easy to show
+that the estimate (4) has a bias of
+# # # - E # ”
+# T # = E # #µ u (y)
+µ u (y) A # (j) # .
+The following theorem gives a bound on the expected squared error of (4). The main tool
+in the proof is Theorem 1.
+
+Theorem 6 Let D = (S, U , Y , P , #, r, µ) be a controlled POMDP satisfying Assump­
+tion 1. For a sample path from D, that is, {X 0 ##, Y t ##(X t ), U t #µ(Y t ), X t+1 #PX t
+(U t )},
+E # # ”
+# T -# # # # 2
+#
+##
+#
+T
+Var # # #µ u (y)
+µ u (y)
+” J # (j) # + # E # #µ u (y)
+µ u (y) A # (j) ## 2
+,
+where the second expectation is over i##, y##(i), u#µ(y), and j#P i (u).
+If we write ” J # (j) = J # (j) + v(j), then by selecting v = (v(1), . . . , v(|S|)) # from the right
+null space of the K × |S| matrix G, where G def
+= # i,y,u # i # y (i)#µ u (y)P #
+i (u), (4) will
+produce an unbiased estimate of # # #. An obvious example of such a v is a constant
+vector, (c, c, . . . , c) # : c # R. We can use this to construct a trivial example where (4)
+produces an unbiased estimate with zero variance. Indeed, let D = (S, U , Y , P , #, r, µ) be
+a controlled POMDP satisfying Assumption 1, with r(i) = c, for some 0 < c # R. Then
+J # (j) = c/(1 - #) and # # # = 0. If we choose v = (-c/(1 - #), . . . , -c/(1 - #)) # and
+”
+J # (j) = J # (j) + v(j), then #µu (y)
+µu (y)
+” J # (j) = 0 for all y, u, j, and so (4) gives an unbiased
+estimate of # # #, with zero variance. Furthermore, for any D for which there exists a pair
+y, u such that µ u (y) > 0 and #µ u (y) #= 0, choosing ” J # (j) = J # (j) gives a variance
+greater than zero---there is a non­zero probability event, (X t = i, Y t = y, U t = u, X t+1 =
+j), such that #µu (y)
+µu (y)
+J # (j) #= 0.
+4 Algorithms
+Given a parameterized class of baseline functions # A r (·, #) : Y # R # # # # R L
+# , we can
+use Theorem 5 to bound the variance of our estimates. Computing the gradient of this
+bound with respect to the parameters # of the baseline function allows a gradient optimiza­
+tion of the baseline. The GDORB Algorithm produces an estimate #S of these gradients
+from a sample path of length S. Under the assumption that the baseline function and its
+gradients are uniformly bounded, we can show that these estimates converge to the gradient
+of # 2
+r . We omit the details (see [8]).
+GDORB Algorithm:
+Given: Controlled POMDP (S, U , Y , P , #, r, µ), parameterized baseline A r .
+set z 0 = 0 (z 0 # R L ), # 0 = 0 (# 0 # R L )
+for all {i s , y s , u s , i s+1 , y s+1 } generated by the POMDP do
+z s+1 = #z s +#A r (y s ) # #µ us (ys )
+µus (ys ) # 2
+# s+1 = # s + 1
+s+1
+((A r (y s ) - #A r (y s+1 ) - r(x s+1 )) z s+1 -# s )
+end for
+For a parameterized class of fixed value functions { ” J # (·, #) : S # R # # # # R L
+}, we can
+use Theorem 6 to bound the expected squared error of our estimates, and compute the
+gradient of this bound with respect to the parameters # of the baseline function. The GBTE
+Algorithm produces an estimate #S of these gradients from a sample path of length S.
+Under the assumption that the value function and its gradients are uniformly bounded, we
+can show that these estimates converge to the true gradient.
+GBTE Algorithm:
+Given: Controlled POMDP (S, U , Y , P , #, r, µ), parameterized fixed value function ” J # .
+set z 0 = 0 (z 0 # R K ), #A 0 = 0 (#A 0 # R 1×L ), #B 0 = 0 (#B 0 # R K ), #C 0 = 0
+(#C 0 # R K ) and #D 0 = 0 (#D 0 # R K×L )
+
+for all {i s , y s , u s , i s+1 , i s+2 } generated by the POMDP do
+z s+1 = #z s + #µ us (ys )
+µus (ys )
+#A s+1 = #A s + 1
+s+1
+# # #µ us (ys )
+µus (ys )
+” J # (i s+1 ) # # # #µ us (ys )
+µus (ys ) # # ” J # (i s+1 ) # # # -#A s #
+#B s+1 = #B s + 1
+s+1 # #µ us (ys )
+µus (ys )
+” J # (i s+1 ) -#B s #
+#C s+1 = #C s + 1
+s+1 ## r(i s+1 ) + # ” J # (i s+2 ) - ” J # (i s+1 ) # z s+1 -#C s #
+#D s+1 = #D s + 1
+s+1
+# #µ us (ys )
+µus (ys ) # # ”
+J # (i s+1 ) # #
+-#D s #
+# s+1 =
+## #
+T
+#A s+1
+-# #
+T
+#B # s+1 #D s+1 -#C # s+1 #D s+1 # #
+end for
+5 Experiments
+Experimental results comparing these GPOMDP variants for a simple three state MDP
+(described in [5]) are shown in Figure 1. The exact value function plots show how differ­
+ent choices of baseline and fixed value function compare when all algorithms have access
+to the exact value function J # . Using the expected value function as a baseline was an
+improvement over GPOMDP. Using the optimum, or optimum constant, baseline was a
+further improvement, each performing comparably to the other. Using the pre­trained fixed
+value function was also an improvement over GPOMDP, showing that selecting the true
+value function was indeed not the best choice in this case. The trained fixed value function
+was not optimal though, as J # (j) -A # r is a valid choice of fixed value function.
+The optimum baseline, and fixed value function, will not normally be known. The online
+plots show experiments where the baseline and fixed value function were trained using on­
+line gradient descent whilst the performance gradient was being estimated, using the same
+data. Clear improvement over GPOMDP is seen for the online trained baseline variant. For
+the online trained fixed value function, improvement is seen until T becomes---given the
+simplicity of the system---very large.
+References
+[1] L. Baird and A. Moore. Gradient descent for general reinforcement learning. In
+Advances in Neural Information Processing Systems 11, pages 968--974. MIT Press,
+1999.
+[2] P. L. Bartlett and J. Baxter. Estimation and approximation bounds for gradient­based
+reinforcement learning. Journal of Computer and Systems Sciences, 2002. To appear.
+[3] A. G. Barto, R. S. Sutton, and C. W. Anderson. Neuronlike adaptive elements that
+can solve difficult learning control problems. IEEE Transactions on Systems, Man,
+and Cybernetics, SMC­13:834--846, 1983.
+[4] J. Baxter and P. L. Bartlett. Infinite­horizon gradient­based policy search. Journal of
+Artificial Intelligence Research, 15:319--350, 2001.
+[5] J. Baxter, P. L. Bartlett, and L. Weaver. Infinite­horizon gradient­based policy search:
+II. Gradient ascent algorithms and experiments. Journal of Artificial Intelligence Re­
+search, 15:351--381, 2001.
+[6] M. Evans and T. Swartz. Approximating integrals via Monte Carlo and deterministic
+methods. Oxford University Press, 2000.
+
+FVF­pretrain
+BL­A # r
+BL­A # r (y)
+BL­E [J #
+GPOMDP­J#
+Exact Value Function---Mean Error
+T
+Relative
+Norm
+Difference
+1e+07
+1e+06
+100000
+10000
+1000
+100
+10
+1
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.05
+0
+FVF­pretrain
+BL­A # r
+BL­A # r (y)
+BL­E [J #
+GPOMDP­J#
+Exact Value Function---One Standard Deviation
+T
+Relative
+Norm
+Difference
+1e+07
+1e+06
+100000
+10000
+1000
+100
+10
+1
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.05
+0
+FVF­online
+BL­online
+GPOMDP
+Online---Mean Error
+T
+Relative
+Norm
+Difference
+1e+07
+1e+06
+100000
+10000
+1000
+100
+10
+1
+1
+0.8
+0.6
+0.4
+0.2
+0
+FVF­online
+BL­online
+GPOMDP
+Online---One Standard Deviation
+T
+Relative
+Norm
+Difference
+1e+07
+1e+06
+100000
+10000
+1000
+100
+10
+1
+1
+0.8
+0.6
+0.4
+0.2
+0
+Figure 1: Three state experiments---relative norm error ## est -### / ####. Exact value func­
+tion plots compare mean error and standard deviations for gradient estimates (with knowledge of
+J# ) computed by: GPOMDP [GPOMDP­J# ]; with baseline Ar = E [J# ] [BL­E [J# ]]; with opti­
+mum baseline [BL­A # r (y)]; with optimum constant baseline [BL­A # r ]; with pre­trained fixed value
+function [FVF­pretrain]. Online plots do a similar comparison of estimates computed by: GPOMDP
+[GPOMDP]; with online trained baseline [BL­online]; with online trained fixed value function [FVF­
+online]. The plots were computed over 500 runs (1000 for FVF­online), with # =
+0.95.# # /T was
+set to 0.001 for FVF­pretrain, and 0.01 for FVF­online.
+[7] P. W. Glynn. Likelihood ratio gradient estimation for stochastic systems. Communi­
+cations of the ACM, 33:75--84, 1990.
+[8] E. Greensmith, P. L. Bartlett, and J. Baxter. Variance reduction techniques for gradient
+estimates in reinforcement learning. Technical report, ANU, 2002.
+[9] H. Kimura, K. Miyazaki, and S. Kobayashi. Reinforcement learning in POMDPs
+with function approximation. In D. H. Fisher, editor, Proceedings of the Fourteenth
+International Conference on Machine Learning (ICML'97), pages 152--160, 1997.
+[10] V. R. Konda and J. N. Tsitsiklis. Actor­Critic Algorithms. In Advances in Neural
+Information Processing Systems 12, pages 1008--1014. MIT Press, 2000.
+[11] P. Marbach and J. N. Tsitsiklis. Simulation­Based Optimization of Markov Reward
+Processes. Technical report, MIT, 1998.
+[12] R. Y. Rubinstein. How to optimize complex stochastic systems from a single sample
+path by the score function method. Ann. Oper. Res., 27:175--211, 1991.
+[13] R. S. Sutton and A. G. Barto. Reinforcement Learning: An Introduction. MIT Press,
+Cambridge MA, 1998. ISBN 0­262­19398­1.
+[14] R. S. Sutton, D. McAllester, S. Singh, and Y. Mansour. Policy Gradient Methods
+for Reinforcement Learning with Function Approximation. In Advances in Neural
+Information Processing Systems 12, pages 1057--1063. MIT Press, 2000.
+[15] R. J. Williams. Simple Statistical Gradient­Following Algorithms for Connectionist
+Reinforcement Learning. Machine Learning, 8:229--256, 1992.
+

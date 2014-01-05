@@ -1,0 +1,838 @@
+Gaussian Processes in Reinforcement Learning
+
+ 
+
+Carl Edward Rasmussen and Malte Kuss Max Planck Institute for Biological Cybernetics Spemannstraße 38, 72076 T¨ubingen, Germany carl,malte.kuss @tuebingen.mpg.de
+
+¡
+
+Abstract We exploit some useful properties of Gaussian process (GP) regression models for reinforcement learning in continuous state spaces and discrete time. We demonstrate how the GP model allows evaluation of the value function in closed form. The resulting policy iteration algorithm is demonstrated on a simple problem with a two dimensional state space. Further, we speculate that the intrinsic ability of GP models to characterise distributions of functions would allow the method to capture entire distributionsoverfuturevalues instead of merelytheir expectation,which has traditionally been the focus of much of reinforcement learning. 1 Introduction Model-based control of discrete-time non-linear dynamical systems is typically exacerbated by the existence of multiple relevant time scales: a short time scale (the sampling time) on which the controller makes decisions and where the dynamics are simple enough to be conveniently captured by a model learning from observations, and a longer time scale which captures the long-term consequences of control actions. For most non-trivial (nonminimum phase) control tasks a policy relying solely on short time rewards will fail. In reinforcement learning this problem is explicitly recognized by the distinction between short-term (reward) and long-term (value) desiderata. The consistency between short- and long-term goals are expressed by the Bellman equation, for discrete states and actions :
+
+¤¦¥¨§¢© §¢ ¢
+
+£
+
+(1)
+
+!£"©#%$'&)(
+
+ $10$ &23 $10$ &#465 ¤¦¥¨§¢879©A@
+
+where
+
+ ¢ !£"© §
+
+¤ ¥ §¢©
+
+is the value (the expected long term reward) of state while following policy
+
+¢ 7
+
+£
+
+£
+
+¢ ¢ ( $10$ &
+
+, which is the probability of taking action in state , and is the transition
+
+denotes the immediate expected reward and
+
+5 BDC CFE
+
+¢
+
+given that we are in state ,
+
+3 $10$'& 
+
+probability of going to state when applying action
+
+is the discount factor (see Sutton and
+
+Barto (1998) for a thorough review). The Bellman equations are either solved iteratively by policy evaluation, or alternatively solved directly (the equations are linear) and commonly interleaved with policy improvement steps (policy iteration). While the concept of a value function is ubiquitous in reinforcement learning, this is not the case in the control community. Some non-linear model-based control is restricted to the easier minimum-phase systems. Alternatively, longer-term predictions can be achieved by concatenating short-term predictions, an approach which is made difficult by the fact that
+
+
+uncertainty in predictions typically grows (precluding approaches based on the certainty equivalence principle) as the time horizon lengthens. See Qui~nonero-Candela et al. (2003) for a full probabilistic approach based on Gaussian processes; however, implementing a controller based on this approach requires numerically solving multivariate optimisation problems for every control action. In contrast, having access to a value function makes computation of control actions much easier. Much previouswork has involvedthe use of functionapproximationtechniquesto represent the value function. In this paper, we exploit a number of useful properties of Gaussian process models for this purpose. This approach can be naturally applied in discrete time, continuous state space systems. This avoids the tedious discretisation of state spaces often required by other methods, eg. Moore and Atkeson (1995). In Dietterich and Wang (2002) kernel based methods (support vector regression) were also applied to learning of the value function, but in discrete state spaces. In the current paper we use Gaussian process (GP) models for two distinct purposes: first to model the dynamics of the system (actually, we use one GP per dimension of the state space) which we will refer to as the dynamics GP and secondly the value GP for representing the value function. When computing the values, we explicitly take the uncertainties from the dynamics GP into account, and using the linearity of the GP, we are able to solve directly for the value function, avoiding slow policy evaluation iterations. Experiments on a simple problem illustrates the viability of the method. For these experiments we use a greedy policy wrt. the value function. However, since our representation of the value function is stochastic, we could represent uncertainty about values enabling a principledattack of the explorationvs. exploitationtradeoff, such as in Bayesian Q-learning as proposed by Dearden et al. (1998). This potential is outlined in the discussion section. 2 Gaussian Processes and Value Functions In a continuous state space we straight-forwardly generalize the Bellman equation (1) by substituting sums with integrals; further, we assume for simplicity of exposition that the policy is deterministic (see Section 4 for a further discussion):
+
+¤ ¥ § ¡
+
+¢8©  (
+
+$10$¥£¢$¥¤& 23 $10$¥¦¢$¥¤& 4 5 ¤ ¥ §
+
+$10$'&$¥¤ 3 $10$'&$¥¤ 4 5
+
+¥£¢ ¥¦¢ § ¢ 7
+
+¢ 7© @¨§ ¢ 7
+
+(
+
+$10$'&$¥¤ ¥¦¢ ¤ ¥¨§
+
+ ¡ ( ¡ ¢ 7© ¢87© §
+
+This involves two integrals over the distribution of consecutive states
+
+lowing the policy . The transition probabilities
+
+ (
+
+$10$¥ & ¢ 7
+
+(2) (3) visited when fol-
+
+may include two sources of stochas-
+
+ticity: uncertainty in the model of the dynamics and stochasticity in the dynamics itself. 2.1 Gaussian Process Regression Models In GP models we put a prior directly on functions and condition on observations to make predictions (see Williams and Rasmussen (1996) for details). The noisy targets
+
+  ©  § 4 
+
+are assumed jointly Gaussian with covariance function :
+
+!#"$&%('0)21 43 © 
+
+where 36587
+
+9  ©@©
+
+5 7 
+
+§ (4)
+
+Throughout the remainder of this paper we use a Gaussian covariance function: where the positive elements of the diagonal matrix S , B and e fD are hyperparameters collected in . The hyperparameters are fit by maximising the marginal likelihood (see again A Williams and Rasmussen (1996)) using conjugate gradients. §
+
+5 7  © CB¦DFE@G£H "A  )¨I §P
+
+5 I  7 RQ4SUTFV 5 © § I 
+
+7 XW`Yba © 587@eFDf  (5) 4dc
+
+
+¡ 
+
+The predictive distribution for a novel test input
+
+ "         $ ! A % '0)£¢ ¥¤  ©¥3 $
+
+TFV
+
+! §P  
+
+ 9  © ¤  ©¥3 ¤  ©Xa`©
+
+e D
+
+I $ T V §is Gaussian:§      §$   
+
+(6)
+
+2.2 Model Identification of System Dynamics Givena set of ¦ -dimensionalobservationsof the form
+
+§¢ !£¨ ¢ 7©
+
+, we use a separate Gaussian
+
+process model for predicting each coordinate of the system dynamics. The inputs to each
+
+
+
+model are the state and action pair
+
+over the consecutive state variable,
+
+
+
+, the output is a (Gaussian) distribution
+
+using eq. (6). Combining the
+
+$10$¥ &.
+
+¨§ 7©   E 8©¨©¨© ¦ §¢§!£#©
+
+predictive models we obtain a multivariate Gaussian distribution over the consecutive state:
+
+the transition probabilities 2.3 Policy Evaluation
+
+(
+
+We now turn towards the problem of evaluating
+
+¤ §
+
+¢8©
+
+for a given policy over the contin-
+
+
+
+uous state space. In policy evaluation the Bellman equations are used as update rules. In order to apply this approach in the continuous case, we have to solve the two integrals in
+
+eq. (3). For simple (eg. polynomial or Gaussian) reward functions 3
+
+we can directly compute1
+
+the first Gaussian integral of eq. (3). Thus, the expected immediate reward, from state ,
+
+following is:
+
+ ¡
+
+  ( 
+
+
+
+$¥¦¢0$'&$ ¤ 3 $¥£¢ 0$'&$ ¤
+
+§ ¢ 7  §
+
+¢ 
+
+where
+
+$¥ 0$ & (   '0)¢    !#" 8©¨©8© Xe ©Ra  e D V $D
+
+(7)
+
+in which the mean and covariance for the consecutive state are coordinate-wise given by eq. (6) evaluated on the dynamics GP. The second integral of eq. (3) involves an expectation over the value function, which is modeled by the value GP as a function of the states. We need access to the value function at every point in the continuous state space, but we only explicitly represent values at a space. Here we use the mean of the GP to represent the value2 ­ see section 4 for an elaboration. Thus, we need to average the values over the distribution predicted for . For
+
+finite number of support points, %  ¢ 8©¨©¨© !¢'& ¡  
+
+V
+
+and let the GP generalise to the entire
+
+¢ 7  © © 
+
+a Gaussian covariance function3 this can be done in closed form as shown by Girard et al.
+
+(2002). In detail, the Bellman equation for the value at support point
+
+(
+
+ 
+
+
+
+
+
+4¦5 $¥ 0$ & ¡
+
+(  ¢ 7© ¢ 7 
+
+454 6
+
+"
+
+§
+
+T V  
+
+¤ § 
+
+
+
+4650)
+
+) I
+
+ 3 1T V
+
+(
+
+ where
+
+4 ) § §
+
+$¥¢ 0$ &is: (   
+
+' ¢   §
+
+W`Y a 32  "S
+
+TFV D B D E@G£H ¢
+
+2 7¢  I © Q S
+
+and where 3
+
+)
+
+the
+
+§ ¤ §¢
+
+V
+
+ © T Vis¢ ) 
+
+§
+
+1
+
+2 8¢  I
+
+(8) (9)
+
+denotes the covariance matrix of the value GP,
+
+© ¨©¨©8©  ¢ & ©%©
+
+¤ §
+
+( the 9 'th row of
+
+(
+
+matrix and boldface is the vector of values at the support points:
+
+
+
+at the support points with the values at all other points. Equation (8) could be used for iterative policy evaluation. Notice however, that eq. (8) is a set of @ linear simultaneous ( equations in , which we can solve4 explicitly:
+
+(   4 5A)
+
+3 1T V CB
+
+(  (  ) I 4 50)
+
+3 1T V a TFV
+
+
+
+© (10)
+
+Q . Note, that this equation implies a consistency between the value
+
+1 2 For more complex reward functions we may approximate it using eg. a Taylor expansion. Thus, here we are using the GP for noise free interpolation of the value function, and conse-
+
+quently set its noise parameter to a small positive constant (to avoid numerical problems) nomial, and mixtures of these. yet devised a formal proof.
+
+3 The covariance functions allowing analytical treatment in this way include Gaussian and poly-
+
+4
+
+We conjecture that the matrix DFEHGIQPSR0T is non-singular under mild conditions, but have not U
+
+
+The computational cost of solving this system is
+
+  ¢¡©, §@
+
+which is no more expensive than
+
+doing iterative policy evaluation, and equal to the cost of value GP prediction. 2.4 Policy Improvement Above we demonstrated how to compute the value function for a given policy . Now given a value function we can act greedily, thereby defining an implicit policy:
+
+ ¢©¤£ ¦¥"¨§
+
+§
+
+©¦ $¥¤G ¢
+
+¡
+
+(
+
+ $10$ &23 $10$ & 465 ¤ §¢
+
+7©A@ ¢ 7 §
+
+
+
+(11)
+
+giving rise to @ one-dimensional optimisation problems (when the possible actions are scalar). As above we can solve the relevant integrals and in addition compute derivatives wrt. the action. Note also that application-specific constraints can often be reformulated as constraints in the above optimisation problem. 2.5 The Policy Iteration Algorithm We now combine policy evaluation and policy improvement into policy iteration in which both steps alternate until a stable configuration is reached5. Thus given observations of system dynamics and a reward function we can compute a continuous value function and thereby an implicitly defined policy.
+
+Algorithm 1 Policy iteration, batch version
+
+1. Given:
+
+interval
+
+,
+
+
+
+observations of system dynamics of the form
+
+discount factor and reward function
+
+5
+
+
+
+3 § ¢  !¢ 7© for a fixed time
+
+2. Model Identification: Model the system dynamics by Gaussian processes for each
+
+state coordinate and combine them to obtain a model
+
+3. Initialise Value Function: Choose a set %
+
+(
+
+§
+
+initialize
+
+
+
+£ ¢ ©.
+
+
+
+3
+
+' ¢
+
+6 ¢ ¨©8©¨©  ¢ ¦¡&
+
+V
+
+ 
+
+of @ support points and
+
+using conjugate gradient optimisation of the marginal likelihood and set e fD to a small positive constant. 4. Policy Iteration:
+
+repeat for all
+
+ ¢ %
+
+do
+
+!( "
+
+$£ 0$by &
+
+$10$¥ & ( 
+
+§
+
+$'& $'&  ©
+
+Fit Gaussian process hyperparameters for representing
+
+¤ §¢©
+
+Find action
+
+Compute
+
+solving equation (11) subject to problem specific constraints. using the dynamics Gaussian processes
+
+)
+
+
+
+Solve equation (7) in order to obtain
+
+Compute 9 'th row of
+
+
+
+as in equation (9)
+
+end for
+
+£
+
+( § 4 50)
+
+I
+
+3 1TFV T V ©
+
+
+
+¤ §¢© (
+
+Update Gaussian process hyperparameter for representing
+
+until stabilisation of
+
+( to fit the new
+
+The selection of the support points remains to be determined. When using the algorithm in an online setting, support points could naturally be chosen as the states visited, possibly selecting the ones which conveyed most new information about the system. In the experimental section, for simplicity of exposition we consider only the batch case, and use simply a regular grid of support points. We have assumed for simplicity that the reward function is deterministic and known, but it would not be too difficult to also use a (GP) model for the rewards; any model that allows
+
+5 Assuming convergence, which we have not proven.
+
+
+t
+
+-1 -0.5
+
+ (a)
+
+0.6 1
+
+5 4 3 2 1 -1
+
+-0.5
+
+ (b)
+
+0.6 1
+
+Figure 1: Figure (a) illustrates the mountain car problem. The car is initially standing
+
+
+
+motionless at
+
+such that
+
+I
+
+I 
+
+B 9E©
+
+ B
+
+
+
+¦¢¨§
+
+©¡  andthegoalistobringitupandholditintheregion ©¡ £¢
+
+¢
+
+B E
+
+B
+
+¢
+
+B ©¥¤
+
+© . The hatched area marks the target region and below the
+
+
+
+approximation by a Gaussian is shown (both projected onto the
+
+
+
+axis). Figure (b) shows
+
+the position of the car is when controlled according to (11) using the approximated value function after 6 policy improvements shown in Figure 3. The car reaches the target region
+
+
+
+in about five time steps but does not end up exactly at
+
+dynamics model. The circles mark the
+
+ D B
+
+ B © due to uncertainty in the
+
+©
+
+© second time steps.
+
+
+
+evaluation of eq. (7) could be used. Similarly the greedy policy has been assumed, but generalisation to stochastic policies would not be difficult. 3 Illustrative Example For reasons of presentability of the value function, we below consider the well-known mountain car problem "park on the hill", as described by Moore and Atkeson (1995) where the state-space is only two-dimensional. The setting depicted in Figure 1(a) consists of a frictionless, point-like, unit mass car on a hilly landscape described by
+
+
+
+ 4
+
+V
+
+
+
+© D
+
+
+
+ 
+
+
+
+
+
+"! (12)
+
+
+
+for for C B#B
+
+©
+
+The state of the system which are constrained to
+
+force
+
+I'&
+
+% in the range
+
+I
+
+¢  E© E
+
+§ ¢
+
+#¢
+
+&
+
+§P §
+
+
+
+is described by the position of the car and its speed and Y£¢$§ CY respectively. As action a horizontal I 
+
+¢
+
+¢(%)¢
+
+can be applied in order to bring the car up into the target
+
+region which is a rectangle in state space such that ©¡ 0¢
+
+B
+
+
+
+¢
+
+B
+
+©¡¤ and I
+
+B 9E©
+
+
+
+1¢2§ ¢
+
+B 9E©
+
+.
+
+Note that the admissible range of forces is not sufficient to drive up the car greedily from landscape in order to accelerate up the slope, which gives the problem its non-minimum phase character.
+
+the initial state ¢ 
+
+3
+
+I B !B © ©¡  such that a strategy has to be found which utilises the
+
+For system identification we draw samples
+
+  §¢
+
+  " 4%
+
+ © 9  E 8©¨©8©    B ¡
+
+5  uniformly from
+
+their respective admissible regions and simulate time steps of
+
+§
+
+in time using an ODE solver in order to get the consecutive states
+
+   B¢ 7©.
+
+
+
+seconds6 forward We then use two
+
+Gaussian processes to build a model to predict the system behavior from these examples for the two state variables independently using covariance functions of type eq. (5). Based usually considered in the literature. Our algorithm works equally well for shorter time steps (G should be increased); for even longer time steps, modeling of the dynamics gets more complicated,
+
+6 Note that 687@9BADC E seconds seems to be an order of magnitude slower than the time scale
+
+and eventually for large enough 6F7 control is no-longer possible.
+
+
+4 2 0 -1 4 2 0 -1
+
+V
+
+0.6 0.4 0.2 0 -1 2 2 2
+
+V
+
+1
+
+0
+
+V
+
+1
+
+0
+
+1
+
+0
+
+-0.5 -0.5 -0.5 -1 -1 -1
+
+0 0 0
+
+0.5 x
+
+(a)
+
+dx
+
+1 -2 0.5 x
+
+(b)
+
+dx
+
+1 -2 0.5 x
+
+(c)
+
+dx
+
+1 -2
+
+Figure 2: Figures (a-c) show the estimated value function for the mountain car example after initialisation (a), after the first iteration over % (b) and a nearly stabilised value function after 3 iterations (c). See also Figure 3 for the final value function and the corresponding state transition diagram
+
+on  
+
+B
+
+random examples, the relations can already be approximated to within root mean
+
+squared errors (estimated on
+
+B B
+
+E8B B B
+
+test samples and considering the mean of the predicted
+
+distribution) of © Y for predicting and © Y for predicting . Having a model of the system dynamics, the other necessary element to provide to the proposed algorithm is a reward function. In the formulation by Moore and Atkeson (1995) the reward is equal to if the car is in the target regionand elsewhere. For conveniencewe reward as indicated in Figure 1(a). We now can solve the update equation (10) and also evaluate its gradient with respect to . This enables us to efficiently solve the optimization
+
+§
+
+E
+
+approximate this cube by a Gaussian proportional to '
+
+E
+
+§¡ BB 4 © £¢ © D with maximum #!B 7 B B ©
+
+©  
+
+%
+
+ 
+
+problem eq. (11) subject to the constraints on , § and % described above. States outside
+
+E E
+
+the feasible region are assigned zero value and reward. As support points for the value function we simply put a regular Y ¥¤ Y grid onto the state-space and initialise the value function with the immediate rewards for these states, Figure 2(a). The standard deviation of the noise of the value GP representing
+
+5 set to e 1
+
+ B B E
+
+© , and the discount factor to
+
+ B
+
+ B 
+
+¤ §
+
+¢8© is
+
+© ¦ . Following the policy iteration
+
+algorithm we estimate the value of all support points following the implicit policy (11) wrt. the initial value function, Figure 2(a). We then evaluate this policy and obtain an updated value function shown in Figure 2(b) where all points which can expect to reach the reward region in one time step gain value. If we iterate this procedure two times we obtain a value function as shown in Figure 2(c) in which the state space is already well organised. After five policy iterations the value function and therefore the implicit policy is stable, Figure 3(a). In Figure 3(b) a dynamic GP based state-transition diagram is shown, when following the implicit policy. For some of the support points the model correctly
+
+in which each support point ¢  is connected to its predicted (mean) consecutive state ¢ 7
+
+predicts that the car will leave the feasible region, no matter what corresponds to areas with zero value in Figure 3(a).
+
+§
+
+If we control the car from
+
+¢  B !B ©
+
+I
+
+3
+
+©  
+
+"% " &
+
+¢ is applied, which
+
+according to the found policy the car gathers
+
+momentum by first accelerating left before driving up into the target region where it is dynamics are sufficient for this task. The control policy found is probably very close to the optimally achievable.
+
+balanced as illustrated in Figure 1(b). It shows that the   B random examples of the system
+
+
+dx
+
+V
+
+4 2 0 -1
+
+2
+
+1
+
+0
+
+-0.5 -1
+
+0 dx
+
+2.5 2 1.5 1 0.5 0 -0.5 -1 -1.5 -2 -2.5
+
+0.5 x
+
+(a)
+
+-2 -1 -0.5 0 0.5 1 1.5 1
+
+x
+
+(b)
+
+Figure 3: Figures (a) shows the estimated value function after 6 policy improvements (subsequent to Figures 2(a-c)) over % where has stabilised. Figure (b) is the corresponding state transition diagram illustrating the implicit policy on the support points. The black implicit greedy policy with respect to (a). The thick line marks the trajectory of the car for the movement described in Figure 1(b) based on the physics of the system. Note that
+
+lines connect ¢  and the respective ¢ 7 estimated by the dynamics GP when following the
+
+
+
+the temporary violation of the constraint
+
+ D B §
+
+C Y remains unnoticed using time intervals of
+
+© ; to avoid this the constraints could be enforcedcontinuously in the training set.
+
+
+
+(
+
+4 Perspectives and Conclusion Commonly the value function is defined to be the expected (discounted) future reward. Conceptuallyhowever, there is more to values than their expectations. The distribution over future reward could have small or large variance and identical means, two fairly different situations, that are treated identically when only the value expectation is considered. It is clear however, that a principled approach to the exploitation vs. exploration tradeoff requires a more faithful representation of value, as was recently proposed in Bayesian Qlearning (Dearden et al. 1998), and see also Attias (2003). For example, the large variance case is more attractive for exploration than the small variance case. The GP representation of value functions proposed here lends itself naturally to this more elaborate concept of value. The GP model inherently maintains a full distribution over values, although in the present paper we have only used its expectation. Implementation of this would require a second set of Bellman-like equations for the second moment of the values at the support points. These equations would simply express consistency of uncertainty: the uncertainty of a value should be consistent with the uncertainty when following the policy. The values at the support points would be (Gaussian) distributions with individual variances, which is readily handled by using a full diagonal noise term in c the place of 587 e fD in eq. (5). The individual second moments can be computed in closed form (see derivations in Qui~nonero-Candela et al. (2003)). However, iteration would be necessary to solve the combined system, as there would be no linearity corresponding to eq. (10) for the second moments. In the near future we will be exploring these possibilities. Whereas only a batch version of the algorithm has been described here, it would obviously be interesting to explore its capabilities in an online setting, starting from scratch. This will require that we abandon the use of a greedy policy, to avoid risking to get stuck in a
+
+
+local minima caused by an incomplete model of the dynamics. Instead, a stochastic policy should be used, which should not cause further computational problems as long as it is represented by a Gaussian (or perhaps more appropriately a mixture of Gaussians). A good policy should actively explore regions where we may gain a lot of information, requiring the notion of the value of information (Dearden et al. 1998). Since the information gain would come from a better dynamics GP model, it may not be an easy task in practice to optimise jointly information and value. We have introduced Gaussian process models into continuous-state reinforcement learning tasks, to model the state dynamics and the value function. We believe that the good generalisation properties, and the simplicity of manipulation of GP models make them ideal candidates for these tasks. In a simple demonstration, our parameter-free algorithm converges rapidly to a good approximation of the value function. Only the batch version of the algorithm was demonstrated. We believe that the full probabilistic nature of the transition model should facilitate the early states of an on-line process. Also, online addition of new observations in GP model can be done very efficiently. Only a simple problem was used, and it will be interesting to see how the algorithm performs on more realistic tasks. Direct implementation of GP models are suitable for up to a few thousand support points; in recent years a number of fast approximate GP algorithms have been developed, which could be used in more complex settings. We are convinced that recent developments in powerful kernel-based probabilistic models for supervised learning such as GPs, will integrate well into reinforcement learning and control. Both the modeling and analytic properties make them excellent candidates for reinforcement learning tasks. We speculate that their fully probabilistic nature offers promising prospects for some fundamental problems of reinforcement learning. Acknowledgements Both authors were supported by the German Research Council (DFG). References Attias, H. (2003). Planning by probabilistic inference. In Proceedings of the Ninth International Workshop on Artificial Intelligence and Statistics. Dearden, R., N. Friedman, and S. J. Russell (1998). Bayesian Q-learning. In Fifteenth National Conference on Artificial Intelligence (AAAI). Dietterich, T. G. and X. Wang (2002). Batch value function approximation via support vectors. In Advances in Neural Information Processing Systems 14, Cambridge, MA, pp. 1491­1498. MIT Press. Girard, A., C. E. Rasmussen, J. Qui~nonero-Candela, and R. Murray-Smith (2002). Multiple-step ahead prediction for non linear dynamic systems ­ a Gaussian process treatment with propagation of the uncertainty. In Advances in Neural Information Processing Systems 15. Moore, A. W. and C. G. Atkeson (1995). The parti-game algorithm for variable resolution reinforcement learning in multidimensional state-spaces. Machine Learning 21, 199­233. Qui~nonero-Candela, J., A. Girard, J. Larsen, and C. E. Rasmussen (2003). Propagation of uncertainty in Bayesian kernel models - application to multiple-step ahead forecasting. In Proceedings of the 2003 IEEE Conference on Acoustics, Speech, and Signal Processing. Sutton, R. S. and A. G. Barto (1998). Reinforcement Learning. Cambridge, Massachusetts: MIT Press. Williams, C. K. I. and C. E. Rasmussen (1996). Gaussian processes for regression. In Advances in Neural Information Processing Systems 8.
+
+

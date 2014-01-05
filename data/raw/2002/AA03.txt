@@ -1,0 +1,930 @@
+Distance Metric Learning, with Application to Clustering with Side-Information
+
+Eric P. Xing, Andrew Y. Ng, Michael I. Jordan and Stuart Russell
+
+ 
+
+University of California, Berkeley Berkeley, CA 94720 epxing,ang,jordan,russell¡ @cs.berkeley.edu Abstract
+
+Many algorithms rely critically on being given a good metric over their inputs. For instance, data can often be clustered in many "plausible" ways, and if a clustering algorithm such as K-means initially fails to find one that is meaningful to a user, the only recourse may be for the user to manually tweak the metric until sufficiently good clusters are found. For these and other applications requiring good metrics, it is desirable that we provide a more systematic way for users to indicate what they consider "similar." For instance, we may ask them to provide examples. In this paper, we present an algorithm that, given examples of similar (and, if desired, dissimilar) pairs of points in ¢¤£ , learns a distance metric over
+
+¢¥£ thatrespectstheserelationships. Ourmethodisbasedonposingmet-
+
+ric learning as a convex optimization problem, which allows us to give efficient, local-optima-free algorithms. We also demonstrate empirically that the learned metrics can be used to significantly improve clustering performance.
+
+1 Introduction The performance of many learning and datamining algorithms depend critically on their being given a good metric over the input space. For instance, K-means, nearest-neighbors classifiers and kernel algorithms such as SVMs all need to be given good metrics that reflect reasonably well the important relationships between the data. This problem is particularly acute in unsupervised settings such as clustering, and is related to the perennial problem of there often being no "right" answer for clustering: If three algorithms are used to cluster a set of documents, and one clusters according to the authorship, another clusters according to topic, and a third clusters according to writing style, who is to say which is the "right" answer? Worse, if an algorithm were to have clustered by topic, and if we instead wanted it to cluster by writing style, there are relatively few systematic mechanisms for us to convey this to a clustering algorithm, and we are often left tweaking distance metrics by hand. In this paper, we are interested in the following problem: Suppose a user indicates that certain points in an input space (say, ¢¦£ ) are considered by them to be "similar." Can we automatically learn a distance metric over ¢¤£ that respects these relationships, i.e., one that assigns small distances between the similar pairs? For instance, in the documents example, we might hope that, by giving it pairs of documents judged to be written in similar styles, it would learn to recognize the critical features for determining style.
+
+
+One important family of algorithms that (implicitly) learn metrics are the unsupervised ones that take an input dataset, and find an embedding of it in some space. This includes algorithms such as Multidimensional Scaling (MDS) [2], and Locally Linear Embedding (LLE) [9]. One feature distinguishing our work from these is that we will learn a full metric ding for) the points in the training set. Our learned metric thus generalizes more easily to previously unseen data. More importantly, methods such as LLE and MDS also suffer from the "no right answer" problem: For example, if MDS finds an embedding that fails to capture the structure important to a user, it is unclear what systematic corrective actions would be available. (Similar comments also apply to Principal Components Analysis (PCA) [7].) As in our motivating clustering example, the methods we propose can also be used in a pre-processing step to help any of these unsupervised algorithms to find better solutions. In the supervised learning setting, for instance nearest neighbor classification, numerous attempts have been made to define or learn either local or global metrics for classification. In these problems, a clear-cut, supervised criterion--classification error--is available and can be optimized for. (See also [11], for a different way of supervising clustering.) This literature is too wide to survey here, but some relevant examples include [10, 5, 3, 6], and [1] also gives a good overview of some of this work. While these methods often learn good metrics for classification, it is less clear whether they can be used to learn good, general metrics for other algorithms such as K-means, particularly if the information available is less structured than the traditional, homogeneous training sets expected by them. In the context of clustering, a promising approach was recently proposed by Wagstaff et al. [12] for clustering with similarity information. If told that certain pairs are "similar" or "dissimilar," they search for a clustering that puts the similar pairs into the same, and dissimilar pairs into different, clusters. This gives a way of using similarity side-information to find clusters that reflect a user's notion of meaningful clusters. But similar to MDS and LLE, the ("instance-level") constraints that they use do not generalize to previously unseen data whose similarity/dissimilarity to the training set is not known. We will later discuss this work in more detail, and also examine the effects of using the methods we propose in conjunction with these methods. 2 Learning Distance Metrics
+
+ ¢¡ ¢¥£¤£ ¢¥£ ¡¦¥§ ¢ overthe inputspace, ratherthan focusingonlyon (findinganembed-
+
+ 
+
+Suppose we have some set of points pairs of them are "similar":
+
+©¨  ¡
+
+¢¥£ ,andaregiveninformationthatcertain
+
+¡ !¨"$#%¨'&(0)21 "!¨4#$53(if¨"between¨3&
+
+and
+
+How can we learn a distance metric
+
+are similar points and ¨ 5 (1) that respects this;
+
+specifically, so that "similar" points end up close to each other? Consider learning a distance metric of the form
+
+ "!¨4#$53(76  98@!¨4#$5'(A6CBDB¨2EF5GBDB8 6CH !¨IEP5'(RQTS !¨UEF5'(WV (2)
+
+To ensure that this be a metric--satisfying non-negativity and the triangle inequality--
+
+we require that be positive semi-definite,
+
+distance; if we restrict
+
+S
+
+.1 Setting gives Euclidean
+
+to be diagonal, this corresponds to learning a metric in which
+
+S
+
+S SYXa` Sb6dc
+
+the different axes are given different "weights"; more generally, parameterizes a family
+
+of Mahalanobis distances over ¢¦£ .2 Learning such a distance metric is also equivalent to finding a rescaling of a data that replaces each point with and applying the
+
+1 2
+
+ 
+
+Technically, this also allows pseudometrics, where
+
+hpirqtsvuxwyG
+
+does not imply
+
+sw
+
+.
+
+¨ S ¨ $egf
+
+qGqts3yUqtwyxyvqGqts3y"qtwyxy,
+
+Note that, but putting the original dataset through a non-linear basis function and considering
+
+non-linear distance metrics can also be learned.
+
+
+standard Euclidean metric to the rescaled data; this will later be useful in visualizing the learned metrics. A simple way of defining a criterion for the desired metric is to demand that
+
+!¨  #%¨ & ( 1
+
+pairs of points
+
+ ¢¡¤£¥¡¤ ¢¡§¦©¨
+
+8¤©!#"%$ BDB¨  E ¨ & BDB8
+
+in have, say, small squared distance between them:
+
+. This is trivially solved with
+
+¤&#'#"%( BDB¨"E¨3&3BB80)21
+
+, which is not
+
+S
+
+to ensure that does not
+
+f S 6 `
+
+useful, and we add the constraint
+
+collapse the dataset into a single point. Here,
+
+3
+
+can be a set of pairs of points known to be
+
+"dissimilar" if such information is explicitly available; otherwise, we may take it to be all
+
+pairs not in . This gives the optimization problem:
+
+ ¢¡§£ 8
+
+s.t.
+
+S X ` V
+
+ ¤&#'#"%$ BDB¨"GEP¨3&9BDB8 ¤&4'#"%( BDB¨vGEP¨3&9BDB85)61 #
+
+f
+
+(3) (4) (5)
+
+1
+
+The choice of the constant 1 in the right hand side of (4) is arbitrary but not important, and this problem has an objective that is linear in the parameters , and both of the constraints are also easily verified to be convex. Thus, the optimization problem is convex, which
+
+changing it to any other positive constant results only in 7 Sbeing replaced by 7 . Also,
+
+enables us to derive efficient, local-minima-free algorithms to solve it. We also note that, while one might consider various alternatives to (4), "
+
+¨3&9BDBf8 )91
+
+8¤    "%( BB¨""E
+
+S f S
+
+" would not be a good choice despite its giving a simple linear constraint. It
+
+would result in
+
+S
+
+always being rank 1 (i.e., the data are always projected onto a line).3
+
+S 2.1 The case of diagonal
+
+In the case that we want to learn a diagonal
+
+S 6A@ !S g #gS fgf # V V V#gS (, ¡§BDC
+
+£ £
+
+an efficient algorithm using the Newton-Raphson method. Define
+
+E
+
+!S (76 !S g # V V V#$S (A6 F BDB¨  EP¨ & BDBf8 EHG§I
+
+E £ £ §    #"%$
+
+E
+
+CQPR
+
+F ¤    #"%(
+
+we can derive
+
+BDB¨  EP¨ & BDB8TSU
+
+It is straightforward to show that minimizing
+
+multiplication of
+
+S
+
+(subject to
+
+S X ` ) is equivalent, up to a
+
+by a positive constant, to solving the original problem (3­5). We can
+
+thus use Newton-Raphson to efficiently optimize .4
+
+S 2.2 The case of full
+
+E
+
+In the case of learning a full matrix
+
+S
+
+f
+
+, the constraint that
+
+S X ` becomes slightly trickier
+
+to enforce, and Newton's method often becomes prohibitively expensive (requiring
+
+time to invert the Hessian over
+
+W V
+
+!XW`Y (
+
+parameters). Using gradient descent and the idea of
+
+iterative projections (e.g., [8]) we derive a different algorithm for this setting.
+
+3 The proof is reminiscent of the derivation of Fisher's linear discriminant. Briefly, consider max-
+
+rfrw #g hXirfr rfrw q
+
+imizing
+
+ 9ace e qtsutrs%v ygqtsta s%v y q
+
+sible since
+
+qbadcfe!g#ge'hpi'hpi&qsrfrsut4 s%v i yxyadcfe e 
+
+sut4 s%v i '©" x'v 
+
+, where
+
+. Decomposing
+
+q
+
+4
+
+i  g
+
+t&g t g tjg t g   tXxya   t,
+
+
+
+as
+
+ at¤dfehg tg t
+
+(always pos-
+
+), this gives which we recognize as a Rayleigh-
+
+quotient like quantity whose solution is given by (say) solving the generalized eigenvector problem
+
+g
+
+mi¤
+
+for the principal eigenvector, and setting
+
+g
+
+e'qsr e'qsr
+
+
+
+.
+
+To ensure that , which is true iff the diagonal elements
+
+ e 5ku e
+
+w
+
+npo tuno t¤tuvtFis.
+
+dlll  g 
+
+t¤t
+
+are non-negative, we actually
+
+replace the Newton update by , where a step-size parameter optimized via a
+
+line-search to give the largest downhill step subject to
+
+
+Iterate Iterate
+
+SS ¡¡S66
+
+until
+
+S ¡6 S© ! 8 !S (%(
+
+converges
+
+E
+
+until convergence Figure 1: Gradient ascent + Iterative projection algorithm. Here,
+
+e&% w
+
+matrices (
+
+rfr rfr$  qXa a  tvw y t v
+
+).
+
+B¡ B¡ CC  ¢¡§£  ¢¡§£
+
+8£¢8 3BBS ¢     ¥¤ EPS BB¦ ¡ S¥¤4)¤ ¨§  3BBS EPS BB¦ ¡ S )¨§ f
+
+¤
+
+"!
+
+¡¡
+
+rfr¡#hrfr$ is the Frobenius norm on
+
+We pose the equivalent problem:
+
+ B(' E 8
+
+s.t. )
+
+S X ` V
+
+!S(A6 ¤   #"%( BDB¨v$#$¨3&9BDB8 !S (A6  §#!#"%$ BB¨  #%¨ & BDBf80 1
+
+E !S (
+
+We will use a gradient ascent step on
+
+(6) (7) (8)
+
+to optimize (6), followed by the method of
+
+iterative projections to ensure that the constraints (7) and (8) hold. Specifically, we will
+
+
+
+repeatedly take a gradient step
+
+§
+
+the sets
+
+0 repeatedly project into ¡ and
+
+©S  ¡ S X `
+
+¡ . Thisgives the
+
+ 6 ©S  ¡  ¤&#©!"%$ BDB¨v4E¨'&9BBf8 1
+
+S ¡6 S1©2 8 !S(,0f§and6then E S
+
+algorithm shown in Figure 1.5 The motivation§ for the specific choice of the problem formulation (6­8) is that projecting
+
+S § S ¡6 B3  Conto  ¢¡§£ 8 BDBS E S BBf¦ ¡ S4¤@)5§  ¢   ¥¤ or  f
+
+can be done inexpensively. Specifically, the first projection step
+
+¡ involves minimizing a quadratic objective subject to
+
+!pW ( f
+
+a single linear constraint; the solution to this is easily found by solving (in
+
+§
+
+a sparse system of linear equations. The second projection step onto
+
+f
+
+positive-semi definite matrices, is done by first finding the diagonalization
+
+@
+
+where
+
+6
+
+8 ¤
+
+6) @¢¥£¡§BDCBA !£ Bcontains@  #'sV Vcorresponding
+
+3'
+
+`'#   ¡ V#£ `'# (
+
+is a diagonal matrix of
+
+@
+
+8
+
+6 @ !@  # VSV V4# ( 
+
+¡§BDC S
+
+S 676 Q98
+
+V
+
+time)
+
+, the space of 6all
+
+,
+
+'s eigenvalues and the8 columns of ¤E6
+
+eigenvectors, and taking
+
+SC¤ 6D6 Q
+
+, where
+
+£ ¡ . (E.g.,see[4].)
+
+3 Experiments and Examples We begin by giving some examples of distance metrics learned on artificial data, and then show how our methods can be used to improve clustering performance. 3.1 Examples of learned distance metrics Consider the data shown in Figure 2(a), which is divided into two classes (shown by the different symbols and, where available, colors). Suppose that points in each class are "sim-
+
+1
+
+ilar" to each other, and we are given
+
+diagonal or a full
+
+8£FHGI&P&QSRHIT VUW
+
+, we obtain:
+
+1.036
+
+XX X
+
+1.007
+
+X
+
+S
+
+reflecting this.6 Depending on whether we learn a
+
+XXX Y`ba 8"cedHTT VUW
+
+Y`
+
+3.245 3.286 0.081 3.286 3.327 0.082
+
+0.081 0.082
+
+0.002
+
+To visualize this, we can use the fact discussed earlier that learning
+
+to finding a rescaling of the data
+
+q r
+
+5
+
+¨ § S ¨ %egf
+
+BDBgf"BDB8 is equivalent
+
+, that hopefully "moves" the similar pairs
+
+The algorithm shown in the figure includes a small refinement that the gradient step is taken the
+
+direction of the projection of
+
+disrupt the constraint i . Empirically, this modification often significantly speeds up convergence. points.
+
+6
+
+In the experiments with synthetic data, p was a randomly sampled 1% of all pairs of similar
+
+e
+
+i
+
+onto the orthogonal subspace of
+
+q i9h
+
+, so that it will "minimally"
+
+
+2-class data (original) 2-class data projection (Newton)
+
+2-class data projection (IP)
+
+z
+
+5 0 -5
+
+z
+
+5 0 -5
+
+z
+
+5 5
+
+5 0 -5 20
+
+5 5 20
+
+0 y 0
+
+-5 -5
+
+x
+
+0 y 0
+
+-5 -5
+
+x
+
+0 y 0
+
+-20 -20 x
+
+(a) (b) (c)
+
+Figure 2: (a) Original data, with the different classes indicated by the different symbols (and col-
+
+ors, where available). (b) Rescaling of data corresponding to learned diagonal corresponding to full .
+
+3-class data (original) 3-class data projection (Newton)
+
+ . (c) Rescaling
+
+
+
+3-class data projection (IP)
+
+z
+
+2 0 -2
+
+z
+
+2 0 -2
+
+z
+
+2 0 -2
+
+5 5 2
+
+0 y 5 0
+
+-5 -5
+
+x
+
+0 y 5 0
+
+-5 -5
+
+x
+
+0 y 2 0
+
+-2
+
+(c) . (c) Rescaling corre-
+
+-2 x
+
+(a) (b)
+
+Figure 3: (a) Original data. (b) Rescaling corresponding to learned diagonal
+
+S ¨ %egf sponding to full . together. Figure 2(b,c) shows the result of plotting
+
+
+
+
+
+. As we see, the algorithm has
+
+successfully brought together the similar points, while keeping dissimilar ones apart. Figure 3 shows a similar result for a case of three clusters whose centroids differ only in the x and y directions. As we see in Figure 3(b), the learned diagonal metric correctly
+
+S
+
+ignores the z direction. Interestingly, in the case of a full , the algorithm finds a surprising projection of the data onto a line that still maintains the separation of the clusters well. 3.2 Application to clustering One application of our methods is "clustering with side information," in which we learn a distance metric using similarity information, and cluster data using that metric. Specifi-
+
+1 !¨g#%¨3&©(0) 1 ¨v ¨'&
+
+cally, suppose we are given , and told that each pair means and to the same cluster. We will consider four algorithms for clustering:
+
+E f
+
+1. K-means using the default Euclidean metric
+
+cluster centroids
+
+ ¤¢
+
+to define distortion (and ignoring ).
+
+BDB¨  ¡ £¢1'BDB!¨ f
+
+between points
+
+#$¨ & ( )1
+
+belong
+
+¨ 
+
+2. Constrained K-means: K-means but subject to points assigned to the same cluster [12].7
+
+and
+
+always being
+
+3. K-means + metric: K-means but with distortion defined using the distance metric 4. Constrained K-means + metric: Constrained K-means using the distance metric
+
+learned from .
+
+1
+
+learned from . This is implemented as the usual K-means, except if
+
+points are assigned to cluster centroids
+
+BB¨"4E¥  ¢ BDBf8 1
+
+7
+
+the points in each resulting connected component i are constrained to lie in the same cluster, which we pick to be .
+
+qts v #¨ ©©y
+
+w ¨© qtssuttuxsandv §¦ys v
+
+p , then during the step in which
+
+to cluster
+
+ §© qtsut ¨ ©©y 
+
+, we assign both
+
+"!w
+
+. More generally, if we imagine drawing an edge between each pair of points in , then all
+
+#i&% ©§©ya e qtsut''¨ © y w
+
+$
+
+
+Original 2-class data Porjected 2-class data
+
+z
+
+10 0 -10
+
+z
+
+10 0 -10
+
+20 20
+
+0 y 20 0
+
+-20 -20
+
+x
+
+0 y 20 0
+
+-20 -20
+
+x
+
+(a) 1. K-means: Accuracy = 0.4975 2. Constrained K-means: Accuracy = 0.5060 3. K-means + metric: Accuracy = 1 4. Constrained K-means + metric: Accuracy = 1 (b)
+
+Figure 4: (a) Original dataset (b) Data scaled according to learned metric. ( shown, but visually indistinguishable results.)
+
+  6 1 # V Vgave)be
+
+VW# ¨ 
+
+Let
+
+7
+
+( be the cluster to which point
+
+£©©
+
+¡ £¢¤¦¥¦§¦¨£¤¦©'s result is
+
+algorithm, and let
+
+is assigned by an automatic clustering
+
+7
+
+some "correct" or desired clustering of the data. Following [?], in
+
+the case of 2-cluster data, we will measure how well the
+
+7 7 ¡
+
+%$  ¥¨
+
+¡
+
+Accuracy
+
+6 F
+
+'&
+
+1   1    6 & 6 17  's 6 &
+
+match the
+
+7 7 ¡ ¡ #
+
+¨v,¨3&
+
+1 #" 
+
+`'V! ! E 1 ( 6 1 1 #&  G(' 6 `
+
+B ¨
+
+, ¡
+
+
+
+where
+
+1   f
+
+¡ is the indicator function(
+
+the probability that for two points
+
+7
+
+7
+
+'s
+
+according to
+
+). This is equivalent to
+
+drawn randomly from the dataset, our clustering
+
+agrees with the "true" clustering
+
+7
+
+on whether
+
+¨ ¨3&
+
+and belong to same or different
+
+clusters.8
+
+As a simple example, consider Figure 4, which shows a clustering problem in which the "true clusters" (indicated by the different symbols/colors in the plot) are distinguished by their -coordinate, but where the data in its original space seems to cluster much better according to their -coordinate. As shown by the accuracy scores given in the figure, both K-means and constrained K-means failed to find good clusterings. But by first learning a distance metric and then clustering according to that metric, we easily find the correct clustering separating the true clusters from each other. Figure 5 gives another example showing similar results. We also applied our methods to 9 datasets from the UC Irvine repository. Here, the "true clustering" is given by the data's class labels. In each, we ran one experiment using "lit¨
+
+5
+
+1
+
+tle" side-information , and one with "much" side-information. The results are given in Figure 6.9 We see that, in almost every problem, using a learned diagonal or full metric leads to significantly improved performance over naive K-means. In most of the problems, using a learned metric with constrained K-means (the 5th bar for diagonal , 6th bar for full ) also outperforms using constrained K-means alone (4th bar), sometimes by a very large almost any clustering will correctly predict that most pairs are in different clusters. In this setting, the same cluster (as determined by ) with chance 0.5, and from different clusters with chance 0.5, so that "matches" and "mis-matches" are given the same weight. All results reported here used K-means with multiple restarts, and are averages over at least 20 trials (except for wine, 10 trials). the case of "little" side-information, the size of the subset was chosen so that the resulting number of original dataset. In the case of "much" side-information, this was changed to 70%.
+
+S S
+
+8 In the case of many ( )10
+
+) clusters, this evaluation metric tends to give inflated scores since
+
+we therefore modified the measure averaging not only
+
+32 s!t,s v drawn uniformly at random, but from
+
+9
+
+p was generated by picking a random subset of all pairs of points sharing the same class 3 t.
+
+In
+
+resulting connected components 465 (see footnote 7) would be very roughly 90% of the size of the
+
+
+Original data Projected data
+
+50 0 -50 50 0 -50
+
+z z
+
+50 50 50 50
+
+0 y 0
+
+-50 -50 x
+
+0 y 0
+
+-50 -50 x
+
+(a) 1. K-means: Accuracy = 0.4993 2. Constrained K-means: Accuracy = 0.5701 3. K-means + metric: Accuracy = 1 4. Constrained K-means + metric: Accuracy = 1 (b)
+
+Figure 5: (a) Original dataset (b) Data scaled according to learned metric. ( shown, but gave visually indistinguishable results.) £©©
+
+¡ £¢¤¦¥¦§¦¨£¤¦©'s result is
+
+Boston housing (N=506, C=3, d=13) ionosphere (N=351, C=2, d=34) Iris plants (N=150, C=3, d=4)
+
+1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0
+
+Kc=447 Kc=354 Kc=269 Kc=187 Kc=133 Kc=116
+
+wine (N=168, C=3, d=12) balance (N=625, C=3, d=4) breast cancer (N=569, C=2, d=30)
+
+1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0
+
+Kc=153 Kc=127 Kc=548 Kc=400 Kc=482 Kc=358
+
+soy bean (N=47, C=4, d=35) protein (N=116, C=6, d=20) diabetes (N=768, C=2, d=8)
+
+1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0 1 0.8 0.6 0.4 0.2 0
+
+Kc=41 Kc=34 Kc=92 Kc=61 Kc=694 Kc=611
+
+Figure 6: Clustering accuracy on 9 UCI datasets. In each panel, the six bars on the left correspond to an experiment with "little" side-information p , and the six on the right to "much" side-information.
+
+!
+
+From left to right, the six bars in each set are respectively K-means, K-means
+
+ric, K-means
+
+C-Kmeans
+
+!
+
+full metric, Constrained K-means (C-Kmeans), C-Kmeans
+
+full metric. Also shown are
+
+! !
+
+diagonal met-
+
+diagonal metric, and
+
+465
+
+ 
+
+: size of dataset; i : number of classes/clusters; : di-
+
+h
+
+mensionality of data; are also shown. : mean number of connected components (see footnotes 7, 9). 1 s.e. bars
+
+
+Performance on Protein dataset Performance on Wine dataset
+
+1 1
+
+0.9 0.9
+
+0.8 0.8
+
+0.7 0.7
+
+performance performance
+
+kmeans c-kmeans kmeans + metric (diag A) c-kmeans + metric (diag A) kmeans + metric (full A) c-kmeans + metric (full A)
+
+0.6
+
+0.5
+
+kmeans c-kmeans kmeans + metric (diag A) c-kmeans + metric (diag A) kmeans + metric (full A) c-kmeans + metric (full A)
+
+0.6
+
+0.5
+
+0 0.1
+
+ratio of constraints
+
+(a)
+
+0.2 0 0.1
+
+ratio of constraints
+
+(b)
+
+0.2
+
+Figure 7: Plots of accuracy vs. amount of side-information. Here, the -axis gives the fraction of all
+
+pairs of points in the same class that are randomly sampled to be included in p . margin. Not surprisingly, we also see that having more side-information in leads to metrics giving better clusterings.
+
+1
+
+s
+
+typically
+
+Figure 7 also shows two typical examples of how the quality of the clusterings found increases with the amount of side-information. For some problems (e.g., wine), our algorithm learns good diagonal and full metrics quickly with only a very small amount of side-information; for some others (e.g., protein), the distance metric, particularly the full metric, appears harder to learn and provides less benefit over constrained K-means. 4 Conclusions We have presented an algorithm that, given examples of similar pairs of points in ¢ £ , learns a distance metric that respects these relationships. Our method is based on posing metric learning as a convex optimization problem, which allowed us to derive efficient, localoptima free algorithms. We also showed examples of diagonal and full metrics learned from simple artificial examples, and demonstrated on artificial and on UCI datasets how our methods can be used to improve clustering performance. References [1] C. Atkeson, A. Moore, and S. Schaal. Locally weighted learning. AI Review, 1996. [2] T. Cox and M. Cox. Multidimensional Scaling. Chapman & Hall, London, 1994. [3] C. Domeniconi and D. Gunopulos. Adaptive nearest neighbor classification using support vector machines. In Advances in Neural Information Processing Systems 14. MIT Press, 2002. [4] G. H. Golub and C. F. Van Loan. Matrix Computations. Johns Hopkins Univ. Press, 1996. [5] T. Hastie and R. Tibshirani. Discriminant adaptive nearest neighbor classification. IEEE Transactions on Pattern Analysis and Machine Learning, 18:607­616, 1996. [6] T.S. Jaakkola and D. Haussler. Exploiting generative models in discriminaive classifier. In Proc. of Tenth Conference on Advances in Neural Information Processing Systems, 1999. [7] I.T. Jolliffe. Principal Component Analysis. Springer-Verlag, New York, 1989. [8] R. Rockafellar. Convex Analysis. Princeton Univ. Press, 1970. [9] S.T. Roweis and L.K. Saul. Nonlinear dimensionality reduction by locally linear embedding. Science 290: 2323-2326. [10] B. Scholkopf and A. Smola. Learning with Kernels. In Press, 2001. [11] N. Tishby, F. Pereira, and W. Bialek. The information bottleneck method. In Proc. of the 37th Allerton Conference on Communication, Control and Computing, 1999. [12] K. Wagstaff, C. Cardie, S. Rogers, and S. Schroedl. Constrained k-means clustering with background knowledge. In Proc. 18th International Conference on Machine Learning, 2001.
+
+

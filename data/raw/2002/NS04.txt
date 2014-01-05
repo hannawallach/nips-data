@@ -1,0 +1,966 @@
+Spikernels: Embedding Spiking Neurons in Inner-Product Spaces
+
+ ¢¡   ¡¢£ ¡¥¤
+
+Lavi Shpigelman
+
+ 
+
+¡
+
+£
+
+Yoram Singer Rony Paz Eilon Vaadia
+
+School of computer Science and Engineering Interdisciplinary Center for Neural Computation Dept. of Physiology, Hadassah Medical School
+
+The Hebrew University Jerusalem, 91904, Israel {shpigi,singer}@cs.huji.ac.il {ronyp,eilon}@hbf.huji.ac.il
+
+Abstract Inner-product operators, often referred to as kernels in statistical learning, define a mapping from some input space into a feature space. The focus of this paper is the construction of biologically-motivated kernels for cortical activities. The kernels we derive, termed Spikernels, map spike count sequences into an abstract vector space in which we can perform various prediction tasks. We discuss in detail the derivation of Spikernels and describe an efficient algorithm for computing their value on any two sequences of neural population spike counts. We demonstrate the merits of our modeling approach using the Spikernel and various standard kernels for the task of predicting hand movement velocities from cortical recordings. In all of our experiments all the kernels we tested outperform the standard scalar product used in regression with the Spikernel consistently achieving the best performance. 1 Introduction Neuronal activity in primary motor cortex (MI) during multi-joint arm reaching movements in 2D and 3-D [1, 2] and drawing movements [3] has been used extensively as a test bed for gaining understanding of neural computations in the brain. Most approaches assume that information is coded by firing rates, measured on various time scales. The tuning curve approach models the average firing rate of a cortical unit as a function of some external variable, like the frequency of an auditory stimulus or the direction of a planned movement. Many studies of motor cortical areas [4, 2, 5, 3, 6] showed that while single units are broadly tuned to movement direction, a relatively small population of cells (tens to hundreds) carries enough information to allow for accurate prediction. Such broad tuning can be found in many parts of the nervous system, suggesting that computation by distributed populations of cells is a general cortical feature. The population-vector method [4, 2] describes each cell's firing rate as the dot product between that cell's preferred direction and the direction of hand movement. The vector sum of preferred directions, weighted by the measured firing rates is used both as a way of understanding what the cortical units encode and as a means for estimating the velocity vector. Several recent studies [7, 8, 9] propose that neurons can represent or process multiple parameters simultaneously, suggesting that it is the dynamic organization of the activity in neuronal populations that may represent temporal properties of behavior such as the computation of transformation from 'desired action' in external coordinates to muscle activation patterns. Some studies
+
+
+[10, 11, 12] support the notion that neurons can associate and dissociate rapidly to functional groups in the process of performing a computational task. The concepts of simultaneous encoding of multiple parameters and dynamic representation in neuronal populations, could together explain some of the conundrums in motor system physiology. These concepts also invite usage of increasingly complex models for relating neural activity to behavior. Advances in computing power and recent developments of physiological recording methods allow recording of ever growing numbers of cortical units that can be used for real-time analysis and modeling. These developments and new understandings have recently been used to reconstruct movements on the basis of neuronal activity in real-time in an effort to facilitate the development of hybrid brainmachine interfaces that allow interaction between living brain tissue and artificial electronic or mechanical devices to produce brain controlled movements [13, 6, 14, 15, 11, 16, 17]. Current attempts at predicting movement from cortical activity rely on modeling techniques such as cosine-tuning estimation (pop. vector) [18], linear regression [15, 19] and artificial neural nets [15] (though this study reports getting better results by linear regression). A major deficiency of standard approaches is poor ability to extract the relevant information from monitored brain activity in an efficient manner that will allow reducing the number of recorded channels and recording time. The paper is organized as follows. In Sec. 2 we describe the problem setting that this paper is concerned with. In Sec. 3 we introduce and explain the main mathematical tool that we use, namely, the kernel operator. In Sec. 4 we discuss the design and implementation of a biologically-motivated kernel for neural activities. We report experimental results in Sec. 5 and give conclusions in Sec. 6. 2 Problem setting
+
+Consider the case where we monitor instantaneous spike rates from
+
+ 
+
+cortical units during phys-
+
+ical motor behavior of a subject. Our goal is to learn a predictive model of some behavior
+
+parameter with the cortical activity as the input. Formally speaking, let
+
+of instantaneous firing rates from cortical units consisting of
+
+to denote sequences of firing rates and denote by
+
+0  "!$#%¡'&
+
+ 
+
+¡£¢¥¤§¦©¨
+
+be a sequence
+
+samples altogether. We use
+
+¡ 1
+
+¡the ¡21
+
+¡ ¡)(
+
+¡
+
+length of a sequence . Let be the
+
+th sample (i.e. instantaneous firing rates) of a sequence . We also use to denote the concate-
+
+nation of with one more sample . We refer to the instantaneous firing rate of a unit
+
+6
+
+PRQ 7 Q QTG2G2G8Q QUA "!5#%¡'&
+
+¡ ¡879@.
+
+3 154
+
+by .
+
+We also need to employ a notation for sub-sequences. The -long prefix is denoted Finally,
+
+throughout the work we need to examine a substrings of sequences. We denote by a vector of
+
+indices into the sequence where
+
+¡ ACBD# 7  2G2G2GH &
+
+and .
+
+We also need to introduce some notation for target variables we would like to predict. Let
+
+VW¢¥¤§
+
+0 0FE 0FI 0 0SE 0FI
+
+denote some parameter of the movement that we would like to predict (e.g. the movement
+
+velocity in the
+
+¤ ¦e¨)gf ¤ 
+
+1
+
+direction,
+
+X`Y
+
+). Our goal is to learn an approximation
+
+Va @
+
+of the form
+
+bdc
+
+from neural firing rates to movement parameter. In general, information about
+
+movement can be found in neural activity both before and after the time of movement itself. Our plan, though, is to design a model that can be used for controlling a neural prosthesis. We will
+
+therefore confine ourselves to causal predictors that use
+
+like to make
+
+Va @ Bhbi#F¡ 7p9@ &
+
+¡ 79@
+
+to predict
+
+V @
+
+. We therefore would
+
+as close as possible (in a sense that is explained in the sequel) to
+
+V @
+
+.
+
+3 Kernel methods for regression A major mathematical notion employed in this paper is kernel operators. Kernel operators allow algorithms whose interface to the data is limited to scalar products to employ complicated premappings of the data into feature spaces by use of kernels. Formally, a kernel is an inner-
+
+product operator
+
+to describe
+
+q# 1t1C&Bx5#is1&`x$# 1C&
+
+q
+
+qrctsvuws f ¤
+
+via a mapping
+
+xTc$swhere
+
+fys
+
+is some arbitrary vector space. An explicit way
+
+from
+
+s
+
+to an inner-products space
+
+y
+
+such that
+
+. Given a kernel operator we can use it to perform various statistical
+
+learning tasks. One such task is support vector regression (SVR) [20] which attempts to find a regression function for target values that is linear if observed in the (typically very large) feature space mapped by the kernel. We give here a brief description of SVR for the the sake of clarity.
+
+
+Support Vector Regression minimizes Vapnik's [21] -insensitive loss function
+
+ £¢ bt#¥¤ & ¢ 
+
+which defines a hyperplane with width
+
+ 
+
+¨©
+
+¡V
+
+¡   ¡£¢V ¡§¦ bt#¥¤ & B
+
+around the estimate. Exam-
+
+ples that fall within it's boundaries are considered well estimated and do not contribute to the
+
+error. Examples outside the tube contribute linearly to the loss. Say
+
+tor implemented by kernel
+
+bt#¥¤ & B "!# 'x5#¥¤ & $#&% &
+
+q#  ¤ &
+
+x5#¥¤ &
+
+is the feature vec-
+
+. To estimate a linear (linear in feature space) regression
+
+with precision , one minimizes
+
+')( ! ( #&0
+
+P
+
+E 2
+
+1 43( 7
+
+¡V ( ¢ bi#%x "¤# ( &&
+
+ 
+
+¡¦
+
+This can be written as a constrained minimization problem
+
+P
+
+E
+
+minimize subject to
+
+5£#¥! 76 87698"&$B '@( ! ( #A0
+
+6"(V©(¥!# 76 TS8 (
+
+2
+
+1 §3( 7 B6#"(C#D698( &
+
+"x ¥¤# t(F&E#GF2&H¢ Ve($Q& I#P62( $¢ "!# 2x Q¤# (%&E#GF2&Q& I#P6R8(
+
+
+
+By switching to the dual problem of this optimization problem, it is possible to incorporate the kernel function, achieving a mapping that may not be feasible by calculating (possibly infinite)
+
+
+
+feature vectors
+
+x5#%¡©&
+
+. For chosen a-priori, the dual problem is
+
+1
+
+¢a  "Y# (8 #GY ( b#&
+
+43( 7 ¥cd`3 7
+
+2
+
+1
+
+(
+
+¢ 'P
+
+2 2
+
+1 43( 7
+
+"Y# (8 ¢PY (F& Ve( maximize
+
+ 0VU W  S X "Y# `Y 8 &$B
+
+"Ye8( ¢PY (F& "Ye8d ¢DY$d"& 3£#¥¤ (  ¤fd"& # #
+
+subject to
+
+g ¢ Pe2G2G2G2`hic Y ( `Y (8 Pp q0sr
+
+¢ 
+
+0  2
+
+and
+
+1 §3( 7
+
+"Y# ( ¢DY (8 & B 
+
+The solution of the regression estimate takes the form
+
+bt#¥¤ & B
+
+2
+
+1 §3( 7
+
+"Y# (8 ¢DY (F& 3#¥¤ ( ¤t&$#&F
+
+In summary, SVM regression solves a quadratic optimization problem to find a hyperplane in the kernel induced feature space that best estimates the data for an -insensitive linear loss function.  
+
+4 Spikernels The quality of SVM learning is highly dependent on how the data is embedded in the feature space via the kernel operator. For this reason, several studies have been devoted lately to developing new kernels [22, 23, 24]. In fact, for classification problems, a good kernel would render the work of the classification algorithm trivial. With this in mind, we develop a kernel for neural spiking activity. 4.1 Motivation Our goal in developing a kernel for spike trains is to map similar patterns to nearby areas of the feature space. Current methods for predicting response variables from neural activities use standard linear regression techniques (see for instance [15]) or or even replace the time pattern with mean firing rates. A notable example is the population vector method [18]. Other approaches use off-the-shelf learning algorithms, intended for general purpose. In the description of our kernel we attempt to capture some well accepted notions on similarities between spike trains. We make the following assumptions regarding similarities between spike patterns:
+
+
+Pattern A Pattern B Pattern A Pattern B Pattern A Pattern B Time of Interest
+
+R R R a a
+
+a te te te
+
+Time Time Time
+
+Figure 1: Illustrative examples of pattern similarities. Left: bin-by-bin comparison yields small differences. Middle: patterns with large bin-by-bin differences that can be eliminated with some time warping. Right: patterns whose suffix (time of interest) is similar and prefix is different.
+
+  The most commonly made assumption is that similar firing patterns may have small differences
+
+in a bin-by-bin comparison. This type of variation is due to inherent noise of any physical system but also responses to external factors that were not recorded and are not directly related the to the task performed. On the left-hand side of Fig. 1 we show an example of two patterns that are bin-wise similar though clearly not identical. is conceivable that some features of external stimuli are represented by population dynamics that would be best described as 'temporal' coding. by some non-linear time distortion or shifting, the similarity becomes apparent. An illustration of such patterns is given in the middle plots of Fig. 1. In comparing patterns we would like to induce a higher score when the time-shifts are small.
+
+  A cortical population may display highly specific patterns to represent specific information. It
+
+  Two patterns may be quite different in a simple bin-wise comparison but if they are aligned
+
+ 
+
+Patterns that are associated with identical values of an external stimulus at time
+
+¡£¢ 6
+
+may be
+
+similar at that time but very different at
+
+6
+
+when values of the external stimulus for these
+
+patterns are no longer similar (as illustrated on the right-hand-side of Fig. 1). 4.2 Kernel definition We describe the kernel by specifying the features that make up the feature space. Our construction of the feature space builds on the work of Lodhi et al. [24]. First, we need to introduce a few
+
+more notations. Let
+
+¡
+
+be a sequence of length of all possible -long index
+
+. Also,
+
+I !
+
+vectors defining a sub-sequence of
+
+let
+
+  "Y#  5&
+
+ B  "!$#%¡'&I. 
+
+I4
+
+¡ ¤¦¥Wc§ B A c At¢©¨ PRQTheAset G2G2G  A Q  '!5#%¡'& 
+
+is
+
+7
+
+denote a bin-wise distance over a pair of samples (firing rates). We also overload no-
+
+tation and denote by
+
+  #%¡F &  3  §#%¡ !(  4&
+
+B
+
+7
+
+a distance between sequences. The sequence
+
+distance is the sum over the samples constituting the two sequences. Let component of our (infinite) feature vector is defined as,
+
+"BADCFEHGc$2I# CFE  %$x #%¡'&$B '&(0
+
+x$#%¡'& 2
+
+0)21&3456&¦78@9
+
+§QPI ISRT0U
+
+"5# ¢h# "P"&.
+
+The
+
+
+
+where and
+
+A
+
+0
+
+is a normalization constant that simplifies the calculation and and
+
+
+
+V$x #%¡©& ¡
+
+Ap7
+
+(1) is the first
+
+index of . In words,
+
+is compared to
+
+is a sum over all n-long sub-sequences of . Each sub-sequence
+
+(the feature coordinate) and is weighted up according to its similarity to
+
+¡
+
+¡
+
+¡
+
+
+
+.
+
+In particular, part of the weight of each sub-sequence of reflects how concentrated the sub-
+
+sequence is toward the end of . Put another way, the entry indexed by is to the time series near its end.
+
+
+
+measures how close
+
+
+
+This definition seems to fit our assumptions on neural coding for the following reasons:
+
+It allows for complex patterns: small values of
+
+# "
+
+and (or concentrated measures) mean that
+
+ 
+
+is almost identical to a each coordinate
+
+ 
+
+¡
+
+
+
+tends toward being either
+
+P
+
+or
+
+
+
+depending whether
+
+suffix of or not.
+
+
+  Patterns that are piece-wise similar to
+
+
+
+contribute to the
+
+
+
+feature coordinate with a weight
+
+that decays as the sample-by-sample comparison between the sequences grows large.
+
+We allow gaps in the indexes defining sub-sequences, thus, allowing for time warping. Patterns that begin further from the required prediction time are penalized by an exponentially
+
+  
+
+decaying weight. 4.3 Efficient kernel calculation
+
+he definition of
+
+x
+
+given by Eq. (1) requires the manipulation of an infinite feature space. Straight-
+
+forward calculation of the feature values and performing the induced inner-product is clearly impossible. Based on ideas from [24] we developed an indirect method for evaluating the kernel through a recursion which can be performed efficiently using dynamic programing. We now
+
+describe the recursion.
+
+Denote by
+
+1 ¢ ¤ ¦
+
+the last entry in the sequence
+
+equations for
+
+x
+
+¡21 ¢ ¤ A ¨ CFE
+
+§QPI Y I.
+
+We now describe two recursive
+
+with respect to the length of the time series and the sub-sequence length. Due
+
+to the lack of space we skip some of the algebraic manipulations that are needed to derive the
+
+recursions. The first equation is
+
+x $ #%¡"1& B # x $ #%¡©&$# # " ADC
+
+$ cY I0 & (U x $ U U"#%¡'&
+
+¡
+
+&
+
+¢
+
+into two subsets: one where Eq. (2) simply separates the sum over sub-sequences of
+
+specified by the index vectors and the latter where
+
+for
+
+x
+
+A
+
+I
+
+¡
+
+1
+
+1
+
+(2) is not
+
+specifies . The second recursive equation
+
+is, again, with respect to both the length of the sub-sequence ( ) and the length of the
+
+
+
+
+
+sequence ,
+
+B$x #'&B 0 (U " ADC$ # C B$x U Ut#%©79d R7H& C
+
+d 3 7
+
+£
+
+& c£¥¤ I §QP ISR d§¦ 7 £ I ¡ &
+
+¢
+
+§QP2I I
+
+The¨ last equation simply states that the feature is a sum over all possible values of
+
+for ,
+
+q
+
+:
+
+ ! ¤ cd I A
+
+I (3) . Note that
+
+is empty. Eqs. (2) and (3) are now used for computing the recursion equation for
+
+©§
+
+q #%¡21t'&5B I
+
+B$x #%¡21&
+
+We plug Eq. (2) into and plug Eq. (3) into
+
+&
+
+x
+
+B$x #%¡"1&V$x %$x #'& . 
+
+# '&
+
+Using algebraic manipulations we
+
+replace integrals over scalar products of function,
+
+q #%¡"1t'& B # q #%¡'&E#&0
+
+The initial conditions are:
+
+I I
+
+§QP2I I C
+
+d`3 7
+
+£
+
+by the proper kernels and get the following recursive
+
+# C q R 7t#%¡©79d R 7H& "BADC$ "BADC   (4) & & £ ©  §¦ §QPI ISR d I E cY I $ c£¤ I I
+
+g ¡§¢¥¤¨!#"A ¨ CFE ¢ ¤ A ¨ C£ q`#%¡'&B P  
+
+if
+
+ "!5#%¡'& p '!5# '&  
+
+q ( #%¡'& B
+
+Assuming that the computation time of the integral in Eq. (4) is a constant, computing the entire
+
+recursion requires $&%
+
+F "!5#%¡©&$ "! # '& !('
+
+time. We can achieve a speed up by a factor of
+
+ "!$# '&
+
+if
+
+we cache the term on the right hand side of Eq.(4) as follows. Define,
+
+q  #%¡21t"V&B 0 I
+
+C
+
+£)
+
+d`3 7
+
+# C
+
+§QPI IR d I
+
+£0) §¦
+
+E
+
+q R7 #%¡"# "V& 7p9d R 7 & "VA C
+
+¨
+
+© 1
+
+§QP2I I
+
+E
+
+§QPI I §QPI I0
+
+$ cY I $ c I I I & ¦ ADC C    & £) ¤ (5)
+
+Separating the above sum into its two parts (one for
+
+the definition of
+
+q 
+
+Bh '!5# "V&
+
+and one for the rest), and using
+
+from Eq.(5) we get the following recursive equation for
+
+E © 
+
+$ cIY I $ c I I
+
+&
+
+)
+
+q ,
+
+q  #%¡21t"V8& B # 0£q R 7'#%¡'& "BADC I
+
+I
+
+§QP& IA
+
+¦
+
+§QPI I
+
+C    # # q  #%¡21t'&
+
+g ¡ ¢¥¤ A ¨ CFE £¢¥¤ A ¨ C£ q  #%¡`'&$BDP
+
+¨!#"  0
+
+
+
+ if  "!5#%¡'& p '!5# '&   q ( #%¡`'&$B
+
+I (6)
+
+
+Finally, the recursive equation for
+
+yielding an $ 4.4 Spikernel variants.
+
+I h#F "!5#%¡©& "!$# '&! & q #%¡21t'& B # q #%¡'&E# q  #%¡21t'&q 
+
+I
+
+dynamic programing solution for
+
+q is, I I
+
+#%¡`'& .
+
+The kernels defined by Eq.(1) consider only patterns of fixed length ( ). It makes sense to look at sub-sequences of various lengths. Since a linear combination of kernels is also a kernel, we
+
+can define our kernel to be
+
+q#¡ 6 &5B 2
+
+I §3( 7
+
+ q ( #¡ 6 &£¢  U G ( 
+
+!
+
+The kernel summation can be interpreted as a concatenation of the feature vectors that these kernels represent. Weighted summation is concatenation of the feature vectors after first multiplying them by the square root of the weights.
+
+Different choices of
+
+Say we assign
+
+  "Y#  &
+
+ C#"Y  &
+
+result in kernels that differ in the way two rate values are compared.
+
+E
+
+EE¦¥
+
+"
+
+to be the squared ¤ norm:
+
+( Yi¢  (
+
+
+
+'" ¢
+
+ A4 3 7 #Y54 ¢ 4&E " ( (
+
+A U © R ( 
+
+" #"
+
+, the integral
+
+in the kernel recursion Eq.(6) becomes:
+
+©  
+
+"VA C ADC   B ¨§ § 
+
+(
+
+$&% ')(10 24365¡798 , which has an
+
+c© I¦ c I 
+
+!
+
+Note that the constant
+
+!
+
+fold gain affect on
+
+q
+
+goes to infinity as
+
+"
+
+goes to 1. This gain results in a kernel whose computation is numerically unstable. However, we
+
+can easily cancel it with the constant
+
+0
+
+. Substituting this result back into Eq.(4) we get
+
+q  #%¡21t"V&B # q R 7'#%¡'& " (#" ( # # q  #%¡"1t'& 5 Experimental results Data collection: The data used in this work was recorded from the primary motor cortex of a rhesus (Macaca mulatta) monkey (~4.5 kg). The animal's care and surgical procedures accorded with The NIH Guide for the Care and Use of Laboratory Animals (rev. 1996) and with the Hebrew University guidelines supervised by the institutional committee for animal care and use. The monkey sat in a dark chamber, and 8 electrodes were introduced into each hemisphere. The electrode signals were amplified, filtered and sorted (MCP-PLUS, MSD, Alpha-Omega, Nazareth, Israel). The data used in this report includes 31 single units and 16 multi-unit channels (MUA) that were recorded in one session by 16 microelectrodes. The monkey used two planarmovement manipulanda to control 2 cursors (X and + shapes) on the screen to perform center-out task. Each trial begun when the monkey centered both cursors on a central circle for 1.0-1.5s. Either cursor could turn green, indicating the hand to be used in the trial (X for right arm and + for the left). Then, (after an additional hold period of 1.0-1.5s) one of eight targets appeared at a distance of 4 cm from the origin and monkey had to move and reach the target in less than 2s to receive liquid reward. At the end of each session, we examined the activity of neurons evoked by passive manipulation of the limbs and applied intracortical microstimulation (ICMS) to evoke movements. The data presented here was recorded in penetration sites where ICMS evoked shoulder and elbow movements. Penetration locations were verified by MRI (Biospec Bruker 4.7 Tesla). Data preprocessing and modeling: The movements and spike data were preprocessed to create a labeled corpus. We used only the data from trials on which the monkey succeeded in the movement task and examined only the right hand movements. We partitioned the movement and
+
+)
+
+"
+
+E
+
+We show results for the ¤ norm.
+
+spike trains into
+
+  P h@ 
+
+-long bins to get the spike counts and average hand movement velocities
+
+I E I
+
+U
+
+Y R ( I
+
+
+in each segment. We then normalized the spike counts to achieve a zero mean and a unit variance the target label and the preceding second (i.e. 10 segments) of spike counts from all ( ) cortical
+
+for each cortical unit. A labeled example #%¡e@pX©@ & for time consisted of the 6 s or   velocity as
+
+units as the input sequence
+
+¡ @
+
+P 
+
+was ¡£¢ hence
+
+. In our experiments the number of cortical units
+
+the matrix of spike counts is of size ¡¤¢ u P
+
+
+
+
+
+.
+
+Each kernel employs a few parameters (
+
+of two more parameters, ( and
+
+  0
+
+#t"52G2G2G)
+
+and the SVM regression setup requires setting
+
+). Therefore, the learning task is performed in two stages. First,
+
+we used cross-validation to choose the best parameters using a validation set. Then, we learned to
+
+predict the response variable using SVR. Overall we had
+
+of which we used the first
+
+P
+
+
+
+minutes of clean cortical recordings
+
+minutes as our validation set for tuning the parameters. The second
+
+'
+
+
+
+half was used for training and testing. The kernels that we tested are the exponential kernel
+
+£
+
+(
+
+q#%¡'& B  CQE &
+
+, the homogeneous polynomial kernel (
+
+standard scalar product kernel ( Spikernel.
+
+q#%¡'&5B ¡ 2
+
+q#%¡'& BD#%¡ "'& A   B ¨§
+
+, ), the
+
+) which boils down to a linear regression, and the
+
+R¦¥ R I(
+
+'
+
+Accuracy results were obtained by performing 5-fold cross-validation for each kernel. The 5 folds were produced by randomly splitting the data into 5 groups: ¡ out of the © groups were used for training and the rest of the data was used for evaluation. This was process was repeated 5 times by using once each fifth of the data as a test set. We computed the correlation coefficient per fold for each kernel. The per-fold results are shown in Fig. 2A as a scatter plot. Each point compares the Spikernel score versus one of the adversaries. The Spikernel out-performed the
+
+rest in every single test set. We found out that predicting the
+
+predicting the
+
+XY
+
+X
+
+)
+
+signal was more difficult than
+
+signal. This may be the result of sampling a population of cortical units that
+
+are tuned more to the left-right directions. The mean results are summarized in Fig. 2B. The linear regression method (scalar-product kernel) came in last. It seems that both re-mapping the data by standard kernels and by the Spikernel allow for better prediction models. The ordering of the kernels by their mean score is consistent when looking at per-test results, except for the exponential kernel which is out-performed by linear regression in some of the tests.
+
+A B 0.8
+
+0.7
+
+Mean Values vx vy
+
+Mean r 0.70 0.62 0.56 0.47 0.44 Mean r 0.49 0.36 0.29 0.25 0.21
+
+Parameters µ=0.99, =0.7, N=5 C=0.01 C=10  =10-6 C=1 C=0.01
+
+0.6
+
+lenrekip
+
+0.5
+
+0.4
+
+Kernel Spikernel (s·t)2 (s·t)3 exp(-(s-t)2) Lin. - (s·t)
+
+S 0.3
+
+0.2
+
+0.1
+
+6 S LN&RUUHODWLRQVWDQG DUG N HUQHOV
+
+HUQHO Y V
+
+0.3 0.4 0.2 0.5 0.6 0.7
+
+&RHIILFLHQWV
+
+0 0 0.1 0.8
+
+standard embeddings
+
+Figure 2: The Spikernel is compared to (color & shape coded) standard kernels. A - Scatter plot of correlation coefficient results in all cross-validation folds. B ­ Mean correlation coefficient values for each kernel type The Spikernel out-performs in all folds.
+
+6 Summary In this paper we described an approach based on recent advances in kernel-based learning for predicting response variables from neural activities. On the data we collected, all the kernels we devised outperform the standard scalar product that is used in linear regression. Furthermore, the Spikernel, a biologically motivated kernel operator for spike counts outperforms all the other kernels. Our current research is focused in two directions. First, we are investigating the adaptations of the Spikernel to other neural activities such as Local Field Potentials (LFP). Our second and more challenging goal is to devise statistical learning algorithms that use the Spikernel as
+
+
+part of a dynamical system that may incorporate bio-feedback. We believe that such extensions are an important and necessary steps toward operational neural prostheses. Acknowledgments: Supported in part by the German-Israeli-Foundation for Scientific Research and Development (GIF) and by the German-Israeli Project Cooperation (DIP) established by BMBF. References [1] Georgopoulos AP, Schwartz AB, and Kettner RE. Neuronal population coding of movement direction. Science, 233:1416­1419, 1986. [2] Apostolos P. Georgopoulus, Ronald E. Kettner, and Andrew B. Wchwartz. Primate motor cortex and free arm movements to visual targets in three-dimensional space. The Journal of NeuroScience, 8, August 1988. [3] Schwartz AB. Direct cortical representation of drawing. Science, 265:540­542, 1994. [4] A. P. Georgopoulus, J.F. Kalaska, and J.T. Massey. Spatial coding of movements: A hypothesis concerning the coding of movement of movement direction by motor cortical populations. Experimental Brain Research (Supp), 7:327­336, 1983. [5] Daniel W. Moran and Andrew B. Schwartz. Motor cortical representation of speed and direction during reaching. Journal of Neurophysiology, 82:2676­2692, 1999. [6] Mark Laubach, Johan Wessberh, and Miguel A. L. Nicolelis. Cortical ensemble activity increasingly predicts behavior outcomes during learning of a motor task. Nature, 405(1), June 2000. [7] Fu QG, Flament D, Coltz JD, and Ebner TJ. Relationship of cerebellar purkinje cell simple spike discharge to movement kinematics in the monkey. Journal of Neurophysiology, 78, 1997. [8] Donchin O, Gribova A, Steinberg O, Bergman H, and Vaadia E. Primary motor cortex is involved in bimanual coordination. Nature, 1998. [9] Anthony G. Reina, Daniel W. Moran, and Andrew B. Schwartz. On the relationship between joint angular velocity and motor cortical discharge during reaching. Journal of Neurophysiology, 85:2576­ 2589, 2001. [10] E. Vaadia, I. Haalman, M. Abeles, H. Bergman, Y. Prut, H. Slovin, and A. Aertsen. Dynamics of neuronal interactions in monkey cortex in relation to behavioral events. Nature, 373:515­518, Febuary 1995. [11] Nicolelis MA Laubach M, Shuler M. Independent component analyses for quantifying neuronal ensemble interactions. J Neurosci Methods, 1999. [12] A. Reihle, S. Grun, M. Diesmann, and A. M. H. J. Aersten. Spike synchronization and rate modulation differentially involved in motor cortical function. Science, 278:1950­1952, 1997. [13] Chapin JK, Moxon KA, Markowitz RS, and Nicolelis MA. Real-time control of a robot arm using simultaneously recorded neurons in the motor cortex. Nature Neuroscience, 2:664­670, 1999. [14] Miguel A. L. Nicolelis. Actions from thoughts. Nature, 409(18), January 2001. [15] Johan Wessberg, Christopher R. Stambaugh, Jerald D. Kralik, Pamela D. Beck, Mark Laubach, John K. Chapin, Jung Kim, James Biggs, Mandayam A. Srinivasan, and Miguel A. L. Nicolelis. Real-time predictionof hand trajectory by ensembles of cortical neurons in primates. Nature, 408(16), November 2000. [16] Nicolelis MA, Ghazanfar AA, Faggin BM, Votaw S, and Oliveira LM. Reconstructing the engram: simultaneous, multisite, many single neuron recordings. Neuron, 18:529­537, 1997. [17] Isaacs RE, Weber DJ, and Schwartz A. Work toward real-time control of a cortical neural prothesis. IEEE Trans Rehabil Eng, 8(196­198), 2000. [18] Dawn M. Taylor, Stephen I. Helms Tillery, and Andrew B. Schwartz. Direct cortical control of 3d neuroprosthetic devices. Science, 2002. [19] Mijail D. Serruya, Nicholas G. Hatsopoulus, Liam Paninski, Matthew R. Fellows, and John P. Donoghue. Instant neural control of a movement signal. Nature, 416:141­142, March 2002. [20] A. Smola and B. Sch. A tutorial on support vector regression, 1998. [21] Vladimir Vapnik. The Nature of Statistical Learning Theory. Springer, N.Y., 1995. [22] Tommi S. Jaakola and David Haussler. Exploiting generative models in discriminative calssifiers. In NIPS, 1998. [23] Marc G. Genton. Classes of kernels for machine learning: A statistical perspective. Journal of MAchine Learning Research, 2:299­312, January 2001. [24] Huma Lodhi, John Shawe-Taylor, Nello Cristianini, and Christopher J. C. H. Watkins. Text classification using string kernels. In NIPS, pages 563­569, 2000.
+
+

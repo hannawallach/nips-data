@@ -1,0 +1,1110 @@
+Constraint Classification for Multiclass Classification and Ranking
+
+Sariel Har-Peled Dan Roth Dav Zimak
+
+ 
+
+Department of Computer Science University of Illinois Urbana, IL 61801 sariel,danr,davzimak @uiuc.edu
+
+¡
+
+Abstract The constraint classification framework captures many flavors of multiclass classification including winner-take-all multiclass classification, multilabel classification and ranking. We present a meta-algorithm for learning in this framework that learns via a single linear classifier in high dimension. We discuss distribution independent as well as margin-based generalization bounds and present empirical and theoretical evidence showing that constraint classification benefits over existing methods of multiclass classification.
+
+1 Introduction Multiclass classification is a central problem in machine learning, as applications that require a discrimination among several classes are ubiquitous. In machine learning, these include handwritten character recognition [LS97, LBD 89], part-of-speech tagging [Bri94, EZR01], speech recognition [Jel98] and text categorization [ADW94, DKR97]. While binary classification is well understood, relatively little is known about multiclass classification. Indeed, the most common approach to multiclass classification, the oneversus-all (OvA) approach, makes direct use of standard binary classifiers to encode and train the output labels. The OvA scheme assumes that for each class there exists a single (simple) separator between that class and all the other classes. Another common approach, all-versus-all (AvA) [HT98], is a more expressive alternative which assumes the existence of a separator between any two classes. OvA classifiers are usually implemented using a winner-take-all (WTA) strategy that associates a real-valued function with each class in order to determine class membership. Specifically, an example belongs to the class which assigns it the highest value (i.e., the "winner") among all classes. While it is known that WTA is an expressive classifier [Maa00], it has limited expressivity when trained using the OvA assumption since OvA assumes that each class can be easily separated from the rest. In addition, little is known about the generalization properties or convergence of the algorithms used. This work is motivated by several successful practical approaches, such as multiclass support vector machines (SVMs) and the sparse network of winnows (SNoW) architecture that
+
+¢
+
+
+rely on the WTA strategy over linear functions. Our aim is to improve the understanding of such classifier systems and to develop more theoretically justifiable algorithms that realize the full potential of WTA. An alternative interpretation of WTA is that every example provides an ordering of the classes (sorted in descending order by the assigned values), where the "winner" is the first class in this ordering. It is thus natural to specify the ordering of the classes for an example directly, instead of implicitly through WTA. In Section 2, we introduce constraint classification, where each example is labeled with a set of constraints relating multiple classes. Each such constraint specifies the relative order of two classes for this example. The goal is to learn a classifier consistent with these constraints. Learning is made possible by a simple transformation mapping each example into a set of examples (one for each constraint) and the application of any binary classifier on the mapped examples. In Section 3, we present a new algorithm for constraint classification that takes on the properties of the binary classification algorithm used. Therefore, using the Perceptron algorithm, it is able to learn a consistent classifier if one exists, using the winnow algorithm it can learn attribute efficiently, and using the SVM, it provides a simple implementation of multiclass SVM. The algorithm can be implemented with a subtle change to the standard (via OvA) approach to training a network of linear threshold gates. In Section 4, we discuss both VC-dimension and margin-based generalization bounds presented a companion paper[HPRZ02]. Our generalization bounds apply to WTA classifiers over linear functions, for which VC-style bounds were not known. In addition to multiclass classification, constraint classification generalizes multilabel classification, ranking on labels, and of course, binary classification. As a result, our algorithm provides new insight into these problems, as well as new, powerful tools for solving them. For example, in Section , we show that the commonly used OvA assumption can cause learning to fail, even when a consistent classifier exists. Section 5 provides empirical evidence that the constraint classification outperforms the OvA approach. 2 Constraint Classification
+
+Learning problems often assume that examples,
+
+fixed probability distribution,
+
+and 
+
+"$#&%¨' , over ()
+
+ ¢¡¤£¦¥¨§©
+
+. 
+
+, are drawn   ! from
+
+is referred to as the instance space
+
+is referred to as the output space (label set).
+
+Definition 2.1 (Learning) Given
+
+from "I#P%Q' , a hypothesis class
+
+algorithm dP e1f£5R§
+
+R
+
+0 examples, 1324 5 ¢¡768£5¥96@§7£ABAB£A C¡EDF£5¥GD&§5§
+
+ba
+
+ 
+
+, drawn H  E
+
+and an error function STGUVWXR`Y
+
+, where gT9iY
+
+£Ac ¡ , a learning
+
+attempts to output a function gh©R , that minimizes
+
+the expected error on a randomly drawn example. Definition 2.2 (Permutations) Denote the set of full orders over
+
+ 
+
+sisting of all permutations of
+
+ 
+
+over cG£BAB@£q
+
+cG£BBA@£Hq . Similarly, 1 s r
+
+ 
+
+cp£ABBB£Hq ¡ as 1Gr , con-
+
+¡
+
+denotes the set of all partial orders
+
+¡
+
+. A partial order, t©us1vr
+
+w x
+
+, defines a binary relation,
+
+ 
+
+w&x and can be rep-
+
+resented by set of pairs on which
+
+ 
+
+of pairs t$2  ¢¦6£y6B§7£BABA£A ¢£yAE§
+
+holds, tI2  ¢£y9§A w x y ¡ . In addition, for any set
+
+¡
+
+, we refer to t both as a set of pairs and as the partial
+
+order produced by the transitive closure of with respect to
+
+ £H$©s1 r  , is consistent with 
+
+t 
+
+(denoted 
+
+wx . Given two partial orders
+
+ 
+
+) if for every  CH£y9§P© cp£ABBB£Hq  ¡ , wy
+
+holds whenever
+
+integers where
+
+w&dXy . If te©f1 r is a full order, then it can be represented by a list of q
+
+w x y if precedes y in the list. The size of a partial order,   tp is the number
+
+of pairs specified in . t
+
+Definition 2.3 (Constraint Classification) Constraint classification is a learning problem
+
+where each example constraint classifier,
+
+gj ¢¡k§ (¥
+
+
+
+g¤ C¡k§
+
+ C¡¤£¦¥Q§F©gh`s1 r
+
+gT!iY 1 s r
+
+is labeled according to a partial order ¥3©us1 r . A
+
+, is consistent with example  ¢¡¤£¦¥¨§ if ¥ is consistent with
+
+). When  ¥9lUt , we call it -constraint classification. t
+
+
+Problem binary multiclass ranking constraint*
+
+3 -multilabel
+
+t -constraint*
+
+Internal Representation
+
+ 
+
+&6£ABBA£ &6£ABBA£ &6£ABBA£ &6£ABBA£ &6£ABBA£
+
+¡£¢
+
+§X© §X© §X© §X© §X©
+
+©
+
+¨  ¨ ¨ ¨ ¨ 
+
+Output Space ( )
+
+¥¤
+
+ 
+
+cG£Bc ¡
+
+cp£ABBB£Hq cG£BBA@£Hq 1 r 1 s r 1 s r x
+
+Hypothesis
+
+¦¨§©¥ @¡0
+
+6
+
+Size of Mapping
+
+¤c
+
+3 ¤ 3
+
+q c
+
+ eq q ¤
+
+c
+
+­
+
+t
+
+            r
+
+r
+
+r
+
+r
+
+¡ ¢ ¡¡¡¡ ¢¢¢¢
+
+r
+
+r
+
+r
+
+r
+
+r
+
+ 
+
+ 
+
+r
+
+¡
+
+4
+
+¡
+
+56©¥!#" $ 7&)()()(&r000  18@¡ 56© ¦9¥@$ 7&)()()(&r  12B¡
+
+6
+
+6
+
+56© ¦9¥@$ 7&)()()(&r  12B¡ 6
+
+56© ¦9¥@ $ 7&)()()(&r  12B¡ 6
+
+¥© !#"%$4 '&)()()(&r  12A¡ 0
+
+§
+
+Table 1: Definitions for various learning problems (notice that the hypothesis for constraint classification is always a full order) and the size of the resultant mapping to -constraint classification.
+
+BDCFEHGIBDP Q
+
+is a variant of
+
+BRCFESGIBRP
+
+that returns the maximal indices with respect to
+
+T A UWVYX'`
+
+.
+
+BDCFEHacbHCcd
+
+is
+
+a linear sorting function (see Definition 2.6).
+
+Definition 2.4 (Error Indicator Function) For any
+
+if fe iY ¥
+
+1 s r , the indicator function
+
+a S  ¢¡j£5¥£Hgk§
+
+ ¢¡j£5¥¨§&©is1 r , and hypothesis
+
+indicates an error on example , ¡
+
+pi  q riQ£g , ¨£ §7£A  § § g6 ¢¡§X2 ¡
+
+ 
+
+S  ¢¡j£5¥£Hgk§2
+
+g T c
+
+gj ¢¡§ , and otherwise.
+
+hg andexample
+
+For example, if
+
+g
+
+q 2  ¢¡j£5¥¨§V24 C¡¤£
+
+
+
+is incorrect since g precedes i in g  7iQ£6q¨£Bc§ .
+
+is correct since i precedes q and i precedes g in the full order
+
+¨£ 
+
+ ¢¡§24  !£ Q£ ¨£Bc§ §
+
+g 7i 6q ,then
+
+pi  q!£Bcp£g whereas
+
+g
+
+ri  q!£BcG£¨g ,and Q£ §
+
+g6
+
+Definition 2.5 (Error) Given an example
+
+of g ©gR , where g Tv Y
+
+ C¡¤£5¥¨§ drawn
+
+!£   !
+
+from "j#P%Q' , the true error
+
+ts is defined to be uSvwvQ egk§ yxtSX ¢¡j£5¥£Hgk§ . Given
+
+2
+
+with respect to
+
+ 1 2
+
+ 5 C¡ 6 £5¥ 6 §7£ABBA£A C¡ D £5¥ D §5§
+
+uSvwv9 1f£Hgk§2 6 
+
+
+
+&Rc
+
+, the empirical error of
+
+
+
+S ¢¡j£5¥£Hgk§B .
+
+g © R 1
+
+is defined to be
+
+In this paper, we consider constraint classification problems where hypotheses are functions Definition 2.6 (Linear Sorting Function) Let  u2    ¨  be a set of vectors,
+
+ 
+
+from to 1 r that output a permutation of cG£BAB@£q . ¡
+
+where   
+
+¡£¢
+
+Y 1 r
+
+¡£¢ ¡£¢
+
+6 £ABAB£ § q
+
+r
+
+&6£ABBA£
+
+¨ 
+
+§h©
+
+. Given
+
+¡ ©
+
+, a linear sorting classifier is a function
+
+g T r
+
+computed in the following way:
+
+gj ¢¡§2
+
+¥©¦¨9 ¨@  12A¡¤£ 1j6'()()(r
+
+ 
+
+¡£¢
+
+where 56© ¦9¥@ returns a permutation of
+
+the case that  18B¡2h  f B¡ , precedes if Wi . ¡
+
+ y
+
+cG£BAB@£q  3y
+
+where precedes y if   1 ¦¡de gf5¡ . In 
+
+Constraint classification can model many well-studied learning problems including multiclass classification, ranking and multilabel classification. Table 1 shows a few interesting classification problems expressible as constraint classification. It is easy to show: Lemma 2.7 (Problem mappings) All of the learning problems in Table 1 can be expressed as constraint classification problems.
+
+Consider a g -class multiclass example,
+
+pq 
+
+ ¢¡¤£ G§
+
+6q . It is transformed into the q -constraint ex-
+
+q 7i q ¨g . If we find a constraint classifier that correctly labels
+
+ 
+
+ample,
+
+according to the given constraints where  kjl fm 6n ,  jl do   , and  jl do qp2 ,
+
+¡
+
+then q r56©¥!#"
+
+2
+
+it can be transformed into 3 Learning In this section, -class constraint classification is transformed into binary classification in
+
+q
+
+higher dimension. Each example
+
+¡ ¡ ¡ ¡
+
+7&6 &jD&p  s1¡ . Ifpq  insteadweare¨ggiven. arankingexample 
+
+
+
+6i pi    ¢¡¤£ ¨£ G§7£b  Q£Acb§@£A  cG£ 9§ § ¡
+
+q  7iQ£Acp£¨g9§ ,
+
+¡
+
+ 
+
+ ¢¡j£
+
+¡ ¨£ ¡ §
+
+ ¢¡¤£ ¨£Bc§7£b  ¨£ p§@£A  !£ 9§ b§ ¡
+
+ ¢¡j£5¥¨§ ©
+
+¡W¢
+
+ 1 s r
+
+¡ ¢
+
+r becomes a set of examples in 
+
+
+ 
+
+¤
+
+cG£Bc ¡ with each constraint  ¢£y9§ contributing a single `positive' and a single `negative'
+
+¡ ¢
+
+r example. Then, a separating hyperplane for the expanded example set (in
+
+viewed as a linear sorting function over 3.1 Kesler's Construction q linear functions, each in
+
+) can be
+
+dimensional space.
+
+Kesler's construction for multiclass classification was first introduced by Nilsson in 1965[Nil65, 75­77] and can also be found more recently[DH73]. This subsection extends
+
+the Kesler construction for constraint classification.
+
+Definition 3.1 (Chunk) A vector
+
+into q chunks ¤   6£ABA@££  § r
+
+  2 ¢¡  6 £BABA££¡
+
+¢
+
+where the -th chunk, 1 r
+
+  
+
+ ¢¡j£5 §
+
+©
+
+¡ ¢ 
+
+r
+
+¡£¢ ¡£¢
+
+§ © 2 2
+
+
+
+DHE , is broken
+
+1¤¥¡5¢6F§¦embedded51inqQ .dimensions,
+
+6 £BABA££¡ ¨¦ §
+
+¡  ¢
+
+r
+
+F6
+
+¢
+
+4
+
+¢
+
+Definition 3.2 (Expansion) Let be a vector
+
+¢¡  ¡)©
+
+¢
+
+. Denote by
+
+ ¢¡j£5 § 2i §
+
+¦
+
+¢3
+
+¡
+
+1¦
+
+ by writing the coordinates of©in the -th chunk of a vector in
+
+zero vector of length . Then
+
+©
+
+1¢¥ ¨6
+
+£5¡j£ r
+
+is the embedding of ¡
+
+ 
+
+ C¡¤£¦§
+
+§P©
+
+¢
+
+ the
+
+¥
+
+¢ ¡can¢
+
+r
+
+be written as the concatenation of three vectors,
+
+© © ©
+
+¡ ¢
+
+r
+
+©
+
+. Finally,
+
+¤
+
+ C¡¤£5£y § 2  ¢¡¤£¦ §  ¢¡j£y9§
+
+¡5¢.
+
+,
+
+¤
+
+ ¡ y in the -th chunk and in the -th chunk of a vector in
+
+ C¡¤£5¥¨§ ¡ Definition 3.3 (Expanded Example Sets) Given an example
+
+¥ © 1 s r , we define the expansion of
+
+
+
+
+
+©
+
+ ¢¡j£5¥¨§2  
+
+ ¢¡j£5¥¨§
+
+, where and
+
+into a set of examples as follows,
+
+¡ ¢
+
+r    ¢¡j£5£y9§7£Acb§!  ¢£y9§X©¥#"%$  c v£
+
+¡
+
+¢
+
+A set of negative examples is defined as the reflection of each expanded example through the origin, specifically
+
+
+
+ ¤'& ¤
+
+£
+
+& 
+
+¡ ¢
+
+r
+
+¤
+
+ 
+
+¥ C¡¤£¦¥Q§2   cb§   £Bc§V©  ¢¡¤£¦¥¨§(")$  c v£ ¡
+
+¢
+
+ 
+
+and the set of both positive and negative examples is denoted by
+
+
+
+¥ C¡¤£5¥¨§ . The expansion of a set of examples, 1
+
+ ¢¡¤£¦¥¨§I2  ¢¡j£5¥¨§10
+
+, is defined as the union of all of the ¢
+
+¡ ¢ ¤  
+
+r 
+
+
+
+expanded examples in the set,
+
+
+
+ e1v§2
+
+
+
+2
+
+&R  C¡¤£¦¥Q§'$   cp£Ac  ¡
+
+
+
+Note that the original Kesler construction produces only . We also create ¥ to simplify
+
+the analysis and to maintain consistency when learning non-linear functions (such as SVM). 3.2 Algorithm Figure 1 (a) shows a meta-learning algorithm for constraint classification that finds a linear sorting function by using any algorithm for learning a binary classifier. Given a set of ¢
+
+¡£¢
+
+ 
+
+2i¡ 7 
+
+& &
+
+k for
+
+ 1v§ ,
+
+examples , the algorithm simply finds a separating hyperplane gj 
+
+ 1
+
+)s1 r cG£Bc &
+
+©
+
+ e1§5$ &
+
+3$ r
+
+
+
+then 6  f 81 d8  f  , and the constraint
+
+¡
+
+¡
+
+¡ 9 
+
+¤
+
+. Supposea correctly classifies g
+
+  £Bc§24 
+
+¡ ¢
+
+¤
+
+§24 
+
+ ¢¡j£5£y9§@£Bcb§X©
+
+56© ¦9¥@ '&)()()(&r 1 A¡ isaconsistentlinearsortingfunction.
+
+g¤  §
+
+. Therefore, if
+
+g¤  §
+
+f ) is consistent with
+
+6  
+
+& &
+
+ CH£y9§ on ¡
+
+(dictating that d 1I
+
+
+
+¡ 8 
+
+ e1§
+
+, then correctly classifies all
+
+¡f©
+
+This framework is significant to multiclass classification in many ways. First, the hypothesis learned above is more expressive than when the OvA assumption is used. Second, it is easy to verify that other algorithmic-specific properties are maintained by the above transformation. For example, attribute efficiency is preserved when using the winnow algorithm. Finally, the multiclass support vector machine can be implemented by learning a
+
+
+
+hyperplane to separate  1v§ with maximal margin.
+
+3.3 Comparison to "One-Versus-All" A common approach to multiclass classification (
+
+ 
+
+2 cp£ABA@£Hq ¡ ) is to make the one-
+
+versus-all (OvA) assumption, namely, that each class can be separated from the rest using
+
+
+Algorithm CONSTRCLASSLEARN INPUT:
+
+¡ 
+
+132  ¦ ¢¡ 68£¦¥ 67§@£BBAB£b ¢¡EDF£¦¥pDP§¦§D
+
+where
+
+OUTPUT: A classifier s g
+
+begin
+
+R2
+
+¥¦¤ ¡ ¢
+
+r §2 © & Y d ¡ ¢
+
+ 
+
+r
+
+¡ ¢
+
+r
+
+1 ©  1 s r
+
+¡£¢
+
+Algorithm ONLINECONCLASSLEARN INPUT:
+
+  ¢
+
+12  5 C¡68£5¥ 6B§7£BABA£A ¢¡kDF£5¥pD§5§
+
+D
+
+where 1f©
+
+OUTPUT: A classifier s g
+
+begin Initialize
+
+¢   j68£BBA   §V©
+
+r
+
+ 1 s r
+
+¡ ¢
+
+r
+
+¡£¢
+
+£¢
+
+¡
+
+, ,
+
+g
+
+ghT g¤   v£  
+
+¤
+
+&
+
+cG£Bc
+
+§¨
+
+&
+
+Repeat until converge
+
+for f2cG  0 do
+
+for all
+
+if  
+
+f A¡n1£is
+
+  yG£y §X©¥
+
+¥1
+
+f £
+
+©
+
+  1v§V©  e1v§@£ R§V© R
+
+g 2gdP 
+
+Set s
+
+ 
+
+¤
+
+¡
+
+promote¤   lfb§
+
+demote¢   f
+
+g  ¢¡§2
+
+
+
+§
+
+¥©¦¨9 ¨@ '&)()()(&r 818@¡ 6  
+
+(b)
+
+do
+
+@¡1
+
+3  then
+
+Calculate
+
+ g  ¢¡k§2
+
+ cp£ c
+
+h¥©¦¨9 ¨@ '&)()()(&r 1 @¡ 6  
+
+(a)
+
+end Set s
+
+end
+
+Figure 1: (a) Meta-learning algorithm for constraint classification with linear sorting funcing hyperplane. (b) Online meta-algorithm for constraint classification with linear sorting functions (see Definition 2.6). The particular online algorithm used determines how
+
+tions (see Definition 2.6). dP  £ § F D is any binary learning algorithm returning a separat-
+
+¤   6 £BABA££  § r is initialized and the promotion and demotion strategies.
+
+a binary classification algorithm. Learning proceeds by learning
+
+classifiers, one corresponding to each class, where example
+
+for classifier ¥ and negative for all others.
+
+ ¢¡j£5¥¨§
+
+q independent binary
+
+is considered positive
+
+It is easy to construct an example where the OvA assumption causes the learning to fail even when there exists a consistent linear sorting function. (see Figure 2) Notice, since the existence of a consistent linear sorting function (w.r.t. ) implies the existence of a separable point sets (e.g. the Perceptron algorithm) is guaranteed to find a consistent linear sorting function. In Section 5, we use the perceptron algorithm to find a consistent classifier 3.4 Comparison to Newtorks of Linear Threshold Gates (Perceptron) It is possible to implement the algorithm in Section using a network of linear classifiers such as multi-output Perceptron [AB99], SNoW [CCRR99, Rot98], and multiclass
+
+
+
+1
+
+separating hyperplane (w.r.t.  1v§ ), any learning algorithm guaranteed to separate two
+
+¡ 
+
+for an extension of the example in Figure 2 to 6 when OvA fails.
+
+¡W¢
+
+SVM [CS00, WW99]. Such a network has
+
+sented by a weight vector,  k1P© (b)). ¡£¢ ¡© as input and q outputs, each repre-
+
+, where the -th output computes   1 ¡ (see Figure 1 
+
+Typically, a label is mapped, via fixed transformation, into a -dimensional output vecq
+
+tor, and each output is trained separately, as in the OvA case. Alternately, if the online perceptron algorithm is plugged into the meta-algorithm in Section , then updates are per-
+
+formed according to a dynamic transformation. Specifically, given
+
+straint  ¢£y § © ¥
+
+ ¢¡j£5¥¨§ , for every con-
+
+, if   1 ¡die gf ¡ ,   1 is `promoted' and  qf is `demoted'. Using a network
+
+in this results in an ultraconservative online algorithm for multiclass classification [CS01]. This subtle change enables the commonly used network of linear threshold gates to learn every hypothesis it is capable of representing.
+
+
+f = 0 + -
+
+f = 0 f = 0 + - + -
+
+¡ Figure 2: A 3-class classification example in   showing that one-versus-all (OvA) does not converge to a consistent hypothesis. Three classes (squares, triangles, and circles) should be separated from the rest. Solid points act as ¢¤£ points in their respective classes. The OvA assumption will attempt to separate the circles from squares and triangles with a single separating hyperplane, as well as the other 2 combinations. Because the solid points are weighted, all OvA classifiers are required to classify them correctly or suffer ¢¤£ mistakes, thus restricting what the final hypotheses will be. As a result, the OvA assumption will misclassify point outlined with a double square since the square classifier predicts "not square" and the circle classifier predicts "circle". One can verify that there exists a WTA classifier for this example.
+
+Dataset glass vowel soybean audiology ISOLET letter Synthetic* Features 9 10 35 69 617 16 100 Classes 6 11 19 24 26 26 3 Training Examples 214 528 307 200 6238 16000 50000 Testing Examples ­ 462 376 26 1559 4000 50000
+
+Table 2: Summary of problems from the UCI repository. The synthetic data is sampled from a random linear sorting function (see Section 5). 4 Generalization Bounds A PAC-style analysis of multiclass functions that uses an extended notion of VC-dimension for multiclass case [BCHL95] provides poor bounds on generalization for WTA, and the current best bounds rely on a generalized notion of margin [ASS00]. In this section, we prove tighter bounds using the new framework. (Definition 2.6). Although both VC-dimension-based (based on growth function) and margin-based bounds for the class of hyperplanes in are known [Vap98, AB99], they dently drawn. It turns out that bounds can be derived indirectly by using known bounds for constraint classification. Due to space considerations see[HPRZ02], where natural extensions to the growth function and margin are used to develop generalization bounds. 5 Experiments As in previous multiclass classification work [DB95, ASS00], we tested our algorithm on a suite of problems from the Irvine Repository of machine learning [BM98] (see Table 2). In addition, we created a simple experiment using synthetic data. The data was generated with weight vectors inside the unit ball. Then, ¥ K training and ¥ K testing examples were
+
+We seek generalization bounds for learning with R , the class of linear sorting functions
+
+¡ ¢
+
+r
+
+
+
+cannot directly be applied since  1v§ produces points that are random, but not indepen-
+
+according to a WTA function over q randomlya generated lineara functions in ¡ 6 apa
+
+, each
+
+
+80
+
+Constraint Classification One versus All
+
+60
+
+Error 40
+
+%
+
+20
+
+0 audiology glass vowel letter isolet soybean synthetic*
+
+Figure 3: Comparison of constraint classification meta-algorithm using the Perceptron algorithm to multi-output Perceptron using the OvA assumption. All of the results for the constraint classification algorithm are competitive with the known. The synthetic data would converge to £ error using constraint classification but would not converge using the OvA approach. randomly sampled within a ball of radius i around the origin and labeled with the linear function that produced the highest value. A comparison is made between the OvA approach (Section ) and the constraint classification approach. Both were implemented on the same network of multi-output Perceptron used the modified update rule discussed in Section . Each update was performed as fol-
+
+network with q  C ¡ 
+
+cb§ weights (with one threshold per class). Constraint classification
+
+lows:
+
+£¢  h £¢¤ 
+
+6 2 ¡ for promotion and
+
+a
+
+£¢   £¢
+
+2
+
+¢
+
+
+
+¤
+
+¡
+
+for demotion. The networks were , a constraint classification example
+
+ 
+
+initialized with weights all . ¢
+
+For each multiclass example
+
+¡£¢
+
+ ¢¡j£5¥ x §V©  1 s r
+
+(Definition 2.4) of
+
+ ¢¡j£5¥ DP§V©
+
+¡£¢
+
+¥ x 2
+
+ 
+
+ 
+
+was created, where
+
+ ¢¡¤£¦¥ x §
+
+cp£ABBB£Hq  ¢¥GDI£¦§ ¡
+
+y2 cp£ABBB£Hq
+
+¦¥
+
+¡
+
+¥pD " . Notice error
+
+corresponds to the traditional error for multiclass classification.
+
+Figure 3 shows that constraint classification outperforms the multioutput Perceptron when using the OvA assumption. 6 Discussion We think constraint classification provides two significant contributions to multiclass classification. Firstly, it provides a conceptual generalization that encompasses multiclass classification, multilabel classification, and label ranking problems in addition to problems with more complex relationships between labels. Secondly, it reminds the community that the Kesler construction can be used to extend any learning algorithm for binary classification to the multiclass (or constraint) setting. Section 5 showed that the constraint approach to learning is advantageous over the oneversus-all approach on both real-world and synthetic data sets. However, preliminary experiments using various natural language data sets, such as part-of-speech tagging, do not yield any significant difference between the two approaches. We used a common transformation [EZR01] to convert raw data to approximately three million examples in one hundred thousand dimensional boolean feature space. There were about 50 different partof-speech tags. Because the constraint approach is more expressive than the one-versus-all approach, and because both approaches use the same hypothesis space (q linear functions), we expected the constraint approach to achieve higher accuracy. Is it possible that a difference would emerge if more data were used? We find it unlikely since both methods use identical representations. Perhaps, it is instead a result of the fact that we are working in very high dimensional space. Again, we think this is not the case, since it seems that "most" random winner-take-all problems (as with the synthetic data) would cause the one-versus-all assumption to fail. Rather, we conjecture that for some reason, natural language problems (along with the
+
+
+transformation)are suited to the one-versus-all approach and do not require a more complex hypothesis. Why, and how, this is so is a direction for future speculation and research. 7 Conclusions The view of multiclass classification presented here simplifies the implementation, analysis, and understanding of many preexisting approaches. Multiclass support vector machines, ultraconservative online algorithms, and traditional one-versus-all approaches can be cast in this framework. It would be interesting to see if it could be combined with the error-correcting output coding method in [DB95] that provides another way to extend the OvA approach. Furthermore, this view allows for a very natural extension of multiclass classification to constraint classification ­ capturing within it complex learning tasks such as multilabel classification and ranking. Because constraint classification is a very intuitive approach and its implementation can be carried out by any discriminant technique, and not only by optimization techniques, we think it will have useful real-world applications. References
+
+[AB99] [ADW94] [ASS00]
+
+M. Anthony and P. Bartlett. Neural Network Learning: Theoretical Foundations. Cambridge University Press, Cambridge, England, 1999. C. Apte, F. Damerau, and S. M. Weiss. Automated learning of decision rules for text categorization. Information Systems, 12(3):233­251, 1994. E. Allwein, R.E. Schapire, and Y. Singer. Reducing multiclass to binary: A unifying approach for margin classifiers. In Proc. 17th International Conf. on Machine Learning, pages 9­16. Morgan Kaufmann, San Francisco, CA, 2000.
+
+[BCHL95] S. Ben-David, N. Cesa-Bianchi, D. Haussler, and P. Long. Characterizations of learnability for classes of valued functions. J. Comput. Sys. Sci., 50(1):74­86, 1995.
+
+[BM98] [Bri94] C.L. Blake and C.J. Merz. UCI repository of machine learning databases, 1998. E. Brill. Some advances in transformation-based part of speech tagging. In AAAI, Vol. 1, pages 722­727, 1994.
+
+H&F()()()&
+
+e -
+
+[CCRR99] A. Carlson, C. Cumby, J. Rosen, and D. Roth. The SNoW learning architecture. Technical Report UIUCDCS-R-992101, UIUC Computer Science Department, May 1999.
+
+[CS00] [CS01] [DB95] [DH73] [DKR97] [EZR01]
+
+K. Crammer and Y. Singer. On the learnability and design of output codes for multiclass problems. In Computational Learing Theory, pages 35­46, 2000. K. Crammer and Y. Singer. Ultraconservative online algorithms for multiclass problems. In COLT/EuroCOLT, pages 99­115, 2001. T. Dietterich and G. Bakiri. Solving multiclass learning problems via error-correcting output codes. Journal of Artificial Intelligence Research, 2:263­286, 1995. R. Duda and P. Hart. Pattern Classification and Scene Analysis. Wiley, New York, 1973. I. Dagan, Y. Karov, and D. Roth. Mistake-driven learning in text categorization. In EMNLP-97, The Second Conference on Empirical Methods in Natural Language Processing, pages 55­63, 1997. Y. Even-Zohar and D. Roth. A sequential model for multi class classification. In EMNLP-2001, the SIGDAT Conference on Empirical Methods in Natural Language Processing, pages 10­19, 2001.
+
+[HPRZ02] S. Har-Peled, D. Roth, and D. Zimak. Constraint classification: A new approach to multiclass classification. In Proc. 13th International Conf. of Algorithmic Learning Theory, pages 365­397, 2002.
+
+[HT98] [Jel98] T. Hastie and R. Tibshirani. Classification by pairwise coupling. In NIPS-10, The 1997 Conference on Advances in Neural Information Processing Systems, pages 507­513. MIT Press, 1998. F. Jelinek. Statistical Methods for Speech Recognition. The MIT Press, Cambridge, Massachusetts, 1998.
+
+[LBD 89] Y. Le Cun, B. Boser, J. Denker, D. Hendersen, R. Howard, W. Hubbard, and L. Jackel. Backpropagation applied to  
+
+[LS97]
+
+[Maa00] [Nil65] [Rot98] [Vap98] [WW99]
+
+handwritten zip code recognition. Neural Computation, 1:pp 541, 1989. D. Lee and H. Seung. Unsupervised learning by convex and conic coding. In Michael C. Mozer, Michael I. Jordan, and Thomas Petsche, editors, Advances in Neural Information Processing Systems, volume 9, page 515. The MIT Press, 1997. W. Maass. On the computational power of winner-take-all. Neural Computation, 12(11):2519­2536, 2000. Nils J. Nilsson. Learning Machines: Foundations of trainable pattern-classifying systems. McGraw-Hill, New York, NY, 1965. D. Roth. Learning to resolve natural language ambiguities: A unified approach. In Proc. of AAAI, pages 806­813, 1998. V. Vapnik. Statistical Learning Theory. Wiley, 605 Third Avenue, New York, New York, 10158-0012, 1998. J. Weston and C. Watkins. Support vector machines for multiclass pattern recognition. In Proceedings of the Seventh European Symposium On Artificial Neural Networks, 4 1999.
+
+

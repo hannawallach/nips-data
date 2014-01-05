@@ -1,0 +1,268 @@
+Minimising Contrastive Divergence in Noisy, Mixed-mode VLSI Neurons
+
+Hsin Chen, Patrice Fleury and Alan F. Murray School of Engineering and Electronics Edinburgh University Mayfield Rd., Edinburgh EH9 3JL, UK {hc, pcdf, afm}@ee.ed.ac.uk
+
+Abstract This paper presents VLSI circuits with continuous-valued probabilistic behaviour realized by injecting noise into each computing unit(neuron). Interconnecting the noisy neurons forms a Continuous Restricted Boltzmann Machine (CRBM), which has shown promising performance in modelling and classifying noisy biomedical data. The Minimising-Contrastive-Divergence learning algorithm for CRBM is also implemented in mixed-mode VLSI, to adapt the noisy neurons' parameters on-chip. Introduction
+
+1
+
+As interests in interfacing electronic circuits to biological cells grows, an intelligent embedded system able to classify noisy and drifting biomedical signals becomes important to extract useful information at the bio-electrical interface. Probabilistic neural computation utilises probability to generalise the natural variability of data, and is thus a potential candidate for underpinning such intelligent systems. To date, probabilistic computation has been unable to deal with the continuous-valued nature of biomedical data, while remaining amenable to hardware implementation. The Continuous Restricted Boltzmann Machine(CRBM) has been shown to be promising in the modelling of noisy and drifting biomedical data[1][2], with a simple Minimising-Contrastive-Divergence(MCD) learning algorithm[1][3]. The CRBM consists of continuous-valued stochastic neurons that adapt their "internal noise" to code the variation of continuous-valued data, dramatically enriching the CRBM's representational power. Following a brief introduction of the CRBM, the VLSI implementation of the noisy neuron and the MCD learning rule are presented. 2 Continuous Restricted Boltzmann Machine Let si represent the state of neuron i, and wij the connection between neuron i and neuron j. A noisy neuron j in the CRBM has the following form: sj = j wij si +  · Nj(0, 1) , (1)
+
+i
+
+
+1 1
+
+0 0
+
+-1 -1
+
+0 (a) 1 -1 -1 0 (b) 1
+
+Figure 1: (a)20 two-dimensional artificial training data (b)20-step reconstruction by the CRBM after 30,000 epochs' fixed-step training
+
+with j (xj) = L + (H - L) · 1 1 + exp(-ajxj) (2)
+
+where Nj(0, 1) refers to a unit Gaussian noise with zero mean,  a noise-scaling constant, and j(·) the sigmoid function with asymptotes at H and L. Parameter aj is the "noise-control factor", controlling the neuron's output nonlinearity such that a neuron j can learn to become near-deterministic (small aj), continuousstochastic (moderate aj), or binary-stochastic (large aj)[4][1]. A CRBM consists of one visible and one hidden layer of noisy neurons with interlayer connections defined by a weight matrix {W}. By minimizing the "Contrastive Divergence" between the training data and the one-step Gibbs sampled data [3], the parameters {wij} and {aj} evolve according to the following equations [1]
+
+w^ij = w( sisj - s^is^j )
+
+a^j = a a2j s2j - s^j 2
+
+(3) (4)
+
+where s^i and s^j denote the one-step sampled state of neuron i and j respectively, and · refers to the expectation over all training data. w and a denote the learning rates for parameters {wij} and {aj}, respectively. Following [5], Eq.(3)and(4) are further simplified to fixed-step directional learning, rather than variable accuratestep learning, as following.
+
+w^ij = wsign a^j = asign
+
+sisj
+
+s2j
+
+- s^is^j 4 4
+
+- s^j 2 4 4
+
+Note that the denominator 1/a2j in Eq.(4) is also absorbed and · 4
+
+(5) (6) indicates that
+
+the expectation operator will be approximated by the average of four data as opposed to all training data. To validate the simplification above, a CRBM with 2 visible neurons and 4 hidden neurons was trained to model the two-dimensional data distribution defined by 20 training data (Fig.1a), with w = 1.5, a = 15 for the trained CRBM reconstructed the same data distribution (Fig.1b) from 200 initially random-distributed data, indicating that the simplification above reduces the hardware complexity at the cost of a slightly slower convergence time.
+
+visible neurons, and a = 1 for hidden neurons 1 . After 30,000 training updates,
+
+1 constants H = -L = 1 and  = 0.2 for all neurons
+
+
+si sr
+
+wi wr
+
+M4
+
+Vw
+
+Mn1 Mp2
+
+Vsi Vsr Vsi Vsr Vw M5
+
+Vw
+
+Vsi Io1 Io2 Io3 Io4 Io1 Io2 Io3 Io4 Vsr Vsr Iout
+
+Mn2 Mp1 M3
+
+Io1 Io2 Io3 Io4 M1 M2 M6
+
+(a) (b)
+
+Figure 2: The circuits of the four-quadrant multiplier (a)one computing cell (b)full circuit composed of two computing cell
+
+3 Noisy neuron with variable nonlinearity
+
+The circuits were fabricated on the AMS 0.6µm 2P3M CMOS process, which allows a power supply voltage of five volts. Therefore, the states of neurons {si} and the corresponding weights {wij} are designed to be represented by voltage in [1.5, 3.5]V and [0,5]V respectively, with both arithmetical zeros at 2.5V. As both si and wij are real numbers, a four-quadrant multiplier is required to calculate wijsi 3.1 Four-quadrant multiplier While the Chible four-quadrant multiplier [6] has a simple architecture with a wide input range, the reference zero of one of its inputs is process-dependent. Though only relative values of weights matter for the neurons, the process-dependent reference becomes nontrivial if the same four-quadrant multiplier is used to implement the MCD learning rule. We thus proposed a `modified Chible multiplier' composed of two computing cells, as shown in Fig.2, to allow external control of reference zeros of both inputs. Each computing cell contains two differential pairs biased by two complementary branches, Mn1-Mn2 and Mp1-Mp2. (Io1 -Io2) is thus proportional to (Vw -Vth,n1 - nVth,n2)(Vsi - Vsr) when Vw > (Vth,n1 + nVth,n2) , and (Io3 - Io4) proportional to
+
+2
+
+(n2V dd - Vw - Vth,p1 - nVth,p2)(Vsr - Vsi) when Vw < (n2V dd - Vth,p1 - nVth,p2)[6]. Subject to careful design of the complementary biasing transistors[6], (Vth,n1 + nVth,n2)  (n2V dd - Vth,p1 - nVth,p2)  V dd/2. Combining the two differential currents then gives Io = (Io1 + Io3) - (Io2 + Io4) = I(Vw) · (Vsi - Vsr) (7) With wi input to one computing cell and wr to the other cell, as shown in Fig.2b, M1-M6 generates an output current Iout  (wi - wr)(si - sr). The measured DC characteristic from a fabricated chip is shown in Fig.4(a) 3.2 Noisy neuron Fig.3 shows the circuit diagram of a noisy neuron. The four-quadrant multipliers output a total current proportional to wijsi, while the differential pair, Mna and
+
+i
+
+2 n is the slope factor of MOS transistor, and Vth,x refers to the absolute value of
+
+transistor Mx's threshold voltage.
+
+
+s1 w1 s2 w2 Vaj
+
+Ib
+
+isum
+
+_ + io
+
+Vsr Vx Mbp1 ic1 Mbp2 ic2
+
+RL
+
+Vsj Csj
+
+si wi
+
+vni Mna Mnb
+
+in Vnr
+
+Vsigma
+
+Figure 3: The circuit diagram of a noisy neuron
+
+Mnb, transforms noise voltage vni into a noise current in = gm(vni - Vnr), where Vsigma controls the transconductance gm and thus scales the noise current as  in Eq.(1). The current-to-voltage converter, composed of an operational amplifier and an voltage-controlled active resistor[7], then sums all currents, outputting a voltage Vx = Vsr - isum · R(Vaj ) to the sigmoid function. The exponential nonlinearity of the sigmoid function is achieved by operating the PMOS differential pair, Mbp1-Mbp2, in the lateral-bipolar mode [8], resulting in a differential output current as following
+
+io = ic1 - ic2 = Ib · ( Isum · R(Vaj)) Vt (8)
+
+where (·) denotes the (·) with H = -L = 1, and Vt = kT/q is the thermal voltage. The resistor RL finally converts io into a output voltage vo = ioRL + Vsr. Eq.(8) implies that Vaj controls the feedback resistance of the I-V converter, and consequently adapts the nonlinearity of the sigmoid function (which appears as aj in Eq.(1)). With various Vaj, the measured DC characteristic (chip result) of the sigmoid function is shown in Fig.4b.
+
+(amps)
+
+Iout
+
+3.0µ 2.0µ 1.0µ 0.0 -1.0µ -2.0µ -3.0µ 0.0 Vsi=1.5 Vsi=1.75 Vsi=2.0 Vsi=2.25 Vsi=2.5 Vsi=2.75 Vsi=3.0 Vsi=3.25 Vsi=3.5
+
+3.5
+
+3.0
+
+2.5
+
+(volts)
+
+Vo 2.0
+
+Vaj=1.0 Vaj=1.4 Vaj=1.8 Vaj=2.2 Vaj=2.6 Vaj=3.0
+
+2.5 Vw (volts) (a) 5.0
+
+1.5 -50.00µ -25.00µ
+
+0.00 25.00µ 50.00µ
+
+Isum (amps) (b)
+
+Figure 4: The measured DC characteristics of (a) four-quadrant multiplier
+
+(b)sigmoid function with variable nonlinearity controlled by Vaj
+
+
+(a) (b)
+
+Figure 5: (a)The measured output of a noisy neuron (upper trace) and the switching signal (lower trace) that samples Vsj (b) Zooming-in of the second sample in(a)
+
+Fig.5 shows the measured output of a noisy neuron (upper trace) with {si} sweeping between 1.5 and 3.5V, {wi}=4V, Vaj=1.8V, and vni generated by LFSR (Linear Feedback Shift Register) [9] with an amplitude of 0.4V. The {si} and {wi} above forced the neuron's output to sweep a sigmoid-shaped curve as Fig.4b, while the input noise disturbed the curve to achieve continous-valued probabilistic output. A neuron state Vsj was sampled periodically and held with negligible clock feedthrough whenever the switch opened(went low).
+
+4 Minimising-Contrastive-Divergence learning on chip
+
+The MCD learning for the Product of Experts[3] has been successfully implemented and reported in [10]. The MCD learning for CRBM is therefore implemented simply by replacing the following two circuits. First, the four-quadrant multiplier described in Sec.3.1 is substituted for the two-quadrant multiplier in [10] to enhance learning flexibility; secondly, a pulse-coded learning circuit, rather than the analogue weightchanging circuit in [10], is employed to allow not only accurate learning steps but also refresh of dynamically-held parameters. 4.1 MCD learning for CRBM Fig.6 shows the block diagram of the VLSI implementation of the MCD learning rules for the noisy neurons, along with the digital control signals. In learning mode (LER/REF=1), the initial states si and sj are first sampled by clock signals CKsi and CKsj, resulting in a current I+ at the output of four-quadrant multiplier. After CK+ samples and holds I+, the one-step reconstructed states s^i and s^j are sampled by CKsip and CKsjp to produce another current I-. CKq then samples and holds the output of the current subtracter Isub, which represents the difference between initial data and one-step Gibbs sampled data. Repeating the above clocking sequence for four cycles, four Isub are accumulated and averaged to derive Iave, representing sisj - s^is^j in equation(5). Finally, Iave is compared to a reference current to determine the learning direction DIR, and the learning circuit, triggered by CKup, updates the parameter once. The dash-lined box represents the voltagelimiting circuit used only for parameter {aj}, whose voltage range should be limited to ensure normal operation of the voltage-controlled active resistor in Fig.3. In refresh mode (LER/REF=1), the signal REFR rather than DIR determines the updating direction, maintaining the weight to a reference value.
+
+4 4
+
+
+CKsi CKq Digital control
+
+q2 q3 q4
+
+Currentaccumulating/ averaging circuit
+
+si q1
+
+CK+ CKsip
+
+s^i
+
+I+ I Isub
+
+Iref Iave
+
+-
+
++
+
+CKsj Sign
+
+s j DIR
+
+Cw
+
+Pulse-coded learning circuit
+
+Voltage limiter Vmax Vmin Vcomp
+
+CKsjp
+
+CKsi CKsj CK+ CKsip CKsjp CKq CKup
+
+q1 q4
+
+s^ j CKup Vmu
+
+(a)
+
+LER/REF REFR
+
+(b)
+
+Figure 6: (a)The block diagram of VLSI implementation of MCD learning rules described in Eq.(5)(6) (b)The digital control signals
+
+The subtracter, accumulator and current comparator in Fig.6 are dominated by the dynamic current mirror[11] and are the same as those used in [10]. The following subsections therefore focus on the pulse-coded learning circuit and the measurement results of on-chip MCD learning. 4.2 The pulse-coded learning circuit The pulse-coded learning circuit consists of a pulse generator (Fig.7a) and the learning cell proposed in [12] (Fig.7b). The stepsize of the learning cell is adjustable through VP and VN in Fig.7b [12]. However, transistor nonlinearities and process variations do not allow different and accurate learning rates to be set for various parameters in the same chip ({aj} and {wij} in our case). We therefore apply a width-variable pulse to the enabling input (EN) of the learning cell, controlling the learning step precisely by monitoring the pulse width off-chip. As the input capacitance of each learning cell is less than 0.1pF, one pulse generator can control all the learning cells with the same learning rate. The simulation in Sec.2 implies that only three pulse generators are required for w, av, and ah. The pulse generator is therefore a simple way to achieve accurate control. The pulse generator is largely a D-type flip-flop whose output Vpulse is initially reset to low via reset. Vpulse then goes high on the rising edge of CKup, while the
+
+Vpulse
+
+D Q EN
+
+VP
+
+CKup Q
+
+R
+
+Vd Cdelay
+
+Cw VN
+
+Vmu
+
+INC/DEC
+
+reset
+
+(a) (b)
+
+Figure 7: The pulse-coded learning circuit composed of (a)a pulse generator and (b)a learning cell proposed in [12]
+
+
+Vcomp
+
+Vmax
+
++ _
+
+DIR
+
+Vaj
+
++ _
+
+Vmin
+
+Figure 8: The voltage-limiting circuit
+
+capacitor Cdelay prevents Vd from going from high to low instantly. Eventually, Vpulse is reset to zero as soon as Vd is discharged. During the positive pulse, the learning cell charges or discharges the voltage stored on Cw[12], according to the directional input INC/DEC. Varying Vmu controls the pulse width accurately from 10ns (V = 2.5V ) to 5us (V = 0.9V ), amounting to learning stepsize from 1mV to 500mV as VN = 0.75V , VP = 4.29V , and Cw = 1pF . 4.3 Voltage-limiting circuit Although Eq.(6) indicates that {aj} can be adapted with the same learning circuit simply by substituting sj and s^j for si and s^i in Fig.6, the voltage Vaj should be confined in [1,3]V, to ensure normal operation of the voltage-controlled active resistor in Fig.3. A voltage-limiting circuit as shown in Fig.8 is thus designed to limit the range of Vaj, defined by Vmax and Vmin through two voltage comparators. As Vmax > Vaj > Vmi, DIR equals Vcomp, i.e. the MCD learning rule decides the learning direction. However, DIR goes high to enforce decreasing Vaj when Vaj > Vmax > Vmin, while DIR goes low to enforce increasing Vaj when Vmax > Vmin > Vaj. 4.4 On-chip learning Two MCD learning circuits, one for {wij} and the other for {aj}, have been fabricated successfully. Fig.9 shows the measured on-chip learning of both parameters with (a) different learning rates (b) different learning directions. To ease testing, si and s^i are fixed at 3.5V, while sj and s^j alternate between 1.5V and 3.5V, as shown by the traces SJ and SJ P in Fig.9. With the reference zero being defined at
+
+(a) (b)
+
+Figure 9: Measurement of parameter aj and wij learning in (a)different learning rates (b)different directions
+
+
+2.5V, the parameters should learn down when sj=3.5V and s^j=1.5V, and learn up when sj=1.5V and s^j=3.5V. In Fig.9a, both parameters were initially refreshed to 2.5V when signal LERREF is low, and subsequently started to learn up and down in response to the changing SJ and SJ P as LERREF goes high. As controlled by different pulse widths (PULSE1 and PULSE2), the two parameters were updated with different stepsizes (10mV and 34mV) but in the same direction. The trace of parameter aj shows digital noise attributable to sub-optimal layout, and has been improved in a subsequent design. In Fig.9b, both parameters were refreshed to 3.5V, a voltage higher than Vmax=3V set for aj. Therefore, the learning circuit forces aj to decrease toward Vmax, while wij remains learning up and down as Fig.9a. 5 Conclusion Fabricated CMOS circuits have been presented and the implemention of noisy neural computation that underlies the CRBM has been demonstrated. The promising measured results show that the CRBM is, as has been inferred in the past[1], amenable to mixed-mode VLSI. This makes possible a VLSI system with continuous-valued probabilistic behaviour and on-chip adaptability, adapting its "internal noise" to model the "external noise" in its environment. A full CRBM system with two visible and four hidden neurons has thus been implemented to examine this concept. The neurons in the proof-of-concept CRBM system are hard-wired to each other and the multi-channel uncorrelated noise sources implemented by the LFSR [9]. A scalable design will thus be an essential next step before pratical biomedical applications. Furthermore, the CRBM system may open the possibility of utilising VLSI intrinsic noise for computation in the deep-sub-miron era. References [1] H. Chen and A. Murray, "A continuous restricted boltzmann machine with an implementable training algorithm," IEE Proc. of Vision, Image and Signal Processing, vol. 150, no. 3, pp. 153­158, 2003. [2] T. Tang, H. Chen, and A. Murray, "Adaptive Stochastic Classifier for Noisy pH-ISFET Measurements," in Proceedings of Thirteenth International Conference on Artificial Neural Networks (ICANN2003), (Istanbul, Turkey), pp. 638­645, Jun. 2003. [3] G. E. Hinton, "Training products of experts by minimizing contrastive divergence," Neural Computation, vol. 14, no. 8, pp. 1771­1800, 2002. [4] B. J. Frey, "Continuous sigmoidal belief networks trained using slice sampling," Advances in Neural Information Processing Systems, vol. 9, pp. 452­458, 1997. [5] A. F. Murray, "Novelty detection using products of simple experts-a potential architecture for embedded systems," Neural Networks, vol. 14, no. 9, pp. 1257­1264, 2001. [6] H. Chible, "Analog circuit for synapse neural networks vlsi implementation," The 7th IEEE Int. Conf. on Electronics, Circuits and Systems (ICECS 2000), vol. 2, pp. 1004­1007, 2000. [7] M. Banu and Y. Tsividis, "Floating voltage-controlled resistors in cmos technology," Electronics Letters, vol. 18, pp. 678­679, 1982. [8] E. Vittoz, "Mos transistors operated in the lateral bipolar mode and their application in cmos technology," IEEE Journal of Solid-State Circuits, vol. sc-18, no. 3, pp. 273­279, 1983. [9] J. Alspector, J. W. Gannett, S. Haber, M. B. Parker, and R. Chu, "A vlsi-efficient technique for generating multiple uncorrelated noise sources and its application to stochastic neural networks," IEEE Trans. Circuits and Systems, vol. 38, no. 1, pp. 109­123, 1991. [10] P. Fleury and A. Murray, "Mixed-signal vlsi implementation of the product of experts' minimizing contrastive divergence learning scheme," in IEEE Proc. of the Int. Sym. on Circuits and Systems (ISCAS 2003), vol. 5, (Bangkok, Thailand), pp. 653­656, May 2003. [11] G. Wegmann and E. Vittoz, "Basic principles of accurate dynamic current mirrors," IEE Proc. on Circuits, Devices and Systems, vol. 137, pp. 95­100, April 1990. [12] G. Cauwenberghs, "An analog vlsi recurrent neural network," IEEE Tran. on Neural Networks, vol. 7, pp. 346­360, Mar. 1996.
+
+

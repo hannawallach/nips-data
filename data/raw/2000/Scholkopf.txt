@@ -1,0 +1,414 @@
+The Kernel Trick for Distances
+Bernhard Sch˜ olkopf
+Microsoft Research
+1 Guildhall Street
+Cambridge, UK
+bs@kyb.tuebingen.mpg.de
+Abstract
+A method is described which, like the kernel trick in support vector ma­
+chines (SVMs), lets us generalize distance­based algorithms to operate
+in feature spaces, usually nonlinearly related to the input space. This
+is done by identifying a class of kernels which can be represented as
+norm­based distances in Hilbert spaces. It turns out that common kernel
+algorithms, such as SVMs and kernel PCA, are actually really distance
+based algorithms and can be run with that class of kernels, too.
+As well as providing a useful new insight into how these algorithms
+work, the present work can form the basis for conceiving new algorithms.
+1 Introduction
+One of the crucial ingredients of SVMs is the so­called kernel trick for the computation of
+dot products in high­dimensional feature spaces using simple functions defined on pairs of
+input patterns. This trick allows the formulation of nonlinear variants of any algorithm that
+can be cast in terms of dot products, SVMs being but the most prominent example [13, 8].
+Although the mathematical result underlying the kernel trick is almost a century old [6], it
+was only much later [1, 3, 13] that it was made fruitful for the machine learning community.
+Kernel methods have since led to interesting generalizations of learning algorithms and to
+successful real­world applications. The present paper attempts to extend the utility of the
+kernel trick by looking at the problem of which kernels can be used to compute distances
+in feature spaces. Again, the underlying mathematical results, mainly due to Schoenberg,
+have been known for a while [7]; some of them have already attracted interest in the kernel
+methods community in various contexts [11, 5, 15].
+Let us consider training data (x 1 ; y 1 ); : : : ; (x m ; ym ) 2 XY : Here, Y is the set of possible
+outputs (e.g., in pattern recognition, f1g), and X is some nonempty set (the domain) that
+the patterns are taken from. We are interested in predicting the outputs y for previously
+unseen patterns x. This is only possible if we have some measure that tells us how (x; y)
+is related to the training examples. For many problems, the following approach works:
+informally, we want similar inputs to lead to similar outputs. To formalize this, we have to
+state what we mean by similar. On the outputs, similarity is usually measured in terms of
+a loss function. For instance, in the case of pattern recognition, the situation is simple: two
+outputs can either be identical or different. On the inputs, the notion of similarity is more
+complex. It hinges on a representation of the patterns and a suitable similarity measure
+operating on that representation.
+
+One particularly simple yet surprisingly useful notion of (dis)similarity --- the one we will
+use in this paper --- derives from embedding the data into a Euclidean space and utilizing
+geometrical concepts. For instance, in SVMs, similarity is measured by dot products (i.e.
+angles and lengths) in some high­dimensional feature space F . Formally, the patterns are
+first mapped into F using  : X ! F; x 7! (x); and then compared using a dot product
+h(x); (x 0 )i. To avoid working in the potentially high­dimensional space F , one tries to
+pick a feature space in which the dot product can be evaluated directly using a nonlinear
+function in input space, i.e. by means of the kernel trick
+k(x; x 0 ) = h(x); (x 0 )i: (1)
+Often, one simply chooses a kernel k with the property that there exists some  such that
+the above holds true, without necessarily worrying about the actual form of  --- already the
+existence of the linear space F facilitates a number of algorithmic and theoretical issues. It
+is well established that (1) works out for Mercer kernels [3, 13], or, equivalently, positive
+definite kernels [2, 14]. Here and below, indices i and j by default run over 1; : : : ; m.
+Definition 1 (Positive definite kernel) A symmetric function k : X  X ! R which for
+all m 2 N; x i 2 X gives rise to a positive definite Gram matrix, i.e. for which for all
+c i 2 R we have Xm
+i;j=1
+c i c j K ij  0; where K ij := k(x i ; x j ); (2)
+is called a positive definite (pd) kernel.
+One particularly intuitive way to construct a feature map satisfying (1) for such a kernel k
+proceeds, in a nutshell, as follows (for details, see [2]):
+1. Define a feature map
+ : X ! R X ; x 7! k(:; x): (3)
+Here, R X denotes the space of functions mapping X into R.
+2. Turn it into a linear space by forming linear combinations
+f(:) =
+m
+X
+i=1
+ i k(:; x i ); g(:) =
+m 0
+X
+j=1
+ j k(:; x 0
+j ); (m; m 0 2 N;  i ;  j 2 R; x i ; x 0
+j 2 X ):
+(4)
+3. Endow it with a dot product hf; gi :=
+P m
+i=1
+P m 0
+j=1  i  j k(x i ; x 0
+j ), and turn it into a
+Hilbert space H k by completing it in the corresponding norm.
+Note that in particular, by definition of the dot product, hk(:; x); k(:; x 0 )i = k(x; x 0 ), hence,
+in view of (3), we have k(x; x 0 ) = h(x); (x 0 )i, the kernel trick. This shows that pd
+kernels can be thought of as (nonlinear) generalizations of one of the simplest similarity
+measures, the canonical dot product hx; x 0 i, x; x 0 2 R N . The question arises as to whether
+there also exist generalizations of the simplest dissimilarity measure, the distance kx x 0 k 2 .
+Clearly, the distance k(x) (x 0 )k 2 in the feature space associated with a pd kernel k can
+be computed using the kernel trick (1) as k(x; x) + k(x 0 ; x 0 ) 2k(x; x 0 ). Positive definite
+kernels are, however, not the full story: there exists a larger class of kernels that can be
+used as generalized distances, and the following section will describe why.
+2 Kernels as Generalized Distance Measures
+Let us start by considering how a dot product and the corresponding distance measure are
+affected by a translation of the data, x 7! x x 0 . Clearly, kx x 0 k 2 is translation invariant
+
+while hx; x 0 i is not. A short calculation shows that the effect of the translation can be
+expressed in terms of k: :k 2 as
+h(x x 0 ); (x 0 x 0 )i =
+1
+2
+kx x 0 k 2 + kx x 0 k 2 + kx 0 x 0 k 2
+
+: (5)
+Note that this is, just like hx; x 0 i, still a pd kernel:
+P
+i;j c i c j h(x i x 0 ); (x j x 0 )i =
+k
+P
+i c i (x i x 0 )k 2  0. For any choice of x 0 2 X , we thus get a similarity measure (5)
+associated with the dissimilarity measure kx x 0 k.
+This naturally leads to the question whether (5) might suggest a connection that holds true
+also in more general cases: what kind of nonlinear dissimilarity measure do we have to
+substitute instead of k: :k 2 on the right hand side of (5) to ensure that the left hand side
+becomes positive definite? The answer is given by a known result. To state it, we first need
+to define the appropriate class of kernels.
+Definition 2 (Conditionally positive definite kernel) A symmetric function k : X X !
+R which satisfies (2) for all m 2 N; x i 2 X and for all c i 2 R with
+Xm
+i=1
+c i = 0; (6)
+is called a conditionally positive definite (cpd) kernel.
+Proposition 3 (Connection pd --- cpd [2]) Let x 0 2 X , and let k be a symmetric kernel
+on X  X . Then
+~ k(x; x 0 ) :=
+1
+2
+(k(x; x 0 ) k(x; x 0 ) k(x 0 ; x 0 ) + k(x 0 ; x 0 )) (7)
+is positive definite if and only if k is conditionally positive definite.
+The proof follows directly from the definitions and can be found in [2].
+This result does generalize (5): the negative squared distance kernel is indeed cpd, for
+P
+i c i = 0 implies
+P
+i;j c i c j kx i x j k 2 =
+P
+i c i
+P
+j c j kx j k 2
+P
+j c j
+P
+i c i kx i k 2 +
+2
+P
+i;j c i c j hx i ; x j i = 2
+P
+i;j c i c j hx i ; x j i = 2k
+P
+i c i x i k 2  0: In fact, this implies that all
+kernels of the form
+k(x; x 0 ) = kx x 0 k  ; 0 <   2 (8)
+are cpd (they are not pd), by application of the following result:
+Proposition 4 ([2]) If k : X  X !] 1; 0] is cpd, then so are ( k)  (0 <  < 1)
+and log(1 k).
+To state another class of cpd kernels that are not pd, note first that as trivial consequences
+of Definition 2, we know that (i) sums of cpd kernels are cpd, and (ii) any constant b 2 R
+is cpd. Therefore, any kernel of the form k + b, where k is cpd and b 2 R, is also cpd. In
+particular, since pd kernels are cpd, we can take any pd kernel and offset it by b and it will
+still be at least cpd. For further examples of cpd kernels, cf. [2, 14, 4, 11].
+We now return to the main flow of the argument. Proposition 3 allows us to construct
+the feature map for k from that of the pd kernel ~
+k. To this end, fix x 0 2 X and define ~ k
+according to (7). Due to Proposition 3, ~ k is positive definite. Therefore, we may employ the
+Hilbert space representation  : X ! H of ~ k (cf. (1)), satisfying h(x); (x 0 )i = ~ k(x; x 0 ),
+hence
+k(x) (x 0 )k 2 = h(x) (x 0 ); (x) (x 0 )i = ~ k(x; x) + ~ k(x 0 ; x 0 ) 2 ~
+k(x; x 0 ): (9)
+
+Substituting (7) yields
+k(x) (x 0 )k 2 = k(x; x 0 ) +
+1
+2
+(k(x; x) + k(x 0 ; x 0 )) : (10)
+We thus have proven the following result.
+Proposition 5 (Hilbert space representation of cpd kernels [7, 2]) Let k be a real­
+valued conditionally positive definite kernel on X , satisfying k(x; x) = 0 for all x 2 X .
+Then there exists a Hilbert space H of real­valued functions on X , and a mapping
+ : X ! H , such that
+k(x) (x 0 )k 2 = k(x; x 0 ): (11)
+If we drop the assumption k(x; x) = 0, the Hilbert space representation reads
+k(x) (x 0 )k 2 = k(x; x 0 ) +
+1
+2
+(k(x; x) + k(x 0 ; x 0 )) : (12)
+It can be shown that if k(x; x) = 0 for all x 2 X , then d(x; x 0 ) :=
+p
+k(x; x 0 ) =
+k(x) (x 0 )k is a semi­metric; it is a metric if k(x; x 0 ) 6= 0 for x 6= x 0 [2].
+We next show how to represent general symmetric kernels (thus in particular cpd kernels)
+as symmetric bilinear forms Q in feature spaces. This generalization of the previously
+known feature space representation for pd kernels comes at a cost: Q will no longer be
+a dot product. For our purposes, we can get away with this. The result will give us an
+intuitive understanding of Proposition 3: we can then write ~ k as ~
+k(x; x 0 ) := Q((x)
+(x 0 ); (x 0 ) (x 0 )). Proposition 3 thus essentially adds an origin in feature space which
+corresponds to the image (x 0 ) of one point x 0 under the feature map. For translation
+invariant algorithms, we are always allowed to do this, and thus turn a cpd kernel into a pd
+one --- in this sense, cpd kernels are ``as good as'' pd kernels.
+Proposition 6 (Vector space representation of symmetric kernels) Let k be a real­
+valued symmetric kernel on X . Then there exists a linear space H of real­valued functions
+on X , endowed with a symmetric bilinear form Q(:; :), and a mapping  : X ! H , such
+that
+k(x; x 0 ) = Q((x); (x 0 )): (13)
+Proof The proof is a direct modification of the pd case. We use the map (3) and linearly
+complete the image as in (4). Define Q(f; g) :=
+P m
+i=1
+P m 0
+j=1  i  j k(x i ; x 0
+j ). To see that it
+is well­defined, although it explicitly contains the expansion coefficients (which need not
+be unique), note that Q(f; g) =
+P m 0
+j=1  j f(x 0
+j ), independent of the  i . Similarly, for g,
+note that Q(f; g) =
+P
+i  i g(x i ), hence it is independent of  j . The last two equations also
+show that Q is bilinear; clearly, it is symmetric.
+Note, moreover, that by definition of Q, k is a reproducing kernel for the feature space
+(which is not a Hilbert space): for all functions f (4), we have Q(k(:; x); f) = f(x); in
+particular, Q(k(:; x); k(:; x 0 )) = k(x; x 0 ):
+Rewriting ~ k as ~
+k(x; x 0 ) := Q((x) (x 0 ); (x 0 ) (x 0 )) suggests an immediate gen­
+eralization of Proposition 3: in practice, we might want to choose other points as origins
+in feature space --- points that do not have a preimage x 0 in input space, such as (usually)
+the mean of a set of points (cf. [12]). This will be useful when considering kernel PCA.
+Crucial is only that our reference point's behaviour under translations is identical to that
+of individual points. This is taken care of by the constraint on the sum of the c i in the
+following proposition. The asterisk denotes the complex conjugated transpose.
+
+Proposition 7 (Exercise 2.23, [2]) Let K be a symmetric matrix, e 2 R m be the vector of
+all ones, I the mm identity matrix, and let c 2 C m satisfy e  c = 1. Then
+~
+K := (I ec  )K(I ce  ) (14)
+is positive definite if and only if K is conditionally positive definite.
+Proof
+``=)'': suppose ~
+K is positive definite, i.e. for any a 2 C m , we have
+0  a  ~
+Ka = a  Ka + a  ec  Kce  a a  Kce  a a  ec  Ka: (15)
+In the case a  e = e  a = 0 (cf. (6)), the three last terms vanish, i.e. 0  a  Ka; proving
+that K is conditionally positive definite.
+``(='': suppose K is conditionally positive definite. The map (I ce  ) has its range in
+the orthogonal complement of e, which can be seen by computing, for any a 2 C m ,
+e
+ (I ce
+ )a = e
+
+a e
+
+ce
+
+a = 0: (16)
+Moreover, being symmetric and satisfying (I ce  ) 2 = (I ce  ), the map (I ce  )
+is a projection. Thus ~
+K is the restriction of K to the orthogonal complement of e, and
+by definition of conditional positive definiteness, that is precisely the space where K is
+positive definite.
+This result directly implies a corresponding generalization of Proposition 3:
+Proposition 8 (Adding a general origin) Let k be a symmetric kernel, x 1 ; : : : ; xm 2 X ,
+and let c i 2 C satisfy
+P m
+i=1 c i = 1. Then
+~ k(x; x 0 ) :=
+1
+2
+0
+@ k(x; x 0 )
+m
+X
+i=1
+c i k(x; x i )
+m
+X
+i=1
+c i k(x i ; x 0 ) +
+m
+X
+i;j=1
+c i c j k(x i ; x j )
+1
+A (17)
+is positive definite if and only if k is conditionally positive definite.
+Proof Consider a set of points x 0
+1 ; : : : ; x 0
+m 0
+, m 0 2 N; x 0
+i 2 X , and let K be the
+(m + m 0 )  (m + m 0 ) Gram matrix based on x 1 ; : : : ; xm ; x 0
+1 ; : : : ; x 0
+m 0
+. Apply Proposi­
+tion 7 using c m+1 = : : : = c m+m 0 = 0.
+Example 9 (SVMs and kernel PCA) (i) The above results show that conditionally posi­
+tive definite kernels are a natural choice whenever we are dealing with a translation in­
+variant problem, such as the SVM: maximization of the margin of separation between two
+classes of data is independent of the origin's position. Seen in this light, it is not surprising
+that the structure of the dual optimization problem (cf. [13]) allows cpd kernels: as noticed
+in [11, 10], the constraint
+P m
+i=1  i y i = 0 projects out the same subspace as (6) in the
+definition of conditionally positive definite kernels.
+(ii) Another example of a kernel algorithm that works with conditionally positive definite
+kernels is kernel PCA [9], where the data is centered, thus removing the dependence on the
+origin in feature space. Formally, this follows from Proposition 7 for c i = 1=m.
+
+Example 10 (Parzen windows) One of the simplest distance­based classification algo­
+rithms conceivable proceeds as follows. Given m+ points labelled with +1, m points
+labelled with 1, and a test point (x), we compute the mean squared distances between
+the latter and the two classes, and assign it to the one where this mean is smaller,
+y = sgn
+ 
+1
+m
+X
+y i = 1
+k(x) (x i )k 2 1
+m+
+X
+y i =1
+k(x) (x i )k 2
+!
+: (18)
+We use the distance kernel trick (Proposition 5) to express the decision function as a kernel
+expansion in input space: a short calculation shows that
+y = sgn 1
+m+
+X
+y i =1
+k(x; x i )
+1
+m
+X
+y i = 1
+k(x; x i ) + c
+!
+; (19)
+with the constant offset c = (1=2m )
+P
+y i = 1 k(x i ; x i ) (1=2m+ )
+P
+y i =1 k(x i ; x i ). Note
+that for some cpd kernels, such as (8), k(x i ; x i ) is always 0, thus c = 0. For others, such as
+the commonly used Gaussian kernel, k(x i ; x i ) is a nonzero constant, in which case c also
+vanishes.
+For normalized Gaussians and other kernels that are valid density models, the resulting
+decision boundary can be interpreted as the Bayes decision based on two Parzen windows
+density estimates of the classes; for general cpd kernels, the analogy is a mere formal one.
+Example 11 (Toy experiment) In Fig. 1, we illustrate the finding that kernel PCA can be
+carried out using cpd kernels. We use the kernel (8). Due to the centering that is built into
+kernel PCA (cf. Example 9, (ii), and (5)), the case  = 2 actually is equivalent to linear
+PCA. As we decrease , we obtain increasingly nonlinear feature extractors.
+Note, moreover, that as the kernel parameter  gets smaller, less weight is put on large
+distances, and we get more localized feature extractors (in the sense that the regions where
+they have large gradients, i.e. dense sets of contour lines in the plot, get more localized).
+Figure 1: Kernel PCA on a toy dataset using the cpd kernel (8); contour plots of the feature
+extractors corresponding to projections onto the first two principal axes in feature space.
+From left to right:  = 2; 1:5; 1; 0:5. Notice how smaller values of  make the feature
+extractors increasingly nonlinear, which allows the identification of the cluster structure.
+
+3 Conclusion
+We have described a kernel trick for distances in feature spaces. It can be used to generalize
+all distance based algorithms to a feature space setting by substituting a suitable kernel
+function for the squared distance. The class of kernels that can be used is larger than
+those commonly used in kernel methods (known as positive definite kernels). We have
+argued that this reflects the translation invariance of distance based algorithms, as opposed
+to genuinely dot product based algorithms. SVMs and kernel PCA are translation invariant
+in feature space, hence they are really both distance rather than dot product based. We
+thus argued that they can both use conditionally positive definite kernels. In the case of
+the SVM, this drops out of the optimization problem automatically [11], in the case of
+kernel PCA, it corresponds to the introduction of a reference point in feature space. The
+contribution of the present work is that it identifies translation invariance as the underlying
+reason, thus enabling us to use cpd kernels in a much larger class of kernel algorithms, and
+that it draws the learning community's attention to the kernel trick for distances.
+Acknowledgments. Part of the work was done while the author was visiting the Aus­
+tralian National University. Thanks to Nello Cristianini, Ralf Herbrich, Sebastian Mika,
+Klaus M˜uller, John Shawe­Taylor, Alex Smola, Mike Tipping, Chris Watkins, Bob
+Williamson, Chris Williams and a conscientious anonymous reviewer for valuable input.
+References
+[1] M. A. Aizerman, E. M. Braverman, and L. I. Rozono’er. Theoretical foundations of the potential
+function method in pattern recognition learning. Autom. and Remote Contr., 25:821--837, 1964.
+[2] C. Berg, J.P.R. Christensen, and P. Ressel. Harmonic Analysis on Semigroups. Springer­Verlag,
+New York, 1984.
+[3] B. E. Boser, I. M. Guyon, and V. N. Vapnik. A training algorithm for optimal margin classi­
+fiers. In D. Haussler, editor, Proceedings of the 5th Annual ACM Workshop on Computational
+Learning Theory, pages 144--152, Pittsburgh, PA, July 1992. ACM Press.
+[4] F. Girosi, M. Jones, and T. Poggio. Regularization theory and neural networks architectures.
+Neural Computation, 7(2):219--269, 1995.
+[5] D. Haussler. Convolutional kernels on discrete structures. Technical Report UCSC­CRL­99­10,
+Computer Science Department, University of California at Santa Cruz, 1999.
+[6] J. Mercer. Functions of positive and negative type and their connection with the theory of
+integral equations. Philos. Trans. Roy. Soc. London, A 209:415--446, 1909.
+[7] I. J. Schoenberg. Metric spaces and positive definite functions. Trans. Amer. Math. Soc.,
+44:522--536, 1938.
+[8] B. Sch˜olkopf, C. J. C. Burges, and A. J. Smola. Advances in Kernel Methods --- Support Vector
+Learning. MIT Press, Cambridge, MA, 1999.
+[9] B. Sch˜olkopf, A. Smola, and K.­R. M˜uller. Nonlinear component analysis as a kernel eigenvalue
+problem. Neural Computation, 10:1299--1319, 1998.
+[10] A. Smola, T. Frieß, and B. Sch˜olkopf. Semiparametric support vector and linear programming
+machines. In M.S. Kearns, S.A. Solla, and D.A. Cohn, editors, Advances in Neural Information
+Processing Systems 11, pages 585 -- 591, Cambridge, MA, 1999. MIT Press.
+[11] A. Smola, B. Sch˜olkopf, and K.­R. M˜uller. The connection between regularization operators
+and support vector kernels. Neural Networks, 11:637--649, 1998.
+[12] W.S. Torgerson. Theory and Methods of Scaling. Wiley, New York, 1958.
+[13] V. Vapnik. The Nature of Statistical Learning Theory. Springer, N.Y., 1995.
+[14] G. Wahba. Spline Models for Observational Data, volume 59 of CBMS­NSF Regional Confer­
+ence Series in Applied Mathematics. SIAM, Philadelphia, 1990.
+[15] C. Watkins, 2000. personal communication.
+

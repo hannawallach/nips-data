@@ -1,0 +1,412 @@
+Perspectives on Sparse Bayesian Learning
+
+David Wipf, Jason Palmer, and Bhaskar Rao
+
+Department of Electrical and Computer Engineering University of California, San Diego, CA 92092 dwipf,japalmer@ucsd.edu, brao@ece.ucsd.edu
+
+Abstract Recently, relevance vector machines (RVM) have been fashioned from a sparse Bayesian learning (SBL) framework to perform supervised learning using a weight prior that encourages sparsity of representation. The methodology incorporates an additional set of hyperparameters governing the prior, one for each weight, and then adopts a specific approximation to the full marginalization over all weights and hyperparameters. Despite its empirical success however, no rigorous motivation for this particular approximation is currently available. To address this issue, we demonstrate that SBL can be recast as the application of a rigorous variational approximation to the full model by expressing the prior in a dual form. This formulation obviates the necessity of assuming any hyperpriors and leads to natural, intuitive explanations of why sparsity is achieved in practice. 1 Introduction In an archetypical regression situation, we are presented with a collection of N regres-
+
+sor/target pairs {i  that, in some sense,
+
+where t
+
+M
+
+, ti  }N
+
+i=1 and the goal is to find a vector of weights w such
+
+ti  Ti w, i or t  w,
+
+N×M [t1, . . . , tN ]T and 
+
+(1) . Ideally, we would like to
+
+learn this relationship such that, given a new training vector , we can make accurate [1, . . . , N ]T  predictions of t, i.e., we would like to avoid overfitting. In practice, this requires some form of regularization, or a penalty on overly complex models. Recently, a sparse Bayesian learning (SBL) framework has been derived to find robust solutions to (1) [3, 7]. The key feature of this development is the incorporation of a prior on the weights that encourages sparsity in representation, i.e., few non-zero weights. When  is square and formed from a positive-definite kernel function, we obtain the relevance vector machine (RVM), a Bayesian competitor of SVMs with several significant advantages. 1.1 Sparse Bayesian Learning Given a new regressor vector , the full Bayesian treatment of (1) involves finding the predictive distribution p(t|t).1 We typically compute this distribution by marginalizing
+
+1 For simplicity, we omit explicit conditioning on  and , i.e., p(t|t)  p(t|t, , ).
+
+
+over the model weights, i.e., p(t|t) =
+
+1 p(t) p(t|w)p(w, t)dw, (2)
+
+where the joint density p(w, t) = p(t|w)p(w) combines all relevant information from the training data (likelihood principle) with our prior beliefs about the model weights. The likelihood term p(t|w) is assumed to be Gaussian,
+
+p(t|w) = (22)- exp N/2
+
+1
+
+-2
+
+2
+
+t - w 2 , (3)
+
+where for now we assume that the noise variance 2 is known. For sparse priors p(w) (possibly improper), the required integrations, including the computation of the normalizing term p(t), are typically intractable, and we are forced to accept some form of approximation to p(w, t). Sparse Bayesian learning addresses this issue by introducing a set of hyperparameters into the specification of the problematic weight prior p(w) before adopting a particular approximation. The key assumption is that p(w) can be expressed as p(w) = p(wi|i)p(i)di, (4) where  = [1, . . . , M]T represents a vector of hyperparameters, (one for each weight). The implicit SBL derivation presented in [7] can then be reformulated as follows,
+
+M M
+
+p(wi) =
+
+i=1 i=1
+
+p(t|t)
+
+= = 1 p(t) 1 p(t) p(t|w)p(t|w)p(w)dw p(t|w)p(t|w)p(w|)p()dwd.
+
+(5)
+
+Proceeding further, by applying Bayes' rule to this expression, we can exploit the plugin rule [2] via,
+
+p(t|t)
+
+=  =
+
+p(t|w)p(t|w)p(w|) p
+
+p(t|w)p(t|w)p(w|)  1
+
+p(t; MAP )
+
+p(|t) dw
+
+(t|)
+
+d
+
+(MAP ) dw p(t|) d
+
+p(t|w)p(w, t; MAP )dw. (6)
+
+The essential difference from (2) is that we have replaced p(w, t) with the approximate distribution p(w, t; MAP ) = p(t|w)p(w; MAP ). Also, the normalizing term becomes p(w, t; MAP )dw and we assume that all required integrations can now be handled in closed form. Of course the question remains, how do we structure this new set of parameters  to accomplish this goal? The answer is that the hyperparameters enter as weight prior variances of the form,
+
+p(wi|i) = N (0, i).
+
+p(i -1
+
+)  i
+
+1-a
+
+exp(-b/i),
+
+The hyperpriors are given by,
+
+(7) (8)
+
+where a, b > 0 are constants. The crux of the actual learning procedure presented in [7] is to find some MAP estimate of  (or more accurately, a function of ). In practice, we find that many of the estimated i's converge to zero, leading to sparse solutions since the corresponding weights, and therefore columns of , can effectively be pruned from analytic computation of (6). the model. The Gaussian assumptions, both on p(t|w) and p(w; ), then facilitate direct,
+
+
+1.2 Ambiguities in Current SBL Derivation Modern Bayesian analysis is primarily concerned with finding distributions and locations of significant probability mass, not just modes of distributions, which can be very misleading in many cases [6]. With SBL, the justification for the additional level of sophistication (i.e., the inclusion of hyperparameters) is that the adoption of the plugin rule (i.e., the approximation p(w, t)  p(w, t; MAP )) is reflective of the true mass, at least sufficiently so for predictive purposes. However, no rigorous motivation for this particular claim is currently available nor is it immediately obvious exactly how the mass of this approximate distribution relates to the true mass. A more subtle difficulty arises because MAP estimation, and hence the plugin rule, is not invariant under a change in parameterization. Specifically, for an invertible function f(·), [f()]MAP = f(MAP ). (9) Different transformations lead to different modes and ultimately, different approximations form of SBL, and the one that has displayed remarkable success in the literature, does not to p(w, t) and therefore p(t|t). So how do we decide which one to use? The canonical in fact find a mode of p(|t), but a mode of p(- log |t). But again, why should this mode necessarily be more reflective of the desired mass than any other? As already mentioned, SBL often leads to sparse results in practice, namely, the approximation p(w, t; MAP ) is typically nonzero only on a small subspace of M-dimensional w space. The question remains, however, why should an approximation to the full Bayesian treatment necessarily lead to sparse results in practice? To address all of these ambiguities, we will herein demonstrate that the sparse Bayesian learning procedure outlined above can be recast as the application of a rigorous variational approximation to the distribution p(w, t).2 This will allow us to quantify the exact relationship between the true mass and the approximate mass of this distribution. In effect, we will demonstrate that SBL is attempting to directly capture significant portions of the probability mass of p(w, t), while still allowing us to perform the required integrations. This framework also obviates the necessity of assuming any hyperprior p() and is independent of the (subjective) parameterization (e.g.,  or - log , etc.). Moreover, this perspective leads to natural, intuitive explanations of why sparsity is observed in practice and why, in general, this need not be the case. 2 A Variational Interpretation of Sparse Bayesian Learning To begin, we review that the ultimate goal of this analysis is to find a well-motivated approximation to the distribution p(t|t; H)  p(t|w)p(w, t; H)dw = p(t|w)p(t|w)p(w; H)dw, (10) where we have explicitly noted the hypothesis of a model with a sparsity inducing (possibly analytically intractable and we must resort to some form of approximation. To accomplish improper) weight prior by H. As already mentioned, the integration required by this form is this, we appeal to variational methods to find a viable approximation to p(w, t; H) [5]. We may then substitute this approximation into (10), leading to tractable integrations and analytic posterior distributions. To find a class of suitable approximations, we first express procedure outlined in [4] in the context of independent component analysis. p(w; H) in its dual form by introducing a set of variational parameters. This is similar to a
+
+2 We note that the analysis in this paper is different from [1], which derives an alternative SBL
+
+algorithm based on variational methods.
+
+
+2.1 Dual Form Representation of p(w; H) At the heart of this methodology is the ability to represent a convex function in its dual form. For example, given a convex function f(y) :
+
+ , the dual form is given by
+
+f(y) = sup [y - f()] ,
+
+
+
+where f() denotes the conjugate function. Geometrically, this can be interpreted as representing f(x) as the upper envelope or supremum of a set of lines parameterized by . The selection of f() as the intercept term ensures that each line is tangent to f(y). If we drop the maximization in (11), we obtain the bound f(y)  y - f(). (12) Thus, for any given , we have a lower bound on f(y); we may then optimize over  to find the optimal or tightest bound in a region of interest. To apply this theory to the problem at hand, we specify the form for our sparse prior
+
+p(w; H) = M i=1 p(wi; H). Using (7) and (8), we obtain the prior
+
+(11)
+
+wi 2 2 -(a+1/2) p(wi; H) = p(wi|i)p(i)di = C
+
+b + , (13)
+
+which for a, b > 0 is proportional to a Student-t density. The constant C is not chosen to enforce proper normalization; rather, it is chosen to facilitate the variational analysis below. Also, this density function can be seen to encourage sparsity since it has heavy tails and a
+
+sharp peak at zero. Clearly p(wi; H) is not convex in wi; however, if we let yi suggested in [5] and define
+
+f(yi) log p(wi; H) = -(a + 1/2) log C b + yi 2 ,
+
+wi as (14) 2
+
+we see that we now have a convex function in yi amenable to dual representation. By computing the conjugate function f(yi), constructing the dual, and then transforming back to p(wi; H), we obtain the representation (see Appendix for details)
+
+2
+
+wi -2 i p(wi; H) = max (2i)- exp
+
+i0
+
+1/2 exp
+
+b -i i -a . (15)
+
+As a, b  0, it is readily apparent from (15) that what were straight lines in the yi domain are now Gaussian functions with variance i in the wi domain. Figure 1 illustrates this connection. When we drop the maximization, we obtain a lower bound on p(wi; H) of the
+
+form
+
+2
+
+-2 wi i p(wi; H)  p(wi; H) ^
+
+(2i)- exp 1/2 exp b -i -a i , (16)
+
+which serves as our approximate prior to p(w; H). From this relationship, we see that p(wi; H) does not integrate to one, except in the special case when a, b  0. We will^now ^ incorporate these results into an algorithm for finding a good H, or more accurately H(), ^ since each candidate hypothesis is characterized by a different set of variational parameters. 2.2 Variational Approximation to p(w, t; H) So now that we have a variational approximation to the problematic weight prior, we must return to our original problem of estimating p(t|t; H). Since the^integration is intractable under model hypothesis H,^we will instead compute p(t|t; H) using p(w, t; H) = ^ p(t|w)p(w; H), with p(w; H) defined as in (16). How do we choose this approximate ^
+
+
+1 0.5
+
+0.9
+
+0 0.8
+
+0.7
+
+-0.5
+
+p (wi; H)
+
+0.6
+
+-1 0.5
+
+Density Density
+
+0.4
+
+Log -1.5
+
+lower bounds ^ p wi; H
+
+0.3
+
+0.2
+
+-2
+
+0.1
+
+-2.5 0 0.5 1 1.5
+
+yi 2 2.5 3 0 -5 -4 -3 -2 -1 0 wi 1 2 3 4 5
+
+Figure 1: Variational approximation example in both yi space and wi space for a, b  0. Left: Dual forms in yi space. The solid line represents the plot of f(yi) while the dotted lines represent variational lower bounds in the dual representation for three different values of i. Right: Dual forms in wi space. The solid line represents the plot of p(wi; H) while the dotted lines represent Gaussian distributions with three different variances. ^ ational parameters , how do we choose the most appropriate ? Consistent with modern model? In other words, given that different H are distinguished by a different set of variBayesian analysis, we concern ourselves not with matching modes of distributions, but with aligning regions of significant probability mass. In choosing p(w, t; H), we would ^ therefore like to match, where possible, significant regions of probability mass in the true ^ the sum of the misaligned mass, i.e., model p(w, t; H). For a given t, an obvious way to do this is to select H by minimizing
+
+H ^
+
+= =
+
+arg min
+
+H ^
+
+arg max
+
+H ^
+
+^ p(w, t; H) - p(w, t; H) dw ^ p(t|w)p(w; H)dw,
+
+(17)
+
+where the variational assumptions have allowed us to remove the absolute value (since the argument must always be positive). Also, we note that (17) is tantamount to selecting the variational approximation with maximal Bayesian evidence [6]. In other words, we ^ explains the training data t, marginalized over the weights. are selecting the H, out of a class of variational approximations to H, that most probably From an implementational standpoint, (17) can be reexpressed using (16) as,  = arg max log dw
+
+M
+
+^ p(t|w) i=1 p wi; H(i)
+
+
+
+M
+
+arg max - 2 log |t| + tT - t + t
+
+
+
+1 = 1
+
+i=1
+
+b -i - alogi , (18)
+
+where t 2I +diag()T . This is the same cost function as in [7] only without terms
+
+resulting from a prior on 2, which we will address later. Thus, the end result of this analysis is an evidence maximization procedure equivalent to the one in [7]. The difference is that, where before we were optimizing over a somewhat arbitrary model parameterization, now we see that it is actually optimization over the space of variational approximations to a model with a sparse, regularizing prior. Also, we know from (17) that this procedure is effectively matching, as much as possible, the mass of the full model p(w, t; H). ^
+
+
+3 Analysis While the variational perspective is interesting, two pertinent questions still remain: 1. Why should it be that approximating a sparse prior p(w; H) leads to sparse representations in practice? 2. How do we extend these results to handle an unknown, random variance 2? We first treat Question (1). In Figure 2 below, we have illustrated a 2D example of evidence For now, we will assume a, b  0, which from (13), implies that p(wi; H)  1/|wi| for maximization within the context of variational approximations to the sparse prior p(w; H). each i. On the left, the shaded area represents the region of w space where both p(w; H) and p(t|w) (and therefore p(w, t; H)) have significant probability mass. Maximization of (17) involves finding an approximate distribution p(w, t; H) with a substantial percentage ^ of its mass in this region.
+
+8 8
+
+6
+
+p (t|w1, w2)
+
+6
+
+p (t|w1, w2)
+
+4 4
+
+^ p w1, w2; Ha
+
+2 2
+
+2
+
+w 0
+
+-2
+
+2
+
+w 0
+
+-2
+
+-4
+
+p (w1, w2; H) -4
+
+-6 -6
+
+^ p w1, w2; Hb
+
+-6 -4 -2
+
+variational constraint
+
+4 6
+
+-8 -8
+
+-8 -6 -4 -2
+
+w01 2 4 6 8 -8 w01 2 8
+
+Figure 2: Comparison between full model and approximate models with a, b  0. Left: Contours of equiprobability density for p(w; H) and constant likelihood p(t|w); the prominent density and likelihood lie within each region respectively. The shaded region represents the area where both have significant mass. Right: Here we have added the contours of p(w; H) for two different values of , i.e., two approximate hypotheses denoted Ha and ^ ^ Hb. The shaded region represents the area where both the likelihood and the approximate ^ prior Ha have significant mass. Note that by the variational bound, each p(w; H) must lie In the plot on the right, we have graphed two approximate priors that satisfy the variational aligns with the horizontal spine of p(w; H) places the largest percentage of its mass (and bounds, i.e., they must lie within the contours of p(w; H). We see that the narrow prior that therefore the mass of p(w, t; Ha)) in the shaded region. This corresponds with a prior of ^ This creates a long narrow prior since there is minimal variance along the w2 axis. In fact, it can be shown that owing to the infinite density of the variational constraint along each axis (which is allowed as a and b go to zero), the maximum evidence is obtained when 2 is strictly equal to zero, giving the approximate prior infinite density along this axis as well. This implies that w2 also equals zero and can be pruned from the model. In contrast, ^ extend directly out (due to the dotted variational boundary) along the spine to penetrate the a model with significant prior variance along both axes, Hb, is hampered because it cannot likelihood.
+
+^ within the contours of p(w; H). ^
+
+p(w; Ha) = p(w1, w2; 1 ^ 0, 2  0). (19)
+
+
+Similar effective weight pruning occurs in higher dimensional problems as evidenced by simulation studies and the analysis in [3]. In higher dimensions, the algorithm only retains those weights associated with the prior spines that span a subspace penetrating the most prominent portion of the likelihood mass (i.e., a higher-dimensional analog to the shaded region already mentioned). The prior p(w; H) navigates the variational constraints, placing ^ as much as possible of its mass in this region, driving many of the i's to zero. In contrast, when a, b > 0, the situation is somewhat different. It is not difficult to show maximal evidence cannot have any i = wi = 0. Intuitively, this occurs because the now that, assuming a noise variance 2 > 0, the variational approximation to p(w, t; H) with us to place infinite prior density in any region of weight space (as occurred previously finite spines of the prior p(w; H), which bound the variational approximation, do not allow approximate prior mass, and therefore the approximate evidence, must also fall to zero by when any i  0). Consequently, if any i goes to zero with a, b > 0, the associated (16). As such, models with all non-zero weights will be now be favored when we form the variational approximation. We therefore cannot assume an approximation to a sparse prior will necessarily give us sparse results in practice. We now address Question (2). Thus far, we have considered a known, fixed noise variance 2; however, what if 2 is unknown? SBL assumes it is unknown and random with prior
+
+c
+
+unknown 2, we arrive at the implicit likelihood equation, distribution p(1/2)  (2)1- exp(-d/2), and c, d > 0. After integrating out the
+
+-(¯+1/2) c
+
+p(t|w) = p(t|w, 2)p(2)d2  d + 1 2 t - w 2 , (20)
+
+where c¯ in a similar manner as before (with wi being replaced by t - w ) giving us, c + (N - 1)/2. We may then form a variational approximation to the likelihood
+
+p(t|w)  (2)- (2)- exp
+
+= (22)- exp N/2
+
+1
+
+-2
+
+2
+
+N/2 1/2 1
+
+-2 (2)- c¯
+
+2
+
+t - w 2 d -2
+
+t - w 2 exp
+
+exp d -2
+
+(2)- , c (21)
+
+where the second step follows by substituting back in for c¯. By replacing p(t|w) with the lower bound from (21), we then maximize over the variational parameters  and 2 via
+
+M
+
+, 2 = arg max - 2 log |t| + tT - t +i=1 t
+
+,2
+
+1 1
+
+-i - alogi -2-clog2, (22) b d
+
+the exact SBL optimization procedure. Thus, we see that the entire SBL framework, including noise variance estimation, can be seen in variational terms.
+
+4 Conclusions The end result of this analysis is an evidence maximization procedure that is equivalent to the one originally formulated in [7]. The difference is that, where before we were optimizing over a somewhat arbitrary model parameterization, we now see that SBL is actually searching a space of variational approximations to find an alternative distribution that captures the significant mass of the full model. Moreover, from the vantage point afforded by this new perspective, we can better understand the sparsity properties of SBL and the relationship between sparse priors and approximations to sparse priors.
+
+
+Appendix: Derivation of the Dual Form of p(wi; H) To accommodate the variational analysis of Sec. 2.1, we require the dual representation of p(wi; H2). As an intermediate step, we must find the dual representation of f(yi), where
+
+yi wi and
+
+-(a+1/2)
+
+f(yi) log p(wi; H) = log C b + yi 2 . (23)
+
+To accomplish this, we find the conjugate function f(i) using the duality relation f(i) = max [iyi - f(yi)] = max iyi - log C + a + log b + .
+
+yi yi
+
+1 2 yi 2 (24)
+
+To find the maximizing yi, we take the gradient of the left side and set it to zero, giving us,
+
+yi max a = - i - 1 2i - 2b. (25)
+
+Substituting this value into the expression for f(i) and selecting
+
+(a+1/2)
+
+C = (2)- exp - a +
+
+f(i) = a + 1 2 log
+
+1/2
+
+1 2
+
+we arrive at
+
+2-i
+
+1 2 1 a + 1
+
+2
+
+, (26)
+
++ log 2 - 2bi. (27)
+
+We are now ready to represent f(yi) in its dual form, observing first that we only need consider maximization over i  0 since f(yi) is a monotonically decreasing function (i.e., all tangent lines will have negative slope). Proceeding forward, we have f(yi) = max [iyi - f(i)] = max , (28) where we have used the monotonically increasing transformation i = -1/(2i), i  0. The attendant dual representation of p(wi; H) can then be obtained by exponentiating both sides of (28) and substituting yi = wi ,
+
+i0 i0
+
+-yi 2i - a + 1 2 1 log i - log 2 - 2 b i
+
+2
+
+1 2 i
+
+2
+
+wi -2 i
+
+p(wi; H) = max exp exp i i0
+
+b -i -a . (29)
+
+Acknowledgments This research was supported by DiMI grant #22-8376 sponsored by Nissan. References
+
+[1] C. Bishop and M. Tipping, "Variational relevance vector machines," Proc. 16th Conf. Uncertainty in Artificial Intelligence, pp. 46­53, 2000. [2] R. Duda, P. Hart, and D. Stork, Pattern Classification, Wiley, Inc., New York, 2nd ed., 2001. [3] A.C. Faul and M.E. Tipping, "Analysis of sparse Bayesian learning," Advances in Neural Information Processing Systems 14, pp. 383­389, 2002. [4] M. Girolami, "A variational method for learning sparse and overcomplete representations," Neural Computation, vol. 13, no. 11, pp. 2517­2532, 2001. [5] M.I. Jordan, Z. Ghahramani, T. Jaakkola, and L.K. Saul, "An introduction to variational methods for graphical models," Machine Learning, vol. 37, no. 2, pp. 183­233, 1999. [6] D.J.C. MacKay, "Bayesian interpolation," Neural Comp., vol. 4, no. 3, pp. 415­447, 1992. [7] M.E. Tipping, "Sparse Bayesian learning and the relevance vector machine," Journal of Machine Learning, vol. 1, pp. 211­244, 2001.
+
+

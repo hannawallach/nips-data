@@ -1,0 +1,524 @@
+Online Passive-Aggressive Algorithms
+
+Koby Crammer Ofer Dekel Shai Shalev-Shwartz Yoram Singer School of Computer Science & Engineering The Hebrew University, Jerusalem 91904, Israel {kobics,oferd,shais,singer}@cs.huji.ac.il
+
+Abstract We present a unified view for online classification, regression, and uniclass problems. This view leads to a single algorithmic framework for the three problems. We prove worst case loss bounds for various algorithms for both the realizable case and the non-realizable case. A conversion of our main online algorithm to the setting of batch learning is also discussed. The end result is new algorithms and accompanying loss bounds for the hinge-loss. 1 Introduction In this paper we describe and analyze several learning tasks through the same algorithmic prism. Specifically, we discuss online classification, online regression, and online uniclass prediction. In all three settings we receive instances in a sequential manner. For concreteness we assume that these instances are vectors in Rn and denote the instance received on round t by xt. In the classification problem our goal is to find a mapping from the instance space into the set of labels, {-1, +1}. In the regression problem the mapping is into R. Our goal in the uniclass problem is to find a center-point in Rn with a small Euclidean distance to all of the instances. We first describe the classification and regression problems. For classification and regression we restrict ourselves to mappings based on a weight vector w  Rn, namely the prediction y^t using f. For regression the prediction is simply y^t = f(xt) while for classimapping f : Rn  R takes the form f(x) = w · x. After receiving xt we extend a fication y^t = sign(f(xt)). After extending the prediction y^t, we receive the true outcome yt. We then suffer an instantaneous loss based on the discrepancy between yt and f (xt). The goal of the online learning algorithm is to minimize the cumulative loss. The losses we discuss in this paper depend on a pre-defined insensitivity parameter and are denoted (w; (x, y)). For regression the -insensitive loss is,
+
+(w; (x, y)) =
+
+0 |y - w · x| - , (1)
+
+otherwise |y - w · x| 
+
+while for classification the -insensitive loss is defined to be,
+
+0 (w; (x, y)) =
+
+- y(w · x)
+
+otherwise y(w · x)  . (2)
+
+As in other online algorithms the weight vector w is updated after receiving the feedback yt. Therefore, we denote by wt the vector used for prediction on round t. We leave the details on the form this update takes to later sections.
+
+
+Problem Classification Regression Uniclass Example (zt) (xt, yt)  Rn× {-1,+1} (xt, yt)  Rn × R (xt, yt)  Rn × {1} Discrepancy () -yt(wt · xt) |yt - wt · xt| xt - wt
+
+Update Direction (vt) ytxt sign(yt - wt · xt) xt
+
+xt-wt xt-wt
+
+Table 1: Summary of the settings and parameters employed by the additive PA algorithm for classification, regression, and uniclass.
+
+The setting for uniclass is slightly different as we only observe a sequence of instances. The goal of the uniclass algorithm is to find a center-point w such that all instances xt fall within a radius of from w. Since we employ the framework of online learning the vector w is constructed incrementally. The vector wt therefore plays the role of the instantaneous center and is adapted after observing each instance xt. If an example xt falls within a Euclidean distance from wt then we suffer no loss. Otherwise, the loss is the distance between xt and a ball of radius centered at wt. Formally, the uniclass loss is,
+
+0 (wt; xt) =
+
+xt - wt - otherwise xt - wt
+
+ . (3)
+
+In the next sections we give additive and multiplicative online algorithms for the above learning problems and prove respective online loss bounds. A common thread of our approach is a unified view of all three tasks which leads to a single algorithmic framework with a common analysis. Related work: Our work builds on numerous techniques from online learning. The updates we derive are based on an optimization problem directly related to the one employed by Support Vector Machines [15]. Li and Long [14] were among the first to suggest the idea of converting a batch optimization problem into an online task. Our work borrows ideas from the work of Warmuth and colleagues [11]. In particular, Gentile and Warmuth [6] generalized and adapted techniques from [11] to the hinge loss which is closely related to the losses defined in Eqs. (1)-(3). Kivinen et al. [10] discussed a general framework for gradient-based online learning where some of their bounds bare similarities to the bounds presented in this paper. Our work also generalizes and greatly improves online loss bounds for classification given in [3]. Herbster [8] suggested an algorithm for classification and regression that is equivalent to one of the algorithms given in this paper, however, the lossbound derived by Herbster is somewhat weaker. Finally, we would like to note that similar algorithms have been devised in the convex optimization community (cf. [1, 2]). The main difference between these algorithms and the online algorithms presented in this paper lies in the analysis: while we derive worst case, finite horizon loss bounds, the optimization community is mostly concerned with asymptotic convergence properties. 2 A Unified Loss The three problems described in the previous section share common algebraic properties which we explore in this section. The end result is a common algorithmic framework that is applicable to all three problems and an accompanying analysis (Sec. 3). Let zt = (xt, yt) denote the instance-target pair received on round t where in the case of uniclass we set yt = 1 as a placeholder. For a given example zt, let (w; zt) denote the discrepancy of w on zt: for classification we set the discrepancy to be -yt(wt · xt) (the negative of the margin), for regression it is |yt - wt · xt|, and for uniclass xt - wt . Fixing zt, we also
+
+
+view (w; zt) as a convex function of w. Let [a]+ be the function that equals a whenever a > 0 and otherwise equals zero. Using the discrepancies defined above, the three different losses given in Eqs. (1)-(3) can all be written as classification we set  - since the discrepancy is defined as the negative of the margin. (w; z) = [(w; z) - ]+, where for While this construction might seem a bit odd for classification, it is very useful in unifying the three problems. To conclude, the loss in all three problems can be derived by applying the same hinge loss to different (problem dependent) discrepancies. 3 An Additive Algorithm for the Realizable Case Equipped with the simple unified notion of loss we describe in this section a single online algorithm that is applicable to all three problems. The algorithm and the analysis we present in this section assume that there exist a weight vector w and an insensitivity parameter
+
+for which the data is perfectly realizable. Namely, we assume that t which implies that, yt(w · xt)  | | (Class.) |yt -w ·xt|  (Reg.) xt - w (w ; zt) = 0 for all  (Unic.) . (4)
+
+A modification of the algorithm for the unrealizable case is given in Sec. 5. The general method we use for deriving our on-line update rule is to define the new weight vector wt+1 as the solution to the following projection problem
+
+2 wt +1 = argmin
+
+w
+
+1 2 w - wt s.t. (w; zt) = 0 , (5)
+
+namely, wt +1 is set to be the projection of wt onto the set of all weight vectors that attain
+
+a loss of zero. We denote this set by C. For the case of classification, C is a half space,
+
+C = {w : -ytw · xt  }. For regression C iscentered
+
+yt|  } and for uniclass it is a ball of radius
+
+attempts to keep wt +1
+
+an -hyper-slab, C = {w : |w · xt -
+
+}. In Fig. 2 we illustrate the projection for the three cases. This optimization problem loss on the most recent example. The resulting algorithm is passive whenever the loss is
+
+as close to wt as possible, while forcing wt +1 to achieve a zero
+
+zero, that is, wt +1 = wt whenever (wt; zt) = 0. In contrast, on rounds for which
+
+(wt; zt) > 0 we aggressively force wt Therefore we name the algorithm passive-aggressive or PA for short. In the following we show that for the three problems described above the solution to the optimization problem in Eq. (5) yields the following update rule,
+
++1
+
+wt vt of
+
++1 = wt + tvt ,
+
+to satisfy the constraint (wt +1 ; zt) = 0.
+
+at xt, C = {w : w - xt 
+
+Parameter: Insensitivity: Initialize: Set w1 = 0 (R&C) ; w1 = x0 (U) For t = 1, 2, . . . · Get a new instance: zt  Rn Suffer loss: (wt; zt)
+
+·· If
+
+(wt; zt) > 0 : 1. Set vt (see Table 1)
+
+2. Set t =
+
+(wt;zt)
+
+2
+
+= wt + tvt
+
+where ent
+
+t
+
+is the
+
+minus the
+
+discrepancy
+
+= (wt; zt)/ vt
+
+2
+
+.
+
+(6) gradiand (Note
+
+3. Update: wt
+
+vt +1
+
+that although the discrepancy might not be differentiable everywhere, its gradient exists whenever the loss is greater than zero). To see that the
+
+Figure 1: The additive PA algorithm.
+
+update from Eq. (6) is the solution to the problem defined by Eq. (5), first note that the equality constraint The Lagrangian of the optimization problem is (w; zt) = 0 is equivalent to the inequality constraint (w; zt)  .
+
+L(w,) = 1 2 w - wt 2 +  ((w; zt) - ) , (7)
+
+
+wt +1
+
+ 
+
+  q
+
+wt +1
+
+ 
+
+  q
+
+wt +1
+
+ 
+
+  q wt wt wt
+
+Figure 2: An illustration of the update: wt +1 is found by projecting the current vector
+
+wt onto the set of vectors attaining a zero loss on zt. This set is a stripe in the case of regression, a half-space for classification, and a ball for uniclass.
+
+with respect to w and use the fact that vt is minus the gradient of the discrepancy to get, where   0 is a Lagrange multiplier. To find a saddle point of L we first differentiate L
+
+ = 0 w = wt + vt . w (L) = w - wt +  w 
+
+To find the value of  we use the KKT conditions. Hence, whenever  is positive (as in the case of non-zero loss), the inequality constraint, (w; zt)  , becomes an equality. Simple algebraic manipulations yield that the value  for which (w; zt) = for all three their respective updates is given in Table 1. The pseudo-code of the additive algorithm for all three settings is given in Fig. 1. We now discuss the initialization of w1. For classification and regression a reasonable choice for w1 is the zero vector. However, in the case of uniclass initializing w1 to be the zero vector might incur large losses if, for instance, all the instances are located far away from the origin. A more sensible choice for uniclass is to initialize w1 to be one of the examples. For simplicity of the description we assume that we are provided with an example x0 prior to the run of the algorithm and initialize w1 = x0. To conclude this section we note that for all three cases the weight vector wt is a linear combination of the instances. This representation enables us to employ kernels [15].
+
+problems is equal to, t = (w; zt)/ vt 2 . A summary of the discrepancy functions and
+
+4 Analysis The following theorem provides a unified loss bound for all three settings. After proving the theorem we discuss a few of its implications. Theorem 1 Let z1, z2, . . . , zt, . . . be a sequence of examples for one of the problems de-
+
+scribed in Table 1. Assume that there exist w t. Then if the additive PA algorithm is run with T  1
+
+T T
+
+( (wt; zt))2 + 2( - )
+
+and such that (w ; zt) = 0 for all
+
+ , the following bound holds for any
+
+(wt; zt)  B w - w1 2 , (8)
+
+t=1 t=1
+
+where for classification and regression B is a bound on the squared norm of the instances
+
+(t : B  xt
+
+2 2
+
+) and B = 1 for uniclass.
+
+
+Proof: Define t =
+
+T t=1
+
+wt - w
+
+2
+
+- wt
+
++1
+
+- wT 2
+
+. We prove the theorem by bounding
+
+t from above and below. First note that
+
+T
+
+t = w1 - w This provides an upper bound on
+
+t=1
+
+t 
+
+2
+
+- wT
+
+t=1
+
+t is a telescopic sum and therefore
+
+2
+
+ w1 - w 2 . (9) - w +1
+
+t t. In the following we prove the lower bound
+
+(wt; zt) B ( (wt; zt) + 2( - )) . (10)
+
+First note that we do not modify wt if
+
+holds when
+
+(wt; zt) = 0. Therefore, this inequality trivially
+
+(wt; zt) = 0 and thus we can restrict ourselves to rounds on which the
+
+discrepancy is larger than , which implies that
+
+round then by rewriting wt +1
+
+t
+
+= = =
+
+wt - w wt - w
+
+-t 2
+
+vt
+
+2 2
+
+(wt; zt) = (wt; zt) - . Let t be such a as wt + tvt we get,
+
+t+1
+
+- t - w2
+
+vt
+
+-2w
+
+2 =
+
+wt - w
+
+2 2
+
++ 2t(vt · (wt - w )) +
+
+- wt + tvt2- w
+
+wt - w
+
+2
+
++ 2tvt · (w - wt) . (11)
+
+Using the fact that -vt is the gradient of the convex function (w; zt) at wt we have, (w ; zt) - (wt; zt)  (-vt) · (w - wt) . Adding and subtracting from the left-hand side of Eq. (12) and rearranging we get, vt · (w - wt)  (wt; zt) - + - (w ;zt) . Recall that (wt; zt) - = (wt; zt) and that  (w ;zt). Therefore, ((wt; zt) - ) + ( - (w ; zt))  (wt; zt) + ( - ) . Combining Eq. (11) with Eqs. (13-14) we get
+
+t  -t
+
+=
+
+2 2 vt + 2t (
+
+2 + 2
+
+(12)
+
+(13)
+
+(14)
+
+t -t vt
+
+(wt; zt) + ( - )) (wt; zt) + 2( - )
+
+. (15)
+
+Plugging t =
+
+(wt; zt)/ vt t 
+
+2
+
+2 into Eq. (15) we get
+
+(wt; zt)
+
+2 vt
+
+( (wt; zt) + 2( - )) .
+
+For uniclass vt
+
+we have vt
+
+2
+
+is always equal to 1 by construction and for classification and regression xt  B which gives, 2
+
+t  (wt; zt) B ( (wt; zt) + 2( - )) .
+
+=
+
+Comparing the above lower bound with the upper bound in Eq. (9) we get
+
+T T
+
+( (wt; zt))2 + 2( - ) (wt; zt)  B w - w1 2 .
+
+t=1 t=1
+
+This concludes the proof. Let us now discuss the implications of Thm. 1. We first focus on the classification case. Due to the realizability assumption, there exist w
+
+and such that for all t, (w ; zt) = 0
+
+which implies that yt(w ·xt=w-/ . Dividing w by its norm.we can rewrite the latter as ) ^ ^ w and ^ = | |/ w The parameter ^ is often
+
+yt(w · xt)  ^ where w
+
+
+referred to as the margin of a unit-norm separating hyperplane. Now, setting get that = -1 we
+
+to obtain two loss bounds for the hinge loss in a classification setting. First, note that by (w; z) = [1 - y(w · x)]+ ­ the hinge loss for classification. We now use Thm. 1
+
+also setting w = w /^ and thus ^
+
+side of Eq. (8) vanishes as =
+
+T
+
+= -1 and thus, = -1 we get that the second term on the left hand
+
+([1 - yt(wt · xt)]+)2  B 2 w = B (^ )2 . (17)
+
+t=1
+
+We thus have obtained a bound on the squared hinge loss. The same bound was also derived by Herbster [8]. We can immediately use this bound to derive a mistake bound for In this case, [1 - yt(wt · xt)]+  1 and therefore the number of prediction mistakes is the PA algorithm. Note that the algorithm makes a prediction mistake iff yt(wt · xt)  0. bounded by B/(^ )2. This bound is common to online algorithms for classification such as ROMMA [14]. We can also manipulate the result of Thm. 1 to obtain a direct bound on the hinge loss. Using again = -1 and omitting the first term in the left hand side of Eq. (8) we get,
+
+T
+
+2(-1 - ) [1 - yt(wt · xt)]+  B w = 2w /^ , which implies that ^
+
+t=1
+
+2 .
+
+By setting w
+
+to get a bound on the cumulative hinge loss,
+
+T
+
+= -2, we can further simplify the above
+
+B
+
+[1 - yt(wt · xt)]+  2 (^
+
+)2
+
+.
+
+t=1
+
+To conclude this section, we would like to point out that the PA online algorithm can also be used as a building block for a batch algorithm. Concretely, let S = {z1, . . . , zm} be a fixed training set and let   R be a small positive number. We start with an initial weight vector w1 and then invoke the PA algorithm as follows. We choose an example z  S such that (w1; z)2 >  and present z to the PA algorithm. We repeat this process and obtain
+
+w2, w3, . . . until the T 'th iteration on which for all z  S,
+
+the batch algorithm is wT . Due to the bound of Thm. 1, T is at most B w -w1 .
+
+(wT ; z)2  . The output of
+
+2 / and
+
+Moreover, in the following
+
+lemma we show that the norm of wT cannot be too large. Since wT achieves a small by construction the loss of wT on any z  S is at most empirical loss and its norm is small, it can be shown using classical techniques (cf. [15]) that the loss of wT on unseen data is small as well. Lemma 2 Under the same conditions of Thm. 1, the following bound holds for any T  1 wT - w1  2 w - w1 . Proof: First note that the inequality trivially holds for T = 1 and thus we focus on the case T > 1. We use the definition of t from the proof of Thm. 1. Eq. (10) implies that t is non-negative for all t. Therefore, we get from Eq. (9) that
+
+T -1
+
+0  t = w1 - w
+
+t=1
+
+2
+
+- wT - w 2 . (18)
+
+Rearranging the terms in Eq. (18) we get that wT - w the triangle inequality to get the bound,
+
+wT - w1 This concludes the proof. =  (wT - w )++ (w
+
+wT - w
+
+w - w1)
+
+- w1
+
+ w - w1 . Finally, we use
+
+ 2 w - w1 .
+
+
+5 A Modification for the Unrealizable Case We now briefly describe an algorithm for the unrealizable case. This algorithm applies only to regression and classification problems. The case of uniclass is more involved and will be discussed in detail elsewhere. The algorithm employs two parameters. The first is the insensitivity parameter which defines the loss function as in the realizable case. However, in this case we do not assume that there exists w that achieves zero loss over the sequence. We instead measure the loss of the online algorithm relative to the loss of any vector w . The second parameter,  > 0, is a relaxation parameter. Before describing the effect of this parameter we define the update step for the unrealizable case. As in the realizable case, the realizable case. However, the scaling factor t is modified and is set to, t = . The following theorem provides a loss bound for the online algorithm relative to the loss of any fixed weight vector w . Theorem 3 Let z1 = (x1, y1), z2 = (x2, y2), . . . , zt = (xt, yt), . . . be a sequence of classification or regression examples. Let w be any vector in Rn. Then if the PA algorithm for the unrealizable case is run with , and with  > 0, the following bound holds for any
+
+algorithm is conservative. That is, if the loss on example zt is zero then wt +1
+
+case the loss is positive the update rule is wt +1
+
+= wt. In
+
+= wt + tvt where vt is the same as in the
+
+(wt; zt) vt + 
+
+2
+
+T  1 and a constant B satisfying B  xt
+
+T
+
+( (wt; zt))2
+
+2
+
+,
+
+2
+
+T
+
+ ( + B) w - w1 + 1 + B  ( (w ; zt))2 . (19)
+
+t=1 t=1
+
+The proof of the theorem is based on a reduction to the realizable case (cf. [4, 13, 14]) and is omitted due to the lack of space. 6 Extensions There are numerous potential extensions to our approach. For instance, if all the components of the instances are non-negative we can derive a multiplicative version of the PA algorithm. The multiplicative PA algorithm maintains a weight vector wt  Pn where
+
+Pn = {x : x  Rn+, n j=1 xj = 1}. The multiplicative update of wt is,
+
+wt
+
++1,j
+
+= (1/Zt) wt,jetvt,j ,
+
+where vt is the same as the one used in the additive algorithm (Table 1), t now becomes
+
+4 (wt; zt)/ vt
+
+and Zt =
+
+n j=1
+
+2
+
+
+
+for regression and classification and (wt; zt)/(8 vt
+
+2
+
+
+
+) for uniclass
+
+wt,jetvt,j is a normalization factor. For the multiplicative PA we can
+
+prove the following loss bound.
+
+for all t. Let DRE (w w ) =
+
+Theorem 4 Let z1, z2, . . . , zt = (xt, yt), . . . be a sequence of examples such that xt,j  0 w . Assume that there exist w and such that (w ; zt) = 0 for all t. Then when the multiplicative version of the PA algorithm is run with > , the following bound holds for
+
+j wj log(wj/wj) denote the relative entropy between w and
+
+any T  1,
+
+T T
+
+( (wt; zt))2 + 2( - ) (wt; zt)  1 B 2 DRE (w w1) ,
+
+t=1 t=1
+
+where for classification and regression B is a bound on the square of the infinity norm of
+
+the instances (t : B  xt
+
+2
+
+
+
+) and B = 16 for uniclass.
+
+
+The proof of the theorem is rather technical and uses the proof technique of Thm. 1 in conjunction with inequalities on the logarithm of Zt (see for instance [7, 11, 9]). An interesting question is whether the unified view of classification, regression, and uniclass can be exported and used with other algorithms for classification such as ROMMA [14] and ALMA [5]. Another, rather general direction for possible extension and divergences such as the Bregman divergence. The resulting optimization problem may be solved via Bregman projections. In this case it might be possible to derive general loss bounds, see for example [12]. We are currently exploring generalizations of our framework to other decision tasks such as distance-learning [16] and online convex programming [17]. References [1] H. H. Bauschke and J. M. Borwein. On projection algorithms for solving convex feasibility problems. SIAM Review, 1996. [2] Y. Censor and S. A. Zenios. Parallel Optimization.. Oxford University Press, 1997. [3] K. Crammer and Y. Singer. Ultraconservative online algorithms for multiclass problems. Jornal of Machine Learning Research, 3:951­991, 2003. [4] Y. Freund and R. E. Schapire. Large margin classification using the perceptron algorithm. Machine Learning, 37(3):277­296, 1999. [5] C. Gentile. A new approximate maximal margin classification algorithm. Journal of Machine Learning Research, 2:213­242, 2001. [6] C. Gentile and M. Warmuth. Linear hinge loss and average margin. In NIPS'98. [7] D. P. Helmbold, R. E. Schapire, Y. Singer, and M. K. Warmuth. A comparison of new and old algorithms for a mixture estimation problem. In COLT'95.
+
+surfaces when replacing the Euclidean distance between wt +1 and wt with other distances
+
+[8] M. Herbster. COLT'01. Learning additive models online with fast evaluating kernels. In
+
+[9] J. Kivinen, D. P. Helmbold, and M. Warmuth. Relative loss bounds for single neurons. IEEE Transactions on Neural Networks, 10(6):1291­1304, 1999. [10] J. Kivinen, A. J. Smola, and R. C. Williamson. Online learning with kernels. In NIPS'02. [11] J. Kivinen and M. K. Warmuth. Exponentiated gradient versus gradient descent for linear predictors. Information and Computation, 132(1):1­64, January 1997. [12] J. Kivinen and M. K. Warmuth. Relative loss bounds for multidimensional regression problems. Journal of Machine Learning, 45(3):301­329, July 2001. [13] N. Klasner and H. U. Simon. From noise-free to noise-tolerant and from on-line to batch learning. In COLT'95. [14] Y. Li and P. M. Long. The relaxed online maximum margin algorithm. Machine Learning, 46(1­3):361­387, 2002. [15] V. N. Vapnik. Statistical Learning Theory. Wiley, 1998. [16] E. Xing, A. Y. Ng, M. Jordan, and S. Russel. Distance metric learning, with application to clustering with side-information. In NIPS'03. [17] M. Zinkevich. Online convex programming and generalized infinitesimal gradient ascent. In ICML'03.
+
+

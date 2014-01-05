@@ -1,0 +1,473 @@
+Learning Semantic Similarity
+Jaz Kandola John Shawe-Taylor
+Royal Holloway, University of London
+fjaz, johng@cs.rhul.ac.uk
+Nello Cristianini
+University of California, Berkeley
+nello@support-vector.net
+Abstract
+The standard representation of text documents as bags of words
+suers from well known limitations, mostly due to its inability to
+exploit semantic similarity between terms. Attempts to incorpo-
+rate some notion of term similarity include latent semantic index-
+ing [8], the use of semantic networks [9], and probabilistic methods
+[5]. In this paper we propose two methods for inferring such sim-
+ilarity from a corpus. The rst one denes word-similarity based
+on document-similarity and viceversa, giving rise to a system of
+equations whose equilibrium point we use to obtain a semantic
+similarity measure. The second method models semantic relations
+by means of a diusion process on a graph dened by lexicon and
+co-occurrence information. Both approaches produce valid kernel
+functions parametrised by a real number. The paper shows how
+the alignment measure can be used to successfully perform model
+selection over this parameter. Combined with the use of support
+vector machines we obtain positive results.
+1 Introduction
+Kernel-based algorithms exploit the information encoded in the inner-products be-
+tween all pairs of data items (see for example [1]). This matches very naturally the
+standard representation used in text retrieval, known as the 'vector space model',
+where the similarity of two documents is given by the inner product between high
+dimensional vectors indexed by all the terms present in the corpus. The combina-
+tion of these two methods, pioneered by [6], and successively explored by several
+others, produces powerful methods for text categorization. However, such an ap-
+proach suers from well known limitations, mostly due to its inability to exploit
+semantic similarity between terms: documents sharing terms that are dierent but
+semantically related will be considered as unrelated. A number of attempts have
+been made to incorporate semantic knowledge into the vector space representation.
+Semantic networks have been considered [9], whilst others use co-occurrence analy-
+sis where a semantic relation is assumed between terms whose occurrence patterns
+in the documents of the corpus are correlated [3]. Such methods are also limited in
+their exibility, and the question of how to infer semantic relations between terms
+or documents from a corpus remains an open issue. In this paper we propose two
+methods to model such relations in an unsupervised way. The structure of the paper
+is as follows. Section 2 provides an introduction to how semantic similarity can be
+
+introduced into the vector space model. Section 3 derives a parametrised class of
+semantic proximity matrices from a recursive denition of similarity of terms and
+documents. A further parametrised class of kernels based on alternative similarity
+measures inspired by considering diusion on a weighted graph of documents is
+given in Section 4. In Section 5 we show how the recently introduced alignment
+measure [2] can be used to perform model selection over the classes of kernels we
+have dened. Positive experimental results with the methods are reported in Section
+5 before we draw conclusions in Section 6.
+2 Representing Semantic Proximity
+Kernel based methods are an attractive choice for inferring relations from textual
+data since they enable us to work in a document-by-document setting rather than
+in a term-by-term one [6]. In the vector space model, a document is represented
+by a vector indexed by the terms of the corpus. Hence, the vector will typically
+be sparse with non-zero entries for those terms occurring in the document. Two
+documents that use semantically related but distinct words will therefore show no
+similarity. The aim of a semantic proximity matrix [3] is to correct for this by
+indicating the strength of the relationship between terms that even though distinct
+are semantically related.
+The semantic proximity matrix P is indexed by pairs of terms a and b, with the
+entry P ab = P ba giving the strength of their semantic similarity. If the vectors
+corresponding to two documents are d i , d j , their inner product is now evaluated
+through the kernel
+k(d i ; d j ) = d 0
+i Pd j ;
+where x 0 denotes the transpose of the vector or matrix x. The symmetry of P
+ensures that the kernel is symmetric. We must also require that P is positive semi-
+denite in order to satisfy Mercer's conditions. In this case we can decompose
+P = R 0 R for some matrix R, so that we can view the semantic similarity as a
+projection into a semantic space
+ : d 7! Rd; since k(d i ; d j ) = d 0
+i Pd j = hRd i ; Rd j i:
+The purpose of this paper is to infer (or rene) the similarity measure between
+examples by taking into account higher order correlations, thereby performing un-
+supervised learning of the proximity matrix from a given corpus. We will propose
+two methods based on two dierent observations.
+The rst method exploits the fact that the standard representation of text docu-
+ments as bags of words gives rise to an interesting duality: while documents can be
+seen as bags of words, simultaneously terms can be viewed as bags of documents
+{ the documents that contain them. In such a model, two documents that have
+highly correlated term-vectors are considered as having similar content. Similarly,
+two terms that have a correlated document-vector will have a semantic relation.
+This is of course only a rst order approximation since the knock-on eect of the
+two similarities on each other needs to be considered. We show that it is possible
+to dene term-similarity based on document-similarity, and vice versa, to obtain
+a system of equations that can be solved in order to obtain a semantic proximity
+matrix P .
+The second method exploits the representation of a lexicon (the set of all words in
+a given corpus) as a graph, where the nodes are indexed by words and where co-
+occurrence is used to establish links between nodes. Such a representation has been
+studied recently giving rise to a number of topological properties [4]. We consider
+
+the idea that higher order correlations between terms can aect their semantic
+relations as a diusion process on such a graph. Although there can be exponentially
+many paths connecting two given nodes in the graph, the use of diusion kernels [7]
+enables us to obtain the level of semantic relation between any two nodes e∆ciently,
+so inferring the semantic proximity matrix from data.
+3 Equilibrium Equations for Semantic Similarity
+In this section we consider the rst of the two methods outlined in the previous
+section. Here the aim is to create recursive equations for the relations between
+documents and between terms.
+Let X be the feature example (term/document in the case of text data) matrix
+in a possibly kernel-dened feature space, so that X 0 X gives the kernel matrix K
+and XX 0 gives the correlations between dierent features over the training set.
+We denote this latter matrix with G. Consider the similarity matrices dened
+recursively by
+^
+K = X 0 ^
+GX +K and ^
+G = X 0 ^
+KX +G (1)
+We can interpret this as augmenting the similarity given by K through indirect
+similarities measured by G and vice versa. The factor  < kKk 1 ensures that the
+longer range eects decay exponentially. Our rst result characterizes the solution
+of the above recurrences.
+Proposition 1 Provided  < kKk 1 = kGk 1 , the kernels ^
+K and ^
+G that solve the
+recurrences (1) are given by
+^
+K = K(I K) 1 and ^
+G = G(I G) 1
+Proof : First observe that
+K(I K) 1 = K(I K) 1 1
+ (I K) 1 + 1
+ (I K) 1
+= 1
+ (I K)(I K) 1 + 1
+ (I K) 1
+= 1
+ (I K) 1 1
+ I
+Now if we substitute the second recurrence into the rst we obtain
+^
+K =  2 X 0 X ^
+KX 0 X + X 0 XX 0 X +K
+=  2 K(K(I K) 1 )K + K 2 +K
+=  2 K(
+1
+ (I K) 1 1
+ I)K + K 2 +K
+= K(I K) 1 K +K(I K) 1 (I K)
+= K(I K) 1
+showing that the expression does indeed satisfy the recurrence. Clearly, by the
+symmetry of the denition the expression for ^
+G also satises the recurrence.
+In view of the form of the solution we introduce the following denition:
+Denition 2 von Neumann Kernel Given a kernel K the derived kernel ^
+K() =
+K(I K) 1 will be referred to as the von Neumann kernel.
+
+Note that we can view ^
+K() as a kernel based on the semantic proximity matrix
+P =  ^
+G+ I since
+X 0 PX = X 0 ( ^
+G + I)X = X 0 ^
+GX +K = ^
+K():
+Hence, the solution ^
+G denes a rened similarity between terms/features. In the
+next section, we will consider the second method of introducing semantic similarity
+derived from viewing the terms and documents as vertices of a weighted graph.
+4 Semantic Similarity as a Diusion Process
+Graph like structures within data occur frequently in many diverse settings. In
+the case of language, the topological structure of a lexicon graph has recently been
+analyzed [4]. Such a graph has nodes indexed by all the terms in the corpus, and
+the edges are given by the co-occurrence between terms in documents of the corpus.
+Although terms that are connected are likely to have related meaning, terms with
+a higher degree of separation would not be considered as being related.
+A diusion process on the graph can also be considered as a model of semantic
+relations existing between indirectly connected terms. Although the number of
+possible paths between any two given nodes can grow exponentially, results from
+spectral graph theory have been recently used by [7] to show that it is possible to
+compute the similarity between any two given nodes e∆ciently without examining
+all possible paths. It is also possible to show that the similarity measure obtained
+in this way is a valid kernel function. The exponentiation operation used in the
+denition, naturally yields the Mercer conditions required for valid kernel functions.
+An alternative insight into semantic similarity, to that presented in section 2, is
+aorded if we multiply out the expression for ^
+K(), ^
+K() = K(I K) 1 =
+P 1
+t=1  t 1 K t : The entries in the matrix K t are given by
+K t
+ij =
+X
+u 2 f1; : : : ; mg t
+u 1 = i; u t = j
+t 1
+Y
+`=1
+K u ` u `+1
+;
+that is the sum of the products of the weights over all paths of length t that start
+at vertex i and nish at vertex j in the weighted graph on the examples. If we
+view the connection strengths as channel capacities, the entry K t
+ij can be seen to
+measure the sum over all routes of the products of the capacities. If the entries
+satisfy that they are all positive and for each vertex the sum of the connections
+is 1, we can view the entry as the probability that a random walk beginning at
+vertex i is at vertex j after t steps. It is for these reasons that the kernels dened
+using these combinations of powers of the kernel matrix have been termed diusion
+kernels [7]. A similar equation holds for G t . Hence, examples that both lie in a
+cluster of similar examples become more strongly related, and similar features that
+occur in a cluster of related features are drawn together in the semantic proximity
+matrix P . We should stress that the emphasis of this work is not in its diusion
+connections, but its relation to semantic proximity. It is this link that motivates
+the alternative decay factors considered below.
+The kernel ^
+K combines these indirect link kernels with an exponentially decaying
+weight. This suggests an alternative weighting scheme that shows faster decay for
+increasing path length,
+~
+K() = K
+1
+X
+t=1
+ t K t
+t! = K exp(K)
+
+The next proposition gives the semantic proximity matrix corresponding to ~
+K().
+Proposition 3 Let ~
+K() = K exp(K). Then ~
+K() corresponds to a semantic
+proximity matrix exp(G).
+Proof : Let X = UV 0 be the singular value decomposition of X , so that K =
+V V 0 is the eigenvalue decomposition of K, where  =  0 . We can write ~
+K as
+~
+K = V  exp()V 0 = X 0 U 1  exp() 1 U 0 X
+= X 0 U exp()U 0 X = X 0 exp(G)X; as required.
+The above leads to the denition of the second kernel that we consider.
+Denition 4 Given a kernel K the derived kernels ^
+K() = K exp(K) will be
+referred to as the exponential kernels.
+5 Experimental Methods
+In the previous sections we have introduced two new kernel adaptations, in both
+cases parameterized by a positive real parameter . In order to apply these kernels
+on real text data, we need to develop a method of choosing the parameter . Of
+course one possibility would be just to use cross-validation as considered by [7].
+Rather than adopt this rather expensive methodology we will use a quantitative
+measure of agreement between the diusion kernels and the learning task known as
+alignment, which measures the degree of agreement between a kernel and target [2].
+Denition 5 Alignment The (empirical) alignment of a kernel k 1 with a kernel
+k 2 with respect to the sample S is the quantity
+A(S; k 1 ; k 2 ) = hK 1 ; K 2 i F
+p
+hK 1 ; K 1 i F hK 2 ; K 2 i F
+;
+where K i is the kernel matrix for the sample S using kernel k i .
+where we use the following denition of inner products between Gram matrices
+hK 1 ; K 2 i F =
+m
+X
+i;j=1
+K 1 (x i ; x j )K 2 (x i ; x j ) (2)
+corresponding to the Frobenius inner product. From a text categorization perspec-
+tive this can also be viewed as the cosine of the angle between two bi-dimensional
+vectors K 1 and K 2 , representing the Gram matrices. If we consider K 2 = yy 0 , where
+y is the vector of outputs (+1/-1) for the sample, then
+A(S; K; yy 0 ) = hK; yy 0 i F
+p
+hK; KiF hyy 0 ; yy 0 i F
+= y 0 Ky
+mkKkF (3)
+The alignment has been shown to possess several convenient properties [2]. Most
+notably it can be e∆ciently computed before any training of the kernel machine
+takes place, and based only on training data information; and since it is sharply
+concentrated around its expected value, its empirical value is stable with respect to
+dierent splits of the data.
+We have developed a method for choosing  to optimize the alignment of the re-
+sulting matrix ~
+K() or ^
+K() to the target labels on the training set. This method
+
+follows similar results presented in [2], but here the parameterization is non-linear
+in  so that we cannot solve for the optimal value. We rather seek the optimal value
+using a line search over the range of possible values of  for the value at which the
+derivative of the alignment with respect to  is zero. The next two propositions
+will give equations that are satised at this point.
+Proposition 6 If  ? is the solution of  ? = argmax  A(S; ~
+K(); yy 0 ) and v i ;  i are
+the eigenvector/eigenvalue pairs of the kernel matrix K then
+m
+X
+i=1
+ 2
+i exp(2 ?  i )
+m
+X
+i=1
+hv i ; yi 2 exp( ?  i ) 2
+i =
+m
+X
+i=1
+ i exp( ?  i )hv i ; yi 2
+m
+X
+i=1
+ 3
+i exp(2 ?  i )
+Proof : First observe that ~
+K() = V MV 0 =
+P m
+i=1  i v i v 0
+i , where M ii =  i () =
+ i exp( i ). We can express the alignment of ~
+K() as
+A(S; ~
+K(); yy 0 ) =
+P m
+i=1  i ()hv i ; yi 2
+m
+pP m
+i=1  i () 2
+:
+The function is a dierentiable function of  and so at its maximal value the deriva-
+tive will be zero. Taking the derivative of this expression and setting it equal to
+zero gives the condition in the proposition statement.
+Proposition 7 If  ? is the solution of  ? = argmax 2(0;kKk 1 ) A(S; ~
+K(); yy 0 ), and
+v i ;  i are the eigenvector eigenvalue pairs of the kernel matrix K then
+m
+X
+i=1
+1
+( ? (1  ?  i )) 2
+m
+X
+i=1
+hv i ; yi 2 (2 ?  i 1)
+( ? (1  ?  i )) 2
+=
+m
+X
+i=1
+hv i ; yi 2
+ ? (1  ?  i )
+m
+X
+i=1
+2 ?  i 1
+( ? (1  ?  i )) 3
+Proof : The proof is identical to that of Proposition 6 except that M ii =  i () =
+(1  i ) 1
+ .
+Denition 8 Line Search Optimization of the alignment can take place by using
+a line search of the values of  to nd a maximum point of the alignment by seeking
+points at which the equations given in Proposition 6 and 7 hold.
+5.1 Results
+To demonstrate the performance of the proposed algorithm for text data, the Med-
+line1033 dataset commonly used in text processing [3] was used. This dataset con-
+tains 1033 documents and 30 queries obtained from the national library of medicine.
+In this work we focus on query20. A Bag of Words kernel was used [6]. Stop words
+and punctuation were removed from the documents and the Porter stemmer was
+applied to the words. The terms in the documents were weighted according to a
+variant of the tfidf scheme. It is given by log(1 + tf)  log(m=df ), where tf repre-
+sents the term frequency, df is used for the document frequency and m is the total
+number of documents. A support vector classier (SVC) was used to assess the per-
+formance of the derived kernels on the Medline dataset. A 10-fold cross validation
+procedure was used to nd the optimal value for the capacity control parameter
+'C'. Having selected the optimal 'C' parameter, the SVC was re-trained ten times
+using ten random training and test dataset splits. Error results for the dierent
+algorithms are presented together with F1 values. The F1 measure is a popular
+statistic used in the information retrieval community for comparing performance of
+
+Train Align SVC Error F1 
+K80 0.851 (0.012) 0.017 (0.005) 0.795 (0.060) 0.197 (0.004)
+B80 0.423 (0.007) 0.022 (0.007) 0.256 (0.351) -
+K50 0.863 (0.025) 0.018 (0.006) 0.783 (0.074) 0.185 (0.008)
+B50 0.390 (0.009) 0.024 (0.004) 0.456 (0.265) -
+K20 0.867 (0.029) 0.019 (0.004) 0.731 (0.089) 0.147 (0.04)
+B20 0.325 (0.009) 0.030 (0.005) 0.349 (0.209) -
+Table 1: Medline dataset - Mean and associated standard deviation alignment, F1
+and SVC error values for a SVC trained using the Bag of Words kernel (B) and the
+exponential kernel (K). The index represents the percentage of training points.
+Train Align SVC Error F1 
+^
+K80 0.758 (0.015) 0.017 (0.004) 0.765 (0.020) 0.032 (0.001)
+B80 0.423(0.007) 0.022 (0.007) 0.256 (0.351) -
+^
+K50 0.766 (0.025) 0.018 (0.005) 0.701 (0.066) 0.039 (0.008)
+B50 0.390 (0.009) 0.024 (0.004) 0.456 (0.265) -
+^
+K20 0.728 (0.012) 0.028 (0.004) 0.376 (0.089) 0.029 (0.07)
+B20 0.325 (0.009) 0.030 (0.005) 0.349 (0.209) -
+Table 2: Medline dataset - Mean and associated standard deviation alignment, F1
+and SVC error values for a SVC trained using the Bag of Words kernel (B) and the
+von Neumann ( ^
+K). The index represents the percentage of training points.
+algorithms typically on uneven data. F1 can be computed using F1 = 2 ~
+PR
+~
+P+R
+, where
+~
+P represents precision i.e. a measure of the proportion of selected items that the
+system classied correctly, and R represents recall i.e. the proportion of the target
+items that the system selected.
+Applying the line search procedure to nd the optimal value of  for the diusion
+kernels. All of the results are averaged over 10 random splits with the standard
+deviation given in brackets. Table 1 shows the results of using the Bag of Words
+kernel matrix (B) and the exponential kernel matrix (K). Table 2 presents the results
+of using the von Neumann kernel matrix ( ^
+K) together with the Bag of Words kernel
+matrix for dierent sizes of the training data. The index represents the percentage
+of training points. The rst column of both table 1 and 2 shows the alignments of
+the Gram matrices to the rank 1 labels matrix for dierent sizes of training data.
+In both cases the results presented indicate that the alignment of the diusion
+kernels to the labels is greater than that of the Bag of Words kernel matrix by
+more than the sum of the standard deviations across all sizes of training data. The
+second column of the tables represents the support vector classier (SVC) error
+obtained using the diusion Gram matrices and the Bag of Words Gram matrix.
+The SVC error for the diusion kernels shows a decrease with increasing alignment
+value. F1 values are also shown and in all instances show an improvement for the
+diusion kernel matrices. An interesting observation can be made regarding the F1
+value for the von Neumann kernel matrix trained using 20% training data ( ^
+K 20 ).
+Despite an increase in alignment value and reduction of SVC error the F1 value
+does not increase as much as that for the exponential kernel trained using the same
+proportion of the data K 20 . This observation implies that the diusion kernel needs
+
+more data to be eective. This will be investigated in future work.
+6 Conclusions
+We have proposed and compared two dierent methods to model the notion of se-
+mantic similarity between documents, by implicitly dening a proximity matrix P
+in a way that exploits high order correlations between terms. The two methods
+dier in the way the matrix is constructed. In one view, we propose a recursive def-
+inition of document similarity that depends on term similarity and vice versa. By
+solving the resulting system of kernel equations, we eectively learn the parameters
+of the model (P ), and construct a kernel function for use in kernel based learning
+methods. In the other approach, we model semantic relations as a diusion pro-
+cess in a graph whose nodes are the documents and edges incorporate rst-order
+similarity. Diusion e∆ciently takes into account all possible paths connecting two
+nodes, and propagates the `similarity' between two remote documents that share
+`similar terms'. The kernel resulting from this model is known in the literature
+as the `diusion kernel'. We have experimentally demonstrated the validity of the
+approach on text data using a novel approach to set the adjustable parameter  in
+the kernels by optimising their `alignment' to the target on the training set. For
+the dataset partitions substantial improvements in performance over the traditional
+Bag of Words kernel matrix were obtained using the diusion kernels and the line
+search method. Despite this success, for large imbalanced datasets such as those en-
+countered in text classication tasks the computational complexity of constructing
+the diusion kernels may become prohibitive. Faster kernel construction methods
+are being investigated for this regime.
+References
+[1] N. Cristianini and J. Shawe-Taylor. An Introduction to Support Vector Ma-
+chines. Cambridge University Press, Cambridge, UK, 2000.
+[2] Nello Cristianini, John Shawe-Taylor, and Jaz Kandola. On kernel target align-
+ment. In Proceedings of the Neural Information Processing Systems, NIPS'01,
+2002.
+[3] Nello Cristianini, John Shawe-Taylor, and Huma Lodhi. Latent semantic kernels.
+Journal of Intelligent Information Systems, 18(2):127{152, 2002.
+[4] R. Ferrer and R.V. Sole. The small world of human language. Proceedings of the
+Royal Society of London Series B - Biological Sciences, pages 2261{2265, 2001.
+[5] Thomas Hofmann. Probabilistic latent semantic indexing. In Research and
+Development in Information Retrieval, pages 50{57, 1999.
+[6] T. Joachims. Text categorization with support vector machines. In Proceedings
+of European Conference on Machine Learning (ECML), 1998.
+[7] R.I. Kondor and J. Laerty. Diusion kernels on graphs and other discrete struc-
+tures. In Proceedings of Intenational Conference on Machine Learning (ICML
+2002), 2002.
+[8] Todd A. Letsche and Michael W. Berry. Large-scale information retrieval with
+latent semantic indexing. Information Sciences, 100(1-4):105{137, 1997.
+[9] G. Siolas and F. d'Alch Buc. Support vector machines based on a semantic
+kernel for text categorization. In IEEE-IJCNN 2000), 2000.
+

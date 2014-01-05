@@ -1,0 +1,428 @@
+To appear in: Advances in Neural Information Processing Systems 13 eds. T. K. Leen, T. G.
+Diettrich, V. Tresp. MIT Press (2001)
+Using the Nystrom Method to Speed Up
+Kernel Machines
+Christopher K. I. Williams and Matthias Seeger
+Institute for Adaptive and Neural Computation
+University of Edinburgh
+5 Forrest Hill, Edinburgh EH1 2QL
+c.k.i.williams@ed.ac.uk, seeger@dai.ed.ac.uk
+http://anc.ed.ac.uk
+Abstract
+A major problem for kernel-based predictors (such as Support Vec-
+tor Machines and Gaussian processes) is that the amount of com-
+putation required to nd the solution scales as O(n 3 ), where n is
+the number of training examples. We show that an approximation
+to the eigendecomposition of the Gram matrix can be computed by
+the Nystrom method (which is used for the numerical solution of
+eigenproblems). This is achieved by carrying out an eigendecom-
+position on a smaller system of size m < n, and then expanding
+the results back up to n dimensions. The computational complex-
+ity of a predictor using this approximation is O(m 2 n). We report
+experiments on the USPS and abalone data sets and show that we
+can set m  n without any signicant decrease in the accuracy of
+the solution.
+In recent years much attention has been paid to kernel-based classiers such as
+Support Vector Machines (SVMs) (Vapnik, 1995), Gaussian process classiers (e.g.
+see Williams & Barber, 1998) and spline methods (Wahba, 1990). One of the main
+drawbacks of kernel-based classiers is that the computational complexity required
+to nd the solution scales as O(n 3 ), where n is the number of training examples. In
+this paper we present a reduced-rank approximation to the Gram matrix K, giving
+rise to O(m 2 n) computational complexity. This approximation ~
+K is obtained by
+randomly choosing m rows/columns of K (without replacement), and then setting
+~
+K = K n;m K 1
+m;m K m;n , where Kn;m is the n  m block of the original matrix K,
+and with similar denitions for the other blocks. We nd that in practice we can
+set m  n without any signicant decrease in the accuracy of the solution.
+In section 1 of the paper we discuss the theory of the method. Section 2 gives
+experimental results, and we conclude with a discussion in section 3.
+1 Theory of the Nystrom method
+1.1 The Nystrom method for approximating eigenfunctions
+In the theory of kernel machines we consider covariance kernels k(x; y). These can
+be related to an expansion into a feature space of dimension N (typically N is larger
+
+than the dimension of the input space x) so that
+k(x; y) =
+N
+X
+i=1
+ i  i (x) i (y); (1)
+where N  1,  1   2      0 denotes the eigenvalues and  1 ;  2 ; : : : denotes
+the eigenfunctions of the operator whose kernel is k, so that
+Z
+k(y ; x) i (x) p(x)dx =  i  i (y); (2)
+where p(x) denotes the probability density of the input vector x. The eigenfunc-
+tions are p-orthogonal, so that
+R  i (x) j (x)p(x)dx = Æ ij . To approximate this
+eigenfunction equation given an iid sample fx 1 ; : : : ; x q g from p(x), we replace the
+integral over p(x) by an empirical average to obtain
+1
+q
+q
+X
+k=1
+k(y ; x k ) i (x k )   i  i (y): (3)
+The p-orthogonality of the eigenfunctions translates into the empirical constraint
+1
+q
+P q
+k=1  i (x k ) j (x k )  Æ i;j . Equation 3 motivates the matrix eigenproblem
+K (q) U (q) = U (q)  (q) ; (4)
+where K (q) is the q  q Gram matrix with elements K (q)
+ij = K(x i ; x j ) for i; j =
+1; : : : ; q, U (q) 2 R qq is column orthonormal and  (q) is a diagonal matrix with
+entries  (q)
+1   (q)
+2  : : :  (q)
+q  0. If we plug the x j for y into equation 3 and match
+this against equation 4 we arrive at the following approximations:
+ i (x j )  p
+qU (q)
+j;i ;  i   (q)
+i
+q : (5)
+Plugging these back in into into equation (3) we obtain the Nystrom approximation
+to the ith eigenfunction (see, e.g., Baker, 1977, chapter 3)
+ i (y) 
+p q
+ (q)
+i
+q
+X
+k=1
+k(y ; x k )U (q)
+k;i =
+p q
+ (q)
+i
+k y :u (q)
+i ; (6)
+where k y is the vector (k(x 1 ; y); : : : ; k(x q ; y)) T and u
+(q)
+i is the ith column of U (q) .
+Note that equation 6 is identical (up to scaling factors) to equation 4.1 in Scholkopf
+et al. (1998) which describes the projection of a new point x onto the ith eigenvector
+in feature space.
+1.2 Using the Nystrom method to approximate the Gram matrix
+To avoid numerical instabilities due to ill-conditioning it is common practice to
+replace the Gram matrix K by K + I (Neal, 1998) where  is a small positive
+constant called jitter factor. One method to cut down on computational costs is to
+use the eigendecomposition of K
+K = UF F U T
+F (7)
+where UF is orthonormal, F = diag( (F )
+i ) i ;  (F )
+1   (F )
+2      0. Now,
+for some p < n build U 2 R np from the rst p columns of UF and let
+
+ = diag( (F )
+1 ; : : : ;  (F )
+p ). We can then approximate K + I by UU T + I . Ap-
+proximations of this kind are widely used, e.g. in principal component analysis
+(PCA) and can be motivated in a variety of ways.
+If the eigendecomposition is available, using the approximation UU T + I will
+greatly reduce the computational costs of many kernel methods. Note that this ma-
+trix is not singular due to the I term. However, computing the eigendecomposition
+is a O(n 3 ) operation. There are methods to compute the rst p eigenvalues and
+eigenvectors of K, but their average running times are signicantly below O(n 3 )
+only if p  n.
+However, the Nystrom technique described above can be used to compute an ap-
+proximation to the eigenvalues and eigenvectors we require. If we use a subset of the
+training data of size q = m < n to create the matrix eigenproblem of equation 7, we
+can then approximate the eigenfunctions at all n points using equation 5. Let this
+low-rank approximation to K be denoted by ~
+K = ~
+U ~
+ ~
+U T =
+P p
+i=1
+~
+ (n)
+i ~
+u
+(n)
+i (~ u
+(n)
+i ) T ,
+where ~
+ (n)
+i and ~
+u (n)
+i are the Nystrom approximations of the eigenvalues/vectors
+ (n)
+i and u (n)
+i of the n  n matrix. By applying equations 5 and 6 with p  m < n
+(and noting that  (F )
+i =  (n)
+i ; i = 1; : : : ; p and the rst p columns of U and U (n)
+coincide), we arrive at the approximation formulae:
+~  (n)
+i
+def
+= n
+m  (m)
+i ; i = 1; : : : ; p (8)
+~
+u (n)
+i
+def
+=
+r m
+n
+1
+ (m)
+i
+K n;m u (m)
+i i = 1; : : : ; p (9)
+where u (m)
+i is the ith eigenvector of the m  m eigenproblem and K n;m is the
+appropriate n  m submatrix of K. Note that the entries of ~ u (n)
+i at the m points
+are just rescaled versions of u (m)
+i . We can therefore compute an approximation to
+the UU T + I in time O(m 3 + pmn) = O(m 2 n) using the Nystrom technique.
+The nature of the approximation of K for p = m. We consider the quality
+of the approximation ~
+K for K at (i) the m points used for the eigendecomposition
+and (ii) the n m other points. Let K be partitioned into blocks Km;m ; Kn m;m =
+K T
+m;n m and Kn m;n m . Plugging the approximation (9) into ~
+K = ~
+U ~
+ ~
+U T it is
+easy to show that
+~
+K = K n;m K 1
+m;m Km;n : (10)
+Further we see that Km;m = ~
+Km;m ; Km;n m = ~
+Km;n m ; Kn m;m = ~
+Kn m;m , but
+that ~
+Kn m;n m = Kn m;mK 1
+m;m K m;n m . The dierence Kn m;n m ~
+Kn m;n m
+is in fact the Schur complement of Km;m : It is easy to show that equation 10 is
+exact in the case that K has rank m and that m linearly-independent columns are
+chosen.
+1.3 Related work
+We have recently become aware of the work of Frieze et al (1998) who use a weighted
+random subsampling of the rows and columns of a rectangular matrix to compute an
+approximation to the SVD of that matrix. As a special case an approximate eigen-
+decomposition of a SPD matrix can be obtained. Our work gives an independent
+derivation of the result (without the weighting), using Nystrom theory, and applies
+it to kernel machines. Also Smola and Scholkopf (2000) have recently described
+a sparse greedy matrix approximation method. It turns out that the form of our
+
+approximation is identical to theirs, although they grow the approximate matrix,
+searching over which row/column to append next, rather than choosing randomly.
+For a given m, the sparse greedy method produces a better approximation to K,
+but at the expense of more computation. Fine and Scheinberg (2000) have also
+very recently pointed out that the incomplete Cholesky factorization algorithm can
+be used to yield a low-rank approximation to K. There are many other papers on
+approximate methods for kernel machines, but as these do not focus on low-rank
+approximations of K references are omitted due to space limitations.
+1.4 Fast approximate Gaussian process classication and regression
+The technique described above is potentially applicable to a wide range of kernel
+methods, including Gaussian process (GP) and Support Vector machine algorithms.
+We specialize here on GP regression and classication.
+GP regression requires us to solve the system (K+I)a = t where t are the training
+targets. The Bayes predictor is then given by ^
+y(x) = a T k(x) where k(x) is the
+vector of length n with elements k(x i ; x). Replacing the Gram matrix in the linear
+system by the approximation ~
+K, the system can easily be solved using the Woodbury
+formula (see, e.g. Press et al., 1992):
+a = 1
+
+
+t ~
+U
+
+I + ~
+ ~
+U T ~
+U
+ 1
+~
+ ~
+U T t
+
+(11)
+which is O(p 2 n). The memory cost is O(np).
+The posterior for the Gaussian process classication model cannot be computed
+in a tractable way, but an approximation based on the Laplace approximation has
+been proposed which works well in practice (e.g. see Williams and Barber (1998)).
+The method is iterative and requires for each iteration the solution of a system of
+the form
+(I +W (K + I))a = Wy +  (12)
+to be computed, where y = (K + I)a old , W is a diagonal matrix and  and W
+depend on y. Using the approximation ~
+K this can be computed eÆciently as follows.
+Let A = ~
+ ~
+U T . In each iteration, we compute D = I + W , b = D 1 (Wy +) and
+B = D 1 W ~
+U . Then we have by Woodbury's formula:
+a = b B (I +AB) 1 Ab: (13)
+Each iteration is therefore O(p 2 n). The memory cost is again O(np).
+A formula for the computation of determinants analogous to the Woodbury formula
+for matrix inversion is also available. This allows the marginal likelihood P (tj) to
+be approximated eÆciently, and used as a means of selecting the kernel parameters
+. (Williams and Barber (1998) describe how to approximate the marginal likeli-
+hood in the classication case.) Of course other methods like cross-validation could
+also be used for kernel optimization.
+2 Experimental Results
+We present experimental results on classication and regression tasks.
+2.1 Classication Experiments
+Our experiments were carried out using the US Postal Service (USPS) handwritten
+digit database. Each example has 256 inputs, being the scaled grey-level values of
+
+the 1616 pixels. There are 7291 training examples and 2007 test examples. There
+are ten dierent output classes, corresponding to the digits 0; : : : ; 9.
+Gaussian process classiers were trained using the Laplace approximation as de-
+scribed in Williams and Barber (1998). The kernel was of the form k(x; y) =
+v 0 exp( k x y k 2 =(0:5  16 2 )) where the width 0:5 equals twice the average of the
+data variance on each dimension, as used in Scholkopf et al. (1999). The scaling
+factor v 0 was set to the reasonable value of 10. The jitter factor  was set to 10 6 .
+We describe three experiments 1 .
+128 256 512 1024
+20
+40
+60
+80
+100
+10 1 10 10 10
+10 8
+10 9
+10 10
+10 11
+10 12
+(a) (b)
+Figure 1: (a) log-log plot of the number of errors against m. Dashed line shows
+performance of the classier using the full GP classier, the + symbol denotes the
+mean of the 10 results for each m. (b) log-log plot of number of ops against m.
+Experiment 1. In the rst experiment, the task is to discriminate the digits of
+class \4" from the rest. We vary m, the size of the subset used, and for each value
+of m use 10 dierent subsets of training data of size m so as to be able to assess
+the eect of this variability on the results. These results are compared to a score
+of 36 errors (out of 2007) for the full GP classier (i.e. without approximating K).
+In Figure 1(a) we plot (on a log-log scale) the results for m = 1024; 512; 256 and
+128. Good performance is obtained down to m = 256, although it deteriorates for
+m = 128. Good performance can also be obtained using p < m; for example with
+m = 1024 good results are obtained with p = 512; 256 and 128. In Figure 1(b) the
+number of ops taken to compute the MAP value of a (as dened in equation 12)
+is plotted against m; this veries the O(m 2 ) scaling behaviour of the computation.
+Experiment 2. The fact that the best performance obtained is close to (and
+sometimes better than) that of the full GP classier using all 7291 training examples
+suggests that all of the information in the training set is being utilized, not just
+the targets corresponding m training points. To examine this issue in more detail
+we compared the performance of a full GP classier using only a subset of the
+training data of size m, against the Nystrom approximation (with p = m) which
+computes a mm matrix eigendecomposition, but makes use of all n training data
+points. Again for each m we used 10 dierent samples from the n training examples
+(sampled without replacement), and performed paired comparisons. The task was
+to discriminate `4's from the rest of the digits, as in the rst experiment.
+The mean and standard deviation for the performance of each classier for m =
+1 In these classication experiments each ~
+u (n)
+i
+(see equation 9) was normalized to have
+length 1.
+
+m 1024 512 256 128 64
+Ny mean 35.9 34.7 34.5 46.8 101.3
+Ny std dev 1.97 2.54 2.99 6.89 22.92
+GP mean 54.1 64.6 77.2 102.9 127.4
+GP std dev 4.48 6.28 13.16 25.01 28.47
+Di mean 18.2 29.9 42.7 56.1 26.1
+t-statistic 11.02 12.20 9.00 6.37 3.41
+Table 1: Performance of the full GP classier using only m data points (denoted
+GP) compared with the Nystrom classier using a eigendecomposition of size m
+(denoted Ny), for m = 1024; 512; 256; 128; 64. The mean and standard deviation
+of the number of errors is reported for both classiers, along with the mean and
+t-statistic computed from the paired dierences.
+1024; 512; 256; 128; 64 are given in Table 1, along with mean of the dierences
+and the t-statistic computed from the paired dierences. We see that the mean
+performance is always better for the Nystrom classier. As t 0:025;9 = 2:26 all ve
+results are signicant at the 5% level. Note also that the variance due to dierent
+samples of size m is smaller for the Nystrom classier than for the full GP classier.
+0 1 2 3 4 5 6 7 8 9
+GP(7291) 18 15 37 33 36 33 14 15 36 24
+Eig(256) 19 15 35 30 36 28 13 15 33 21
+Ny(256,1024) 15 15 37 36 37 29 14 14 33 20
+Ny(256, 512) 22 14 35 32 32 27 14 13 36 24
+Ny(256,256) 18 15 33 31 26 33 12 18 43 31
+Table 2: Comparison of the errors rates of the GP(7291), Eig(256), Ny(256,1024),
+Ny(256,512) and Ny(256,256) classiers for the 10 dierent tasks.
+Experiment 3. The third experiment considers the results obtained for the ten
+dierent tasks of discriminating one digit from all of the others. In Table 2 we
+give the number of errors for four dierent predictors (a) GP(7291), the full GP
+classier; (b) Eig(256), the GP predictor using an exact eigendecomposition of the
+full K matrix and retaining p = 256 eigenvalues (c) Ny(256,1024) the Nystrom
+predictor using p = 256; m = 1024 (d) Ny(256,512) and (e) Ny(256,256). The
+results in most cases are very similar. Notice that the results for Eig(256) and
+Ny(256,512) are the same as or better than GP(7291) for 9 out of the 10 cases, the
+results of Ny(256,1024) are the same as or better than GP(7291) in 8 out of 10 cases
+and the results of Ny(256,256) are the same as or better than GP(7291) in 7 out of
+10 cases.
+We have also implemented an equal-weight committee of up to 10 Ny(p; m) predic-
+tors for small p and m, but have not found improvements over a single predictor of
+the same size.
+2.2 Regression Experiments
+We have also tested the Nystrom method on the abalone regression problem, taken
+from the UCI repository http://www.ics.uci.edu/~mlearn/MLRepository.html,
+as used by Smola and Scholkopf (2000). The problem has 8 input variables (scaled to
+zero mean and unit variance), 3133 training examples and 1044 test examples. We
+
+used a Gaussian kernel with the same parameter settings as Smola and Scholkopf.
+Excellent agreement with the exact method was obtained for m = 1000; 500 and
+250, but performance declined quite markedly for m = 125.
+3 Discussion
+We have seen above that the Nystrom approximation can allow a very signicant
+speed-up of the computations required for the GP classier without sacricing ac-
+curacy. This speed-up comes about from the insight that matrix eigenproblems of
+dierent dimensions are related because they are all approximations of the eigen-
+function equation 2. An advantage of the method is that it is not necessary to
+compute or store the whole Gram matrix, but only a m  n portion of it. For
+problems with thousands of examples we have shown that good performance can be
+obtained using values of m of only a few hundred. As n increases, we would expect
+that the ratio m=n could be made even smaller. The approximation is likely to be
+particularly good for kernels (like the Gaussian kernel) for which the eigenvalues
+decay rapidly.
+Acknowledgements
+We thank Amos Storkey for helpful discussions and the anonymous NIPS referees who
+helped improve this paper. MS gratefully acknowledges support through a research stu-
+dentship from Microsoft Research Ltd.
+References
+Baker, C. T. H. (1977). The numerical treatment of integral equations. Oxford: Clarendon
+Press.
+Fine, S., & Scheinberg, K. (2000). EÆcient SVM Training Using Low-Rank Kernel Rep-
+resentationResearch Report RC 21911). IBM T. J. Watson Research Center.
+Frieze, A., Kannan, R., & Vempala, S. (1998). Fast Monte-Carlo Algorithms for nding
+low-rank approximations. 39th Conference on the Foundations of Computer Science
+(pp. 370{378).
+Neal, R. M. (1998). Regression and classication using Gaussian process priors (with
+discussion). In J. M. Bernardo et al. (Eds.), Bayesian statistics 6, 475{501. Oxford
+University Press.
+Press, W. H., Teukolsky, S. A., Vetterling, W. T., & Flannery, B. P. (1992). Numerical
+Recipes in C. Cambridge University Press. Second edition.
+Scholkopf, B., Mika, S., Burges, C. J. C., et al. (1999). Input space vs feature space in
+kernel-based methods. IEEE Transactions on Neural Networks, 10(5), 1000{1017.
+Scholkopf, B., Smola, A., & Muller, K.-R. (1998). Nonlinear component analysis as a
+kernel eigenvalue problem. Neural Computation, 10, 1299{1319.
+Smola, A. J., & Scholkopf, B. (2000). Sparse Greedy Matrix Approximation for Machine
+Learning. Proceedings of the Seventeenth International Conference on Machine Learn-
+ing. Morgan Kaufmann.
+Vapnik, V. N. (1995). The nature of statistical learning theory. New York: Springer Verlag.
+Wahba, G. (1990). Spline models for observational data. Philadelphia, PA: Society for
+Industrial and Applied Mathematics. CBMS-NSF Regional Conference series in applied
+mathematics.
+Williams, C. K. I., & Barber, D. (1998). Bayesian classication with Gaussian processes.
+IEEE Transactions on Pattern Analysis and Machine Intelligence, 20(12), 1342{1351.
+

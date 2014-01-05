@@ -1,0 +1,384 @@
+On iterative Krylov­dogleg trust­region
+steps for solving neural networks
+nonlinear least squares problems
+Eiji Mizutani
+Department of Computer Science
+National Tsing Hua University
+Hsinchu, 30043 TAIWAN R.O.C.
+eiji@wayne.cs.nthu.edu.tw
+James W. Demmel
+Mathematics and Computer Science
+University of California at Berkeley,
+Berkeley, CA 94720 USA
+demmel@cs.berkeley.edu
+Abstract
+This paper describes a method of dogleg trust­region steps, or re­
+stricted Levenberg­Marquardt steps, based on a projection pro­
+cess onto the Krylov subspaces for neural networks nonlinear least
+squares problems. In particular, the linear conjugate gradient (CG)
+method works as the inner iterative algorithm for solving the lin­
+earized Gauss­Newton normal equation, whereas the outer nonlin­
+ear algorithm repeatedly takes so­called ``Krylov­dogleg'' steps, re­
+lying only on matrix­vector multiplication without explicitly form­
+ing the Jacobian matrix or the Gauss­Newton model Hessian. That
+is, our iterative dogleg algorithm can reduce both operational
+counts and memory space by a factor of O(n) (the number of pa­
+rameters) in comparison with a direct linear­equation solver. This
+memory­less property is useful for large­scale problems.
+1 Introduction
+We consider the so­called neural networks nonlinear least squares prob­
+lem 1 wherein the objective is to optimize the n weight parameters of neural
+networks (NN) [e.g., multilayer perceptrons (MLP)], denoted by an n­dimensional
+vector `, by minimizing the following:
+E(`) = 1
+2
+P m
+p=1 (a p (`) \Gamma t p ) 2 = 1
+2
+r T (`)r(`); (1)
+where a p (`) is the MLP output for the pth training data pattern and t p is the
+desired output. (Of course, these become vectors for a multiple­output MLP.) Here
+r(`) denotes the m­dimensional residual vector composed of r i (`), i = 1; : : : ; m,
+for all m training data.
+1 The posed problem can be viewed as an implicitly constrained optimization problem as
+long as hidden­node outputs are produced by sigmoidal ``squashing'' functions [1]. Our al­
+gorithm exploits the special structure of the sum of squared error measure in Equation (1);
+hence, the other objective functions are outside the scope of this paper.
+
+The gradient vector and Hessian matrix are given by g = g(`) j J T r and
+H = H(`) j J T J+S, where J is the m\Thetan Jacobian matrix of r, and S denotes the
+matrix of second­derivative terms. If S is simply omitted based on the ``small resid­
+ual'' assumption, then the Hessian matrix reduces to the Gauss­Newton model
+Hessian: i.e., J T J. Furthermore, a family of quasi­Newton methods can be ap­
+plied to approximate term S alone, leading to the augmented Gauss­Newton model
+Hessian (see, for example, Mizutani [2] and references therein).
+With any form of the aforementioned Hessian matrices, we can collectively write
+the following Newton formula to determine the next step ffi in the course of the
+Newton iteration for ` next = `now + ffi:
+Hffi = \Gammag: (2)
+This linear system can be solved by a direct solver in conjunction with a suitable
+matrix factorization. However, typical criticisms towards the direct algorithm are:
+ffl It is expensive to form and solve the linear equation (2), which requires
+O(mn 2 ) operations when m ? n;
+ffl It is expensive to store the (symmetric) Hessian matrix H, which requires
+n(n+1)
+2
+memory storage.
+These issues may become much more serious for a large­scale problem.
+In light of the vast literature on the nonlinear optimization, this paper describes how
+to alleviate these concerns, attempting to solve the Newton formula (2) approxi­
+mately by iterative methods, which form a family of inexact (or truncated)
+Newton methods (see Dembo & Steihaug [3], for instance). An important sub­
+class of the inexact Newton methods are Newton­Krylov methods. In particular, this
+paper focuses on a Newton­CG­type algorithm, wherein the linear Gauss­Newton
+normal equation,
+(J T J)ffi = \GammaJ T r; (3)
+is solved iteratively by the linear conjugate gradient method (known as CGNR)
+for a dogleg trust­region implementation of the well­known Levenberg­Marquardt
+algorithm; hence, the name ``dogleg trust­region Gauss­Newton­CGNR'' algorithm,
+or ``iterative Krylov­dogleg'' method (similar to Steihaug [4]; Toint [5]).
+2 Direct Dogleg Trust­Region Algorithms
+In the NN literature, several variants of the Levenberg­Marquardt algorithm
+equipped with a direct linear­equation solver , particularly Marquardt's original
+method, have been recognized as instrumental and promising techniques; see, for
+example, Demuth & Beale [6]; Masters [7]; Shepherd [8]. They are based on a simple
+direct control of the Levenberg­Marquardt parameter ¯ in (H+¯I)ffi = \Gammag, although
+such a simple ¯­control can cause a number of problems, because of a complicated
+relation between parameter ¯ and its associated step length (see Mizutani [9]).
+Alternatively, a more efficient dogleg algorithm [10] can be employed that takes,
+depending on the size of trust region R, the Newton step ffi Newton [i.e., the solution
+of Eq. (2)], the (restricted) Cauchy step ffi Cauchy , or an intermediate dogleg step:
+ffi dogleg
+def = ffi Cauchy + h(ffi Newton \Gamma ffi Cauchy ); (4)
+which achieves a piecewise linear approximation to a trust­region step, or a restricted
+Levenberg­Marquardt step. Note that ffi Cauchy is the step that minimizes the local
+
+quadratic model in the steepest descent direction (i.e., Eq. (8) with k = 1). For
+details on Equation (4), refer to Powell [10]; Mizutani [9, 2].
+When we consider the Gauss­Newton step for ffi Newton in Equation (4), we must
+solve the overdetermined linear least squares problem: minimize ffi
+kr + Jffik 2 , for
+which three principal direct linear­equation solvers are:
+(1) Normal equation approach (typically with Cholesky decomposition);
+(2) QR decomposition approach to Jffi = \Gammar;
+(3) Singular value decomposition (SVD) approach to Jffi = \Gammar (only recom­
+mended when J is nearly rank­deficient).
+Among those three direct solvers, approach (1) to Equation (3) is fastest. (For more
+details, refer to Demmel [11], Chapters 2 and 3.) In a highly overdetermined case
+(with a large data set; i.e., m AE n), the dominant cost in approach (1) is the mn 2
+operations to form the Gauss­Newton model Hessian by:
+J T J =
+m
+X
+i=1
+u i u T
+i ; (5)
+where u T
+i is the ith row vector of J. This cost might be prohibitive even with
+enough storage for J T J. Therefore, to overcome this limitation of direct solvers for
+Equation (3), we consider an iterative scheme in the next section.
+3 Iterative Krylov­Dogleg Algorithm
+The iterative Krylov­dogleg step approximates a trust­region step by iteratively
+approximating the Levenberg­Marquardt trajectory in the Krylov subspace via lin­
+ear conjugate gradient iterates until the approximate trajectory hits the trust­
+region boundary ; i.e., a CG iterate falls outside the trust­region boundary . In this
+context, the linear CGNR method is not intended to approximate the full Gauss­
+Newton step [i.e., the solution of Eq. (3)]. Therefore, the required number of CGNR­
+iterations might be kept small [see Section 4].
+The iterative process for the linear­equation solution sequence fffi k g is called the
+inner 2 iteration, whereas the solution sequence f` k g from the Krylov­dogleg algo­
+rithm is generated by the outer iteration (or epoch), as shown in Figure 1. We now
+describe the inner iteration algorithm, which is identical to the standard linear CG
+algorithm (see Demmel [11], pages 311­312) except steps 2, 4, and 5:
+Algorithm 3.1: The inner iteration of the Krylov­dogleg algorithm (see Figure 1).
+1. Initialization:
+ffi 0 = 0; d 0 = r 0 = \Gammag now ; and k = 1: (6)
+2. Matrix­vector product (compare Eq. (5) and see Algorithm 3.2):
+z = Hnowd k = J T
+now (Jnowd k ) =
+m
+X
+i=1
+(u T
+i d k )u i : (7)
+2 Nonlinear conjugate gradient methods, such as Polak­Ribiere's CG (see Mizutani
+and Jang [13]) and Moller's scaled CG [14], are also widely­employed for training MLPs,
+but those nonlinear versions attempt to approximate the entire Hessian matrix by gen­
+erating the solution sequence f`kg directly as the outer nonlinear algorithm. Thus, they
+ignore the special structure of the nonlinear least squares problem; so does Pearlmutter's
+method [15] to the Newton formula, although its modification may be possible.
+
+Outer
+Iteration
+stopping criteria
+Does
+hold ?
+END
+YES
+NO
+Algorithm for local-model check
+Evaluate E( )
+next
+q
+E( )
+qnow
+Compute
+Initialize Rnow qnow
+YES
+NO
+YES
+NO
+Evaluate nnow
+nnow small
+n
+IF > =
+E( )
+qnow
+E( )
+next
+q
+IF > = Backtracking
+algorithm
+Rnow
+Decrease
+Rnow
+Update
+next
+q
+qnow
+Inner Iteration
+Algorithm 3.1
+Figure 1: The algorithmic flow of an iterative Krylov­dogleg algorithm. For detailed
+procedures in the three dotted rectangular boxes, refer to Mizutani and Demmel [12]
+and Algorithm 3.1 in text.
+3. Analytical step size: j k = r T
+k\Gamma1
+rk\Gamma1
+d T
+k
+z .
+4. Approximate solution:
+ffi k = ffi k\Gamma1 + j k d k : (8)
+If kffi k k ! Rnow , then go onto the next step 5; otherwise compute
+ffi k = Rnow ffi k
+kffi k k ; (9)
+and terminate.
+5. Linear­system residual: r k = r k\Gamma1 \Gamma j k z.
+If kr k k 2 is small enough, then set Rnow / kffi k k, and terminate.
+Otherwise, continue with step 6.
+6. Improvement: fi k+1 = r T
+k rk
+r T
+k\Gamma1
+rk\Gamma1 .
+7. Search direction: d k+1 = r k + fi k+1 d k . Then, set k = k + 1 and back to step 2.
+
+The first step given by Equation (8) is always the Cauchy step ffi Cauchy , moving
+`now to the Cauchy point ` Cauchy when Rnow ? kffi Cauchy k. Then, departing
+from ` Cauchy , the linear CG constructs a Krylov­dogleg trajectory (by adding a CG
+point one by one) towards the Gauss­Newton point ` Newton until the constructed
+trajectory hits the trust­region boundary (i.e., kffi k k – Rnow is satisfied in step 4),
+or till the linear­system residual becomes small in step 5 (unlikely to occur for
+small forcing terms; e.g., 0.01). In this way, the algorithm computes a vector
+between the steepest descent direction and the Gauss­Newton direction, resulting
+in an approximate Levenberg­Marquardt step in the Krylov subspace.
+In step 2, the matrix­vector multiplication of Hd k in Equation (7) can be performed
+with neither the Jacobian nor Hessian matrices explicitly required, keeping only
+several n­dimensional vectors in memory at the same time, as shown next:
+Algorithm 3.2: Matrix­vector multiplication step.
+for i = 1 to m; i.e., one sweep of all training data:
+(a) do forward propagation to compute the MLP output a i (`) for datum i;
+(b) do backpropagation 3 to obtain the ith row vector u T
+i of matrix J;
+(c) compute (u T
+i d k )u i and add it to z;
+end for.
+For one sweep of all m data, each of steps (a) and (b) costs at least 2mn (plus
+additional costs that depend on the MLP architectures) and step (c) [i.e., Eq. (7)]
+costs 4mn. Hence, the overall cost of the inner iteration (Algorithm 3.1) can be
+kept as O(mn), especially when the number of inner iterations is small owing to
+our strategy of upper­bounded trust­region radii (e.g., R upper = 1 for the parity
+problem). Note for ``Algorithm for local­model check'' in Figure 1 that evaluating
+šnow (a ratio between the actual error reduction and the reduction predicted by
+the current local quadratic model) needs a procedure similar to Algorithm 3.2. For
+more details on the algorithm in Figure 1, refer to Mizutani and Demmel [12].
+4 Experiments and Discussions
+In the NN literature, there are numerous algorithmic comparisons available (see, for
+example, Moller [14]; Demuth & Beale [6]; Shepherd [8]; Mizutani [2, 9, 16]). Due to
+the space limitation, this section compares typical behaviors of our Krylov­dogleg
+Gauss­Newton CGNR (or iterative dogleg) algorithm and Powell's dogleg­based
+algorithm with a direct linear­equation solver (or direct dogleg) for solving highly
+overdetermined parity problems. In our numerical tests, we used a criterion, in
+which the MLP output for the pth pattern, a p , can be regarded as either ``on''
+(1.0) if a p – 0:8, or ``off'' (­1.0) if a p Ÿ \Gamma0:8; otherwise, it is ``undecided.'' The
+initial parameter set was randomly generated in the range [\Gamma0:3; 0:3], and the two
+algorithms started exactly at the same point in the parameter space.
+Figure 2 presents MLP­learning curves in RMSE (root mean squared error) for the
+20­bit and 14­bit parity problems. In (b) and (c), the total execution time [roughly
+(b) 32 days (500 epochs); (c) two hours (450 epochs), both on 299­MHz UltraSparc]
+of the direct dogleg algorithm was normalized for comparison purpose. Notably, the
+3 The batch­mode MLP backpropagation can be viewed as an efficient matrix­vector
+multiplication (2mn operations) for computing the gradient J T r without forming explicitly
+the m \Theta n Jacobian matrix or the m­dimensional residual vector (with some extra costs).
+
+0 500 1000
+0
+0.2
+0.4
+0.6
+0.8
+1
+RMSE
+(a) Epoch
+iterative dogleg
+direct dogleg
+0 0.5 1
+0
+0.2
+0.4
+0.6
+0.8
+1
+RMSE
+(b) Normalized exec. time
+iterative dogleg
+direct dogleg
+0 0.5 1
+0
+0.2
+0.4
+0.6
+0.8
+1
+RMSE
+(c) Normalized exec. time
+iterative dogleg
+direct dogleg
+Figure 2: MLP­learning curves of RMSE (root mean squared error) obtained by
+the ``iterative dogleg'' (solid line) and the ``direct dogleg'' (broken line): (a) ``epoch''
+and (b) ``normalized execution time'' for the 20­bit parity problem with a standard
+20 \Theta 19 \Theta 1 MLP with hyperbolic tangent node functions (m = 2 20 , n = 419), and
+(c) ``normalized execution time'' for the 14­bit parity problem with a 14 \Theta 13 \Theta 1
+MLP (m = 2 14 , n = 209). In (a),(b), the iterative dogleg reduced the number of
+incorrect patterns down to 21 (nearly RMSE = 0.009) at epoch 838, whereas the
+direct dogleg reached the same error level at epoch 388. In (c), the iterative dogleg
+solved it perfectly at epoch 1,034 and the direct dogleg did so at epoch 401.
+iterative dogleg converged faster to a small RMSE 4 than the direct dogleg at an
+early stage of learning even with respect to epoch. Moreover, the average number
+of inner CG iterations per epoch in the iterative dogleg algorithm was quite small,
+5.53 for (b) and 4.61 for (c). Thus, the iterative dogleg worked nearly (b) nine times
+and (c) four times faster than the direct dogleg in terms of the average execution
+time per epoch. Those speed­up ratios became smaller than n mainly due to the
+aforementioned cost of Algorithm 3.2. Yet, as n increases, the speed­up ratio can
+be larger especially when the number of inner iterations is reasonably small.
+5 Conclusion and Future Directions
+We have compared two batch­mode MLP­learning algorithms: iterative and direct
+dogleg trust­region algorithms. Although such a high­dimensional parity problem is
+very special in the sense that it involves a large data set but the size of MLP can be
+kept relatively small, the algorithmic features of the two dogleg methods can be well
+understood from the obtained experimental results. That is, the iterative dogleg
+has the great advantage of reducing the cost of an epoch from O(mn 2 ) to O(mn),
+and the memory requirements from O(n 2 ) to O(n), a factor of O(n) in both cases.
+When n is large, this is a very large improvement. It also has the advantage of faster
+convergence in the early epochs, achieving a lower RMSE after fewer epochs than
+the direct dogleg. Its disadvantage is that it may need more epochs to converge to a
+very small RMSE than the direct dogleg (although it might work faster in execution
+time). Thus, the iterative dogleg is most attractive when attempting to achieve a
+reasonably small RMSE on very large problems in a short period of time.
+The iterative dogleg is a matrix­free algorithm that extracts information about the
+Hessian matrix via matrix­vector multiplication; this algorithm might be character­
+ized as iterative batch­mode learning, an intermediate between direct batch­
+4 A standard steepest descent­type online pattern­by­pattern learning (or incremental
+gradient) algorithm (with or without a momentum term) failed to converge to a small
+RMSE in those parity problems due to hidden­node saturation [1].
+
+mode learning and online pattern­by­pattern learning. Furthermore, the algorithm
+might be implemented in a block­by­block updating mode if a large data set can
+be split into multiple proper­size data blocks; so, it would be of our great inter­
+est to compare the performance with online­mode learning algorithms for solving
+large­scale real­world problems with a large­scale NN model.
+Acknowledgments
+We would like to thank Stuart Dreyfus (IEOR, UC Berkeley) and Rich Vuduc (CS,
+UC Berkeley) for their valuable advice. The work was supported in part by SONY
+US Research Labs., and in part by ``Program for Promoting Academic Excellence
+of Universities,'' grant 89­E­FA04­1­4, Ministry of Education, Taiwan.
+References
+[1] E. Mizutani, S. E. Dreyfus, and J.­S. R. Jang. On dynamic programming­like recursive
+gradient formula for alleviating hidden­node satuaration in the parity problem. In
+Proceedings of the International Workshop on Intelligent Systems Resolutions -- the
+8th Bellman Continuum, pages 100--104, Hsinchu, TAIWAN, 2000.
+[2] Eiji Mizutani. Powell's dogleg trust­region steps with the quasi­Newton augmented
+Hessian for neural nonlinear least­squares learning. In Proceedings of the IEEE Int'l
+Conf. on Neural Networks (vol.2), pages 1239--1244, Washington, D.C., July 1999.
+[3] R. S. Dembo and T. Steihaug. Truncated­Newton algorithms for large­scale uncon­
+strained optimization. Math. Prog., 26:190--212, 1983.
+[4] Trond Steihaug. The conjugate gradient method and trust regions in large scale
+optimization. SIAM J. Numer. Anal., 20(3):626--637, 1983.
+[5] P. L. Toint. On large scale nonlinear least squares calculations. SIAM J. Sci. Statist.
+Comput., 8(3):416--435, 1987.
+[6] H. Demuth and M. Beale. Neural Network Toolbox for Use with MATLAB. The
+MathWorks, Inc., Natick, Massachusetts, 1998. User's Guide (version 3.0).
+[7] Timothy Masters. Advanced algorithms for neural networks: a C++ sourcebook. John
+Wiley & Sons, New York, 1995.
+[8] Adrian J. Shepherd. Second­Order Methods for Neural Networks: Fast and Reliable
+Training Methods for Multi­Layer Perceptrons. Springer­Verlag, 1997.
+[9] Eiji Mizutani. Computing Powell's dogleg steps for solving adaptive networks nonlin­
+ear least­squares problems. In Proc. of the 8th Int'l Fuzzy Systems Association World
+Congress (IFSA'99), vol.2, pages 959--963, Hsinchu, Taiwan, August 1999.
+[10] M. J. D. Powell. A new algorithm for unconstrained optimization. In Nonlinear
+Programming, pages 31--65. Edited by J.B. Rosen et al., Academic Press, 1970.
+[11] James W. Demmel. Applied Numerical Linear Algebra. SIAM, 1997.
+[12] Eiji Mizutani and James W. Demmel. On generalized dogleg trust­region steps using
+the Krylov subspace for solving neural networks nonlinear least squares problems.
+Technical report, Computer Science Dept., UC Berkeley, 2001. (In preparation).
+[13] E. Mizutani and J.­S. R. Jang. Chapter 6: Derivative­based Optimization. In Neuro­
+Fuzzy and Soft Computing, pages 129--172. J.­S. R. Jang, C.­T. Sun and E. Mizutani.
+Prentice Hall, 1997.
+[14] Martin Fodslette Moller. A scaled conjugate gradient algorithm for fast supervised
+learning. Neural Networks, 6:525--533, 1993.
+[15] B. A. Pearlmutter. Fast exact multiplication by the Hessian. Neural Computation,
+6(1):147--160, 1994.
+[16] E. Mizutani, K. Nishio, N. Katoh, and M. Blasgen. Color device characterization of
+electronic cameras by solving adaptive networks nonlinear least squares problems. In
+Proc. of the 8th IEEE Int'l Conf. on Fuzzy Systems, vol. 2, pages 858--862, 1999.
+

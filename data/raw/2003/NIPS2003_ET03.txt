@@ -1,0 +1,292 @@
+A Summating, Exponentially-Decaying CMOS Synapse for Spiking Neural Systems
+
+Rock Z. Shi1 ,2 and Timothy Horiuchi1 ,2,3
+
+1 Electrical and Computer Engineering Department
+
+2 Institute for Systems Research
+
+3 Neuroscience and Cognitive Science Program
+
+University of Maryland, College Park, MD 20742 rshi@glue.umd.edu,timmer@isr.umd.edu
+
+Abstract Synapses are a critical element of biologically-realistic, spike-based neural computation, serving the role of communication, computation, and modification. Many different circuit implementations of synapse function exist with different computational goals in mind. In this paper we describe a new CMOS synapse design that separately controls quiescent leak current, synaptic gain, and time-constant of decay. This circuit implements part of a commonly-used kinetic model of synaptic conductance. We show a theoretical analysis and experimental data for prototypes fabricated in a commercially-available 1.5 m CMOS process. 1 Introduction Synapses are a critical element in spike-based neural computation. There are perhaps as many different synapse circuit designs in use as there are brain areas being modeled. This diversity of circuits reflects the diversity of the synapse's computational function. In many computations, a narrow, square pulse of current is all that is necessary to model the synaptic current. In other situations, a longer post-synaptic current profile is desirable to extend the effects of extremely short spike durations (e.g., in address-event systems [1],[2], [3], [4]), or to create a specific time window of interaction (e.g., for coincidence detection or for creating delays [5]). Temporal summation or more complex forms of inter-spike interaction are also important areas of synaptic design that focus on the response to high-frequency stimulation. Recent designs for fast-synaptic depression [6], [7], [8] and time-dependent plasticity [9], [10] are good examples of this where some type of memory is used to create interaction between incoming spikes. Even simple summation of input current can be very important in addressevent systems where a common strategy to reduce hardware is to have a single synapse circuit mimic inputs from many different cells. A very popular design for this purpose is the "current-mirror synapse" [4] that is used extensively in its original form or in new extended forms [6], [8] to expand the time course of current and to provide summation for high-frequency spiking. This circuit is simple, compact, and stable, but couples the leak, part of the synaptic gain, and the decay "time-constant" in one control parameter. This is restrictive and often more control is desirable. Alternatively, the same components can be
+
+
+arranged to give the user manual-control of the decay to produce a true exponential decay when operating in the subthreshold region (see Figure 7 (b) of [11]). This circuit, however, does not provide good summation of multiple synaptic events. In this paper we describe a new CMOS synapse circuit, that utilizes current-mode feedback to produce a first-order dynamical system. In the following sections, we describe the kinetic model of synaptic conductance, describe the circuit implementation and function, provide a theoretical analysis and finally compare our theory against testing results. We also discuss the use of this circuit in various neuromorphic system contexts and conclude with a discussion of the circuit synthesis approach. 2 Proposed synapse model We consider a network of spiking neurons, each of which is modeled by the integrateand-fire model or the slightly more generous Spike Response Model (e.g. [12]). Synaptic function in such neural networks are often modeled as a time-varying current. The functional form of this current could be a  function, or a limited jump at the time of the spike followed by an exponential decay. Perhaps the most widely used function in detailed computational models is the -function, a function of the form e- , introduced by [13]. A more general and practical framework is the neurotransmitter kinetics description proposed by Destexhe et al. [14]. This approach can synthesize a complete description of synaptic transmission, as well as give an analytic expression for a post-synaptic current in some simplified schemes. For a two-state ligand-gated channel model, the neurotransmitter molecules, T, are taken to bind to post-synaptic receptors modeled by the first order kinetic scheme [15]:
+
+t  t
+
+
+
+R + T  T R 
+
+
+
+(1)
+
+where R and TR are the unbound and the bound form of the post-synaptic receptor, respectively.  and  are the forward and backward rate constants for transmitter binding. In this model, the fraction of bound receptors, r, is described by the equation:
+
+dr dt = [T ](1 - r) - r (2)
+
+If the transmitter concentration [T] can be modeled as a short pulse, then r(t) in (2) is a first order linear differential equation. We propose a synapse model that can be implemented by a CMOS circuit working in the subthreshold region. Our model matches Destexhe et al.'s equations for the time-dependent conductance, although we assume a fixed driving potential. In our synapse model, the action potential is modeled as a narrow digital pulse. The pulse width is assumed to be a fixed value tpw, however, in practice tpw may vary slightly from pulse to pulse. Figure 1 illustrates the synaptic current response to a single pulse in such a model: 1. A presynaptic spike occurs at tj, during the pulse, the post-synaptic current is modeled by:
+
+isyn(t) = isyn() + (isyn(tj) - isyn())e- t-tj r (3)
+
+2. After the presynaptic pulse terminated at time tj + tpw, the post-synaptic current is modeled by:
+
+isyn(t) = isyn(tj + tpw)e- t-tj -tpw d (4)
+
+
+ synaptic current  presynaptic pulse tj tj+tpw Figure 1: Synapse model. The action potential (spike) is modeled as a pulse with width tpw. The synapse is modeled as first order linear system with synaptic current response described by Equations (3) and (4)
+
+3 CMOS circuit synthesis and analysis 3.1 The synthesis approach Lazzaro [11] presents a very simple, compact synapse circuit that has an exponentiallydecaying synaptic current after each spike event. The synaptic current always resets to the maximum current value during the spike and is not suitable for the summation of rapid bursts of spikes. Another simple and widely used synapse is the current-mirror synapse that has its own set of practical problems related to the coupling of gain, time constant, and offset parameters. Our circuit is synthesized from the clean exponential decay from Lazzaro's synapse and concepts from log domain filtering [16], [17] to convert the nonlinear characteristic of the current mirror synapse into an externally-linear, time-invariant system [18].
+
+Vdd
+
+spkIn
+
+M1 M2 M4 M5
+
+v
+
+M3 Vw
+
+i
+
+V M7
+
+vc C M6
+
+isyn M8
+
+Figure 2: The proposed synapse circuit.
+
+put with negative logic.
+
+The pin "spkIn" receives the spike in-
+
+The pin "isyn" is the synaptic current output. There
+
+are two control parameters. The input voltage Vw adjusts the weight of the
+
+synapse and the input voltage V sets the time constant. The transistors sizes
+
+are: S1 = 2.4 m/1.6 m, S2 = 8 m/4 m, S3 = 10 m/4 m × 4, S4 = 4 m/4 m, S5 = 4 m/4 m, S6 = 4 m/4 m, S7 = 4 m/4 m, S8 = 10 m/4 m × 20. The bodies of NMOS transistors are connected to ground, and the bodies of PMOS transistors are connected to Vdd except for M3.
+
+
+3.2 Basic circuit description The synapse circuit consists of eight transistors and one capacitor as shown in Figure 2. All transistors are operated in the subthreshold region. Input voltage spikes are applied through an inverter (not shown), onto the gate of the PMOS M1. V sets the current through M7 that determines the time constant of the output synaptic current as will be shown later. Vw controls the magnitude of the synaptic current, so it determines the synaptic weight. The voltage on the capacitor is converted to a current by transistor M6, sent through the current mirror M4 - M5, and into the source follower M3 - M4. The drain current of M8, a scaled copy of current through M6 produces an inhibitory current. A simple PMOS transistor with the same gate voltage as M5 can provide an excitatory synaptic current. 3.3 Circuit analysis We perform an analysis of the circuit by studying its response to a single spike. Assuming a long transistor so that the Early effect can be neglected, the behavior of a NMOS transistor working in the subthreshold region can be described by [19], [20]
+
+ids = SI0 e n nvgs VT e (1-n)vbs VT (1 - e -vds VT ) (5)
+
+where VT = KT/q is the thermal voltage, I0
+
+Vbs = 0, and S =
+
+W L
+
+n is a positive constant current when Vgs =
+
+is the ratio of the transistor width and length. 0 < n < 1 is a
+
+parameter specific to the technology, and we will assume it is constant in this analysis. We assume that all transistors are operating in saturation (vds > 4VT ). We also neglect any parasitic capacitances. The PMOS source follower M3 - M4 is used as a level shifter. Detailed discussion on use of source followers in the subthreshold region has been discussed in [21]. Combined with a current mirror M4 - M5, this sub-circuit implements a logarithmic relationship between i and v (as labeled in Figure 2):
+
+v = Vw + VT p i ln( I0 ) (6)
+
+p
+
+S4 S3S5
+
+Consistent with the translinear principle, this logarithmic relationship will make the current through M2 proportional to . 1 i
+
+For simplicity, we assume a spike begins at time t=0, and the initial voltage on the capacitor C is vc(0). The spike ends at time t = tpw. When the spike input is on (0 < t < tpw), the dynamics of the circuit for a step input is governed by
+
+C dvdt c (t) =
+
+S2S3S5Iop e
+
+S4S6I0
+
+n
+
+2
+
+p(Vdd-Vw ) VT
+
+e -nvc(t) VT -I
+
+I = S7Ione nV VT
+
+(7) (8)
+
+With the aid of transformation
+
+isyn(t) = S8Ione nvc(t) VT (9)
+
+Equation (7) can be changed into a linear ordinary differential equation for isyn(t):
+
+disyn(t) dt 2 S2S3S5S8nIop e S4S6CVT + nI CVT isyn(t) = p(V dd-Vw ) VT (10)
+
+In terms of the general solution expressed in (3), we have
+
+ = CVT nI (11)
+
+
+isyn(0) = S8I0 e n
+
+isyn() =
+
+nvc(0) VT
+
+S2S3S5S8Iop e S4S6I 2 p(V dd-V w) VT
+
+(12) (13)
+
+When the spike input is off (t > tpw) and we neglect the leakage current from M2, then isyn(t) will exponentially decay with the same time constant defined by (11). That is,
+
+isyn(t) = isyn(tpw)e- (t-tpw)  (14)
+
+4 Results 4.1 Comparison of theory and measurement We have fabricated a chip containing the basic synapse circuit as shown in Figure 2 through MOSIS in a commercially-available 1.5 m, double poly fabrication process. In order to compare our theoretical prediction with chip measurement, we first estimate the two transistor parameters  and I0 by measuring the drain currents from test transistors on the same chip. The current measurements were performed with a Keithley 6517A electrometer.  and I0 are estimated by fitting Equation (5) (and PMOS with PMOS i-v equation) through multiple measurements of (vgs, ids) points through linear regression. The two parameters estimating these two parameters as well as to compute our model predictions, we estimate the effective transistor width for the wide transistors (e.g. M8 with m=20).
+
+are found to be n = 0.67, I0 n = 1.32 × 10-14A, p = 0.77, I0 = 1.33 × 10-19A. In p
+
+6 4 2 vSpkIn(V) 0
+
+0 0.5 1 1.5 2 2.5 3 3.5 4
+
+(V)
+
+vc(t)
+
+0.4 0.2 2x (A) 1
+
+isyn(t) 0
+
+measure theory
+
+0 -7 0.5 1 1.5 2 2.5 3 3.5 4 10
+
+theory measure 1.5 2 time (sec)
+
+0 0.5 1 2.5 3 3.5 4
+
+Figure 3: Comparison between model prediction and measurement. To illustrate the detailed time course, we used a large spike pulse width. We set V = 0 and Vw = 3.85V . Figure 3 illustrates our test results compared against the model prediction. We used a very wide pulse to exaggerate the details in the time response. Note that as the time constant is so large, the isyn(t) rises almost linearly during the spike. In this case, Vw = 3.85V . 4.2 Tuning of synaptic strength and time constant The synaptic time constant is solely determined by the leak current through transistor M7. The control is achieved by turning the pin V. The synaptic strength is controlled by Vw (which is also coupled with I) as can be seen from (13). In Figure 4, we present our test results that illustrate how the various time constants and synaptic strengths can be achieved.
+
+
+6 4 2 vSpkIn(t) 0
+
+(V)
+
+6 4 2 vSpkIn(t) 0
+
+(V)
+
+0 20 40 60 80 0 10 20 30 40 50
+
+V=0.150V
+
+(V)
+
+vc(t)
+
+0.4 0.2 0 4x
+
+(A)
+
+(V) V=0.175V
+
+vc(t) V=0.200V
+
+60
+
+0.4 0.2 0
+
+Vw=3.70V Vw=3.75V Vw=3.80V
+
+0 20 40 80 0
+
+-7
+
+x 10
+
+10 20 30 40 50 -7
+
+10
+
+2
+
+iSyn(t) 0
+
+V=0.150V V=0.175V V=0.200V
+
+20
+
+(A)
+
+iSyn(t)
+
+3 2 1 0
+
+Vw=3.70V
+
+Vw=3.75V Vw=3.80V
+
+10 0
+
+40 time (msec) 60 80 0 20 30 40 50 time (msec)
+
+(a) (b)
+
+Figure 4: Changing time constant  and synaptic strength. (a) Keeping Vw = 3.7V constant, but changing V. (b) Keeping V = 0.175V , but changing Vw. In both (a) and (b), spike pulse width is set as 1 msec.
+
+4.3 Spike train response The exponential rise of the synaptic current during a spike naturally provides the summation and saturation of incoming spikes. Figure 5 illustrates this behavior in response to an input spike train of fixed duration. 5 Discussion We have proposed a new synapse model and a specific CMOS implementation of the model. In our theoretical analysis, we have ignored all parasitic effects which can play an significant role in the circuit behavior. For example, as the source follower M3 - M4 provides the gate voltage of M2, switching through M1 will affect the circuit behavior due to parasitic capacitance. We emphasize that various circuit implementation can be designed, especially a circuit with lower glitch but faster speed is preferred. The synaptic model circuit we have described has a single time constant for both its rising and decaying phase, whereas the time-course of biological synapses show a faster rising phase, but a much slower decaying phase. The second time constant can, in principle, be implemented in our circuit by adding a parallel branch to M7 with some switching circuitry. Biological synapses have been best modeled and fitted by an exponentially-decaying time course with different time constants for different types of synapse. Our synapse circuit model captures this important characteristic of the biological synapse, providing an easily controlled exponential decay and a natural summation and saturation of the synaptic current. By using a simple first order linear model, our synapse circuit model can give the circuit designer an analytically tractable function for use in large, complex, spiking neural network system design. The current mirror synapse, in spite of its successful application,
+
+
+(V)
+
+vSpkIn(t)
+
+6 4 2 0
+
+0 50 100 150 200 250
+
+(V)
+
+vc(t)
+
+0.5 0.45 0.4 0.35 0.3
+
+0 50 100 150 200 250
+
+-8
+
+x 10
+
+(A)
+
+iSyn(t)
+
+4 3 2 1 0
+
+0 50
+
+100 time (msec) 150 200 250
+
+Figure 5: Response to spike train. The spike pulse width is set as 1 msec, and period 15 msec. Vw = 3.73V , V = 131mV .
+
+has been found to be an inconvenient computation unit due to its nonlinearity. Our linear synapse is achieved, however, with the cost of silicon size. This is especially true when utilized in an AER system, where the spike can be less than a microsecond. Because our linearity is achieved by employing the CMOS subthreshold current characteristic, working with very narrow pulses will mean the use of large transistor widths to get large charging currents. We have identified a number of modifications that may allow the circuit to operate at much higher current levels and thus higher speed. 6 Conclusion We have identified a need for more independent control of the synaptic gain, timecourse, and leak parameters in CMOS synapse and have demonstrated a prototype circuit that utilizes current-mode feedback to exhibit the same first-order dynamics that are utilized by Destexhe et al. [14], [15] to describe a kinetic model description of receptorneurotransmitter binding for a more efficient computational description of the synaptic conductance. The specific implementation relies on the subthreshold exponential characteristic of the MOSFET and thus operates best at these current levels and slower speeds. Acknowledgments This work was supported by funding from DARPA (N0001400C0315) and the Air Force Office of Strategic Research (AFOSR - F496200110415). We thank MOSIS for fabrication services in support of our neuromorphic analog VLSI course and teaching laboratory. References
+
+[1] M. Mahowald, An Analog VLSI System for Stereoscopic Vision. demic, 1994. Norwell, MA: Kluwer Aca-
+
+
+[2] A. Mortara, "A pulsed communication/computation framework for analog VLSI perceptive systems," in Neuromorphic Systems Engineering, T. S. Land, Ed. Norwell, MA: Kluwer Academic Publishers, 1998, pp. 217­228. [3] S. Deiss, R. Douglas, and A. Whatley, "A pulse-coded communications infrastructure for neu-
+
+romorphic systems," in Pulsed Neural Networks, W. Mass and C. Bishop, Eds. MA: MIT Press, 1999, pp. 157­178. Cambridge,
+
+[4] K. A. Boahen, "The retinomorphic approach: adaptive pixel-parallel amplification, filtering, and quantization," Journal of Analog Integrated Circuits and Signal Processing, vol. 13, pp. 53­68, 1997. [5] M. Cheely and T. Horiuchi, "Analog VLSI models of range-tuned neurons in the bat echolocation system," EURASIP Journal, Special Issue on Neuromorphic Signal Processing and Implementations (in press), 2003. [6] C. Rasche and R. H. R. Hahnloser, "Silicon synaptic depression," Biol. Cybern., vol. 84, pp. 57­62, 2001. [7] A. McEwan and A. van Schaik, "A silicon representation of the Meddis inner hair cell model," in Proceedings of the ICSC Symposia on Intelligent Systems & Application (ISA'2000), 2000, paper 1544-078. [8] M. Boegerhausen, P. Suter, and S. Liu, "Modeling short-term synaptic depression in silicon," Neural Computation, vol. 15, no. 2, pp. 331­348, Feb 2003. [9] P. Hafliger, M. Mahowald, and L.Watts, "A spike based learning neuron in analog VLSI," in Advances in Neural Information Processing Systems, M. C. Mozer, M. I. Jordan, and T. Petsche, Eds. Cambridge, MA: MIT Press, 1997, vol. 9, pp. 692­698. [10] G. Indiveri, "Neuromorphic bistable VLSI synapses with spike-timing-dependent plasticity," in Advances in Neural Information Processing Systems, M. C. Mozer, M. I. Jordan, and T. Petsche, Eds. Cambridge, MA: MIT Press, 2002, vol. 15. [11] J. P. Lazzaro, "Low-power silicon axons, neuons, and synapses," in Silicon Implementations of Pulse Coded Neural Networks, M. E. Zaghloul, J. L. Meador, and R. W. Newcomb, Eds. Norwell, MA: Kluwer Academic Publishers, 1994, pp. 153­164.
+
+[12] W. Gerstner, Spiking Neuron Models: Single Neurons, Populations, Plasticity. UK: Cambridge Unvisity Press, 2002. Cambridge,
+
+[13] W. Rall, "Distinguishing theoretical synaptic potentials computed for different soma-dendritic distributions of synaptic inputs," J. Neurophys., vol. 30, pp. 1138­1168, 1967. [14] A. Destexhe, Z. F. Mainen, and T. J. Sejnowski, "Synthesis of models for excitable membranes, synaptic transmission and neuromodulation using a common kinetic formalism," Journal of Computational Neuroscience, vol. 1, pp. 195­230, 1994. [15] ----, "An efficient method for computing synaptic conductances based on a kinetic model of receptor binding," Neural Computation, vol. 6, pp. 14­18, 1994. [16] E. Seevinck, "Companding current-mode integrator: A new circuit principle for continuous time monolithic filters," Electron. Letts., vol. 26, pp. 2046­2047, Nov 1990. [17] D. R. Frey, "Exponential state space fitlers: A generic current mode design strategy," IEEE Trans. Circuits Syst. I, vol. 43, pp. 34­42, Jan 1996. [18] Y. Tsividis, "Externally linear, time-invariant systems and their application to companding signal processors," IEEE Trans. Circuits Syst. II, vol. 44, pp. 65­85, Feb 1997. [19] C. Mead, Analog VLSI and Neural Systems. Reading, MA: Addison-Wesley, 1989. [20] E. A. Vittoz and J. Fellrath, "CMOS analog integrated circuits based on weak inversion opearaton," IEEE J. Solid-State Circuits, vol. 12, pp. 224­231, Jun. 1977. [21] S.-C. Liu, J. Kramer, G. Indiveri, T. Delbruck, and R. Douglas, Analog VLSI: Circuits and Principle. Cambridge, MA: The MIT Press, 2002.
+
+
